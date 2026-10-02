@@ -1,8 +1,10 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:finly/core/error/failure.dart';
+import 'package:finly/core/usecase/usecase.dart';
 import 'package:finly/features/auth/domain/entities/sign_up_result.dart';
 import 'package:finly/features/auth/domain/entities/user_entity.dart';
+import 'package:finly/features/auth/domain/usecases/get_current_user_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/sign_in_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/sign_out_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/sign_up_use_case.dart';
@@ -18,10 +20,13 @@ class MockSignUp extends Mock implements SignUpUseCase {}
 
 class MockSignOut extends Mock implements SignOutUseCase {}
 
+class MockGetCurrentUser extends Mock implements GetCurrentUserUseCase {}
+
 void main() {
   late MockSignIn signIn;
   late MockSignUp signUp;
   late MockSignOut signOut;
+  late MockGetCurrentUser getCurrentUser;
 
   const user = UserEntity(
     id: 'u1',
@@ -48,13 +53,56 @@ void main() {
     signIn = MockSignIn();
     signUp = MockSignUp();
     signOut = MockSignOut();
+    getCurrentUser = MockGetCurrentUser();
   });
 
-  AuthBloc buildBloc() =>
-      AuthBloc(signIn: signIn, signUp: signUp, signOut: signOut);
+  AuthBloc buildBloc() => AuthBloc(
+        signIn: signIn,
+        signUp: signUp,
+        signOut: signOut,
+        getCurrentUser: getCurrentUser,
+      );
 
-  test('starts unauthenticated', () {
-    expect(buildBloc().state, const AuthState.unauthenticated());
+  test('starts in the initial state', () {
+    expect(buildBloc().state, const AuthState.initial());
+  });
+
+  group('session restore', () {
+    blocTest<AuthBloc, AuthState>(
+      'is authenticated when a stored session exists',
+      build: () {
+        when(() => getCurrentUser(const NoParams()))
+            .thenAnswer((_) async => const Right<Failure, UserEntity?>(user));
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(const AuthStarted()),
+      expect: () => [const AuthState.authenticated(user)],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'is unauthenticated when there is no stored session',
+      build: () {
+        when(() => getCurrentUser(const NoParams()))
+            .thenAnswer((_) async => const Right<Failure, UserEntity?>(null));
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(const AuthStarted()),
+      expect: () => [const AuthState.unauthenticated()],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'starts signed out, without an error, when the session cannot be loaded',
+      build: () {
+        when(() => getCurrentUser(const NoParams())).thenAnswer(
+          (_) async => const Left<Failure, UserEntity?>(
+            NetworkFailure('network_error'),
+          ),
+        );
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(const AuthStarted()),
+      expect: () => [const AuthState.unauthenticated()],
+    );
   });
 
   group('sign in', () {

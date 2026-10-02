@@ -7,6 +7,11 @@ sealed class AuthEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+/// Sent once when the app starts: restores the stored session, if any.
+class AuthStarted extends AuthEvent {
+  const AuthStarted();
+}
+
 class SignInSubmitted extends AuthEvent {
   final String email;
   final String password;

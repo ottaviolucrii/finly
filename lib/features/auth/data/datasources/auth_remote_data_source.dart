@@ -14,6 +14,9 @@ abstract class AuthRemoteDataSource {
 
   Future<void> signOut({required bool allDevices});
 
+  /// The user of the stored session, or null when nobody is signed in.
+  Future<UserModel?> currentUser();
+
   Future<UserModel> switchWorkspace(String workspaceId);
 }
 
@@ -68,6 +71,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     return _client.auth.signOut(
       scope: allDevices ? SignOutScope.global : SignOutScope.local,
     );
+  }
+
+  @override
+  Future<UserModel?> currentUser() async {
+    final user = _client.auth.currentUser;
+    if (user == null) return null;
+    return _loadUser(user.id, user.email ?? '');
   }
 
   @override

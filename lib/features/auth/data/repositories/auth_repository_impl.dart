@@ -38,6 +38,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, UserEntity?>> getCurrentUser() {
+    return _guard<UserEntity?>(() => _remote.currentUser());
+  }
+
+  @override
   Future<Either<Failure, UserEntity>> switchWorkspace(String workspaceId) {
     return _guard<UserEntity>(() => _remote.switchWorkspace(workspaceId));
   }

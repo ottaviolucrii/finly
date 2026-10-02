@@ -2,6 +2,7 @@ import 'package:finly/app.dart';
 import 'package:finly/core/config/app_config.dart';
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
 import 'package:finly/features/auth/presentation/pages/auth_gate.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -25,9 +26,10 @@ Future<void> main() async {
   if (kDebugMode) await _checkConnection();
 
   // The bloc sits above MaterialApp so every pushed page can reach it.
+  // AuthStarted restores the stored session before the first real screen.
   runApp(
     BlocProvider(
-      create: (_) => sl<AuthBloc>(),
+      create: (_) => sl<AuthBloc>()..add(const AuthStarted()),
       child: const FinlyApp(home: AuthGate()),
     ),
   );

@@ -2,6 +2,7 @@ import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_state.dart';
 import 'package:finly/features/auth/presentation/pages/home_placeholder_page.dart';
 import 'package:finly/features/auth/presentation/pages/sign_in_page.dart';
+import 'package:finly/features/auth/presentation/pages/splash_page.dart';
 import 'package:finly/features/auth/presentation/pages/verify_email_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,6 +16,7 @@ class AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
+        if (state.status == AuthStatus.initial) return const SplashPage();
         if (state.user != null) return const HomePlaceholderPage();
         if (state.status == AuthStatus.emailVerificationPending) {
           return VerifyEmailPage(email: state.email ?? '');

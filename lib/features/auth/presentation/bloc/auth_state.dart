@@ -3,6 +3,8 @@ import 'package:finly/core/error/failure.dart';
 import 'package:finly/features/auth/domain/entities/user_entity.dart';
 
 enum AuthStatus {
+  /// App just started; the stored session has not been checked yet.
+  initial,
   unauthenticated,
   loading,
   authenticated,
@@ -27,6 +29,8 @@ class AuthState extends Equatable {
     this.email,
     this.failure,
   });
+
+  const AuthState.initial() : this._(status: AuthStatus.initial);
 
   const AuthState.unauthenticated()
       : this._(status: AuthStatus.unauthenticated);
