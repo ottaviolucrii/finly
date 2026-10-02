@@ -10,21 +10,35 @@ import 'package:finly/features/workspaces/presentation/workspace_messages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// First-run flow for a signed-in user without a workspace.
+/// Creates a workspace.
+///
+/// - First run ([addingType] is null): the user chooses Personal or Business.
+///   Shown by the AuthGate while the user has no workspace.
+/// - Adding another ([addingType] set): the type is fixed (the one the user
+///   does not have yet) and the page is pushed on top of the home screen.
 class OnboardingPage extends StatelessWidget {
-  const OnboardingPage({super.key});
+  final WorkspaceType? addingType;
+
+  const OnboardingPage({super.key, this.addingType});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<OnboardingCubit>(),
-      child: const _OnboardingView(),
+      create: (_) {
+        final cubit = sl<OnboardingCubit>();
+        final type = addingType;
+        if (type != null) cubit.selectType(type);
+        return cubit;
+      },
+      child: _OnboardingView(addingAnother: addingType != null),
     );
   }
 }
 
 class _OnboardingView extends StatelessWidget {
-  const _OnboardingView();
+  final bool addingAnother;
+
+  const _OnboardingView({required this.addingAnother});
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +53,10 @@ class _OnboardingView extends StatelessWidget {
             );
         }
         if (state.status == OnboardingStatus.success) {
-          // The server created the workspace; reload the user so the
-          // AuthGate moves on to the home screen.
+          // The server created the workspace; reload the user so the rest of
+          // the app sees it.
           context.read<AuthBloc>().add(const UserRefreshRequested());
+          if (addingAnother) Navigator.of(context).pop();
         }
       },
       builder: (context, state) {
@@ -50,16 +65,17 @@ class _OnboardingView extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Primeiros passos'),
+            title: Text(addingAnother ? 'Novo workspace' : 'Primeiros passos'),
             actions: [
-              TextButton(
-                onPressed: submitting
-                    ? null
-                    : () => context
-                        .read<AuthBloc>()
-                        .add(const SignOutRequested()),
-                child: const Text('Sair'),
-              ),
+              if (!addingAnother)
+                TextButton(
+                  onPressed: submitting
+                      ? null
+                      : () => context
+                          .read<AuthBloc>()
+                          .add(const SignOutRequested()),
+                  child: const Text('Sair'),
+                ),
             ],
           ),
           body: SafeArea(
@@ -74,6 +90,10 @@ class _OnboardingView extends StatelessWidget {
                           key: ValueKey(type),
                           type: type,
                           submitting: submitting,
+                          onBack: addingAnother
+                              ? () => Navigator.of(context).pop()
+                              : () =>
+                                  context.read<OnboardingCubit>().backToTypes(),
                         ),
                 ),
               ),
@@ -178,11 +198,13 @@ class _TypeCard extends StatelessWidget {
 class _WorkspaceForm extends StatefulWidget {
   final WorkspaceType type;
   final bool submitting;
+  final VoidCallback onBack;
 
   const _WorkspaceForm({
     super.key,
     required this.type,
     required this.submitting,
+    required this.onBack,
   });
 
   @override
@@ -281,9 +303,7 @@ class _WorkspaceFormState extends State<_WorkspaceForm> {
           ),
           const SizedBox(height: 8),
           TextButton(
-            onPressed: widget.submitting
-                ? null
-                : () => context.read<OnboardingCubit>().backToTypes(),
+            onPressed: widget.submitting ? null : widget.onBack,
             child: const Text('Voltar'),
           ),
         ],
