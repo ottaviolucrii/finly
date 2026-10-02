@@ -1,0 +1,490 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------------------------------------------------------------
+% Finly SRS v4.0 - compile with pdfLaTeX (Overleaf default).
+% Upload this file as main.tex plus finly_logo_stacked_clean.png (root or assets/ folder).
+% Do not paste it through a chat box.
+% ---------------------------------------------------------------
+\usepackage[a4paper, margin=2.3cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\IfFileExists{lmodern.sty}{\usepackage{lmodern}}{}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{parskip}
+\usepackage{hyperref}
+\renewcommand{\familydefault}{\sfdefault}
+
+% ---- Brand palette (Finly visual identity guide, March 2026) ----
+\definecolor{finlydark}{HTML}{101820}   % Midnight Black
+\definecolor{finlyblue}{HTML}{1060E3}   % Tech Blue
+\definecolor{finlygold}{HTML}{F29D38}   % Energetic Gold
+\definecolor{finlydeep}{HTML}{1A2E44}   % Deep Professional Blue
+\definecolor{finlystruct}{HTML}{A8A8A8} % Structure Gray (borders only)
+\definecolor{finlytext}{HTML}{4B5563}   % secondary text (AA contrast on white)
+\definecolor{finlylight}{HTML}{F3F6FC}
+
+\hypersetup{colorlinks=true, linkcolor=finlyblue, urlcolor=finlyblue,
+  pdftitle={Finly - Software Requirements Specification v4.0}, pdfauthor={Finly Engineering}}
+
+\titleformat{\section}{\color{finlydeep}\Large\bfseries}{\thesection\quad}{0em}{}[\vspace{2pt}{\color{finlyblue}\titlerule[1.4pt]}]
+\titleformat{\subsection}{\color{finlydeep}\large\bfseries}{\thesubsection\quad}{0em}{}
+\titleformat{\subsubsection}{\color{finlytext}\normalsize\bfseries}{\thesubsubsection\quad}{0em}{}
+\titlespacing*{\section}{0pt}{16pt}{8pt}
+\titlespacing*{\subsection}{0pt}{12pt}{5pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{finlytext}\textbf{Finly} \textperiodcentered{} Software Requirements Specification}
+\fancyhead[R]{\small\color{finlytext}v4.0 \textperiodcentered{} October 2026}
+\fancyfoot[C]{\small\color{finlytext}\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+
+\setlist{itemsep=1pt, topsep=3pt, leftmargin=1.4em}
+
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\PH}{\colorbox{finlyblue}{\color{white}\scriptsize\bfseries\ HIGH\ }}
+\newcommand{\PM}{\colorbox{finlygold}{\color{finlydark}\scriptsize\bfseries\ MEDIUM\ }}
+\newcommand{\PL}{\colorbox{finlystruct}{\color{finlydark}\scriptsize\bfseries\ LOW\ }}
+
+\tcbset{
+  reqbox/.style={enhanced, breakable, colback=white, colframe=finlystruct!70,
+    boxrule=0.4pt, arc=2pt, left=6pt, right=6pt, top=3pt, bottom=3pt,
+    before skip=3pt, after skip=3pt},
+  note/.style={enhanced, breakable, colback=finlylight, colframe=finlyblue,
+    boxrule=0.5pt, arc=2pt, left=8pt, right=8pt, top=5pt, bottom=5pt},
+  warn/.style={enhanced, breakable, colback=finlygold!10, colframe=finlygold,
+    boxrule=0.5pt, arc=2pt, left=8pt, right=8pt, top=5pt, bottom=5pt}
+}
+
+% \req{ID}{Title}{Priority}{Requirement}{Acceptance criteria}
+\newcommand{\req}[5]{%
+  \begin{tcolorbox}[reqbox]
+    {\small\textbf{\textcolor{finlyblue}{#1}}\quad\textbf{#2}\hfill #3}\par\vspace{2pt}
+    {\small #4}\par\vspace{2pt}
+    {\footnotesize\textcolor{finlytext}{\textbf{Acceptance:} #5}}
+  \end{tcolorbox}}
+
+% \br{ID}{Rule}
+\newcommand{\br}[2]{\noindent{\small\textbf{\textcolor{finlyblue}{#1}}\quad #2}\par\vspace{3pt}}
+
+\begin{document}
+
+% ================================ COVER ================================
+% The logo is the official one from the visual identity guide
+% (finly_logo_stacked_clean.png, upload it next to this file in Overleaf).
+\begin{titlepage}
+  \centering
+  \vspace*{1.2cm}
+  \IfFileExists{finly_logo_stacked_clean.png}{\includegraphics[width=9.2cm]{finly_logo_stacked_clean.png}}%
+    {\IfFileExists{assets/finly_logo_stacked_clean.png}{\includegraphics[width=9.2cm]{assets/finly_logo_stacked_clean.png}}%
+    {{\fontsize{40}{44}\selectfont\bfseries\textcolor{finlydark}{FINLY}}}}\\[1.4cm]
+  {\color{finlyblue}\rule{0.6\textwidth}{1.6pt}}\\[0.9cm]
+  {\LARGE\bfseries\color{finlydeep} Software Requirements Specification}\\[0.4cm]
+  {\large\color{finlytext} Professional Financial Intelligence System}\\[0.9cm]
+  {\large\color{finlydeep} Version 4.0 \textperiodcentered{} 2 October 2026}\\[0.2cm]
+  {\color{finlytext}Full-scope baseline --- supersedes v3.0 (March 2026)}
+  \vfill
+  \begin{tcolorbox}[enhanced, width=\textwidth, colback=finlydark, colframe=finlydark, arc=3pt,
+      left=10pt, right=10pt, top=8pt, bottom=8pt]
+    \centering\color{white}
+    Flutter \textperiodcentered{} Clean Architecture \textperiodcentered{} BLoC \textperiodcentered{} Supabase (PostgreSQL + RLS)\\[3pt]
+    \textcolor{finlygold}{Personal (CPF) and Business (CNPJ) workspaces in one login}
+  \end{tcolorbox}
+  \vspace{0.5cm}
+  {\small\color{finlytext}Finly Engineering \textperiodcentered{} Confidential --- internal document}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ============================ 1 INTRODUCTION ===========================
+\section{Introduction}
+
+\subsection{Purpose}
+This document specifies \emph{what} Finly must do and the rules it must obey. It is the single source of truth for requirements. \emph{How} it is built is described in \code{ARCHITECTURE.md}, \code{DATABASE.md} and the SQL scripts; \emph{when} it is built is described in \code{ROADMAP.md}. Design details deliberately do not live here, so a change of library never forces a change of requirement.
+
+\subsection{Product summary}
+Finly is a personal and business finance manager for Brazilian users. One login gives access to up to two isolated workspaces --- \textbf{Personal (CPF)} and \textbf{Business (CNPJ)} --- each with its own accounts, categories, budgets, transactions and reports. Beyond tracking, Finly provides ``financial intelligence'': budgets, recurring bills, a 12-month forecast, a yield simulator, tax provisioning for businesses and receipt scanning.
+
+\subsection{Scope}
+The complete product is in scope; there is no reduced MVP. Work is ordered by dependency (Section~\ref{sec:plan}), not cut down.
+
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}l X@{}}
+\toprule
+In scope & Authentication, workspaces, accounts, credit cards (invoices and installments), transactions, transfers, categories, budgets, recurring bills, dashboard and reports, notifications, forecasting, yield simulator, tax provisioning, receipt OCR, import/export, multi-currency, offline use, audit trail, privacy tools. \\
+Out of scope & Bank connections (Open Finance), payments or Pix initiation, stock/crypto trading, tax return filing (IRPF), invoices (NF-e), workspaces shared between several users, web and desktop clients (the architecture keeps them possible). \\
+\bottomrule
+\end{tabularx}
+
+\subsection{Definitions}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}l X@{}}
+\toprule
+Workspace & Isolated financial context owned by one user: Personal (CPF) or Business (CNPJ). \\
+Cents & All money is an integer number of minor units (R\$10.50 is 1050). \\
+Posted / Pending / Failed & Transaction states: confirmed, scheduled or expected, and rejected. \\
+Leg & One of the two records of a transfer (\code{transfer_out} and \code{transfer_in}). \\
+Invoice (fatura) & Credit card billing cycle grouping the card's charges. \\
+RLS & PostgreSQL Row Level Security, the data-isolation mechanism. \\
+CPF / CNPJ & Brazilian individual / company tax IDs. CNPJ may now be alphanumeric. \\
+CDI & Brazilian interbank deposit rate, benchmark for fixed income. \\
+LGPD & Lei Geral de Prote\c{c}\~ao de Dados (Law 13.709/2018). \\
+\bottomrule
+\end{tabularx}
+
+\subsection{References}
+Finly visual identity guide (March 2026); IN RFB 2.229/2024 (alphanumeric CNPJ); LGPD (Law 13.709/2018); WCAG 2.1 level AA; OFX specification; Supabase documentation (Auth, RLS, Edge Functions, Storage).
+
+\subsection{Conventions}
+Requirement IDs are stable and never reused: \code{FR-<module>NN} for functional, \code{NFR-NN} for non-functional, \code{BR-NN} for business rules. ``Shall'' marks a mandatory statement. Each functional requirement carries a priority (HIGH, MEDIUM, LOW) that orders work inside a phase and an \emph{acceptance} line that tests can be written from.
+
+% ====================== 2 OVERALL DESCRIPTION ==========================
+\section{Overall description}
+
+\subsection{Users}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}l X@{}}
+\toprule
+Individual & Controls daily spending, family budget and personal goals (Personal workspace). \\
+Freelancer / micro-entrepreneur & Uses both workspaces: separates company money from personal money, moves pro-labore between them. \\
+Small-business owner & Cash flow, tax reserve, reports (Business workspace). \\
+\bottomrule
+\end{tabularx}
+
+\subsection{Operating environment and constraints}
+\begin{itemize}
+  \item Mobile first: Android 8.0+ and iOS 14+. Flutter/Dart (SDK 3.10+). Web and desktop are a later target, so domain and data layers shall hold no platform-specific code.
+  \item Backend: Supabase (PostgreSQL, Auth, Storage, Edge Functions). All rules that protect data integrity are enforced \emph{in the database}, not only in the app.
+  \item Interface language: Brazilian Portuguese (default) and English. Time zone for all user-visible dates: America/Sao\_Paulo. Currency default: BRL.
+  \item Look and feel follows the Finly visual identity guide (palette, Poppins for titles, Inter for text).
+\end{itemize}
+
+\subsection{Decisions that shape the requirements}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{ID} & \textbf{Decision} \\
+\midrule
+D-01 & Balances are never stored; they are derived from the opening balance plus transactions (removes sync and race conflicts). \\
+D-02 & A transfer is two independent transaction records (legs) linked by one transfer id. Cross-workspace money movement uses the same mechanism, so no record ever belongs to two workspaces. \\
+D-03 & Workspaces: at most one Personal and one Business per user. Type and tax ID are immutable. Row-access checks go through one helper, so shared workspaces can be added later without rewriting policies. \\
+D-04 & Offline: reading works offline from a local cache; writing offline arrives in a late phase through a queue (client-generated UUIDs, \code{updated_at} and soft delete are present from day one). \\
+D-05 & Audit logging is a database trigger; the audit table is append-only and erased only with the account (LGPD erasure). \\
+D-06 & Money uses integers only. No floating point anywhere, including the tax rate (basis points) and yield maths (decimal arithmetic). \\
+D-07 & Switching workspace is a protected action with a user-selectable protection level (FR-W04). \\
+\bottomrule
+\end{tabularx}
+
+% ====================== 3 DOMAIN & BUSINESS RULES ======================
+\section{Domain model and business rules}
+
+\begin{tcolorbox}[note]
+\small Entities: \code{profile} $\rightarrow$ \code{workspace} $\rightarrow$ (\code{account}, \code{category}, \code{budget}, \code{recurring_transaction}, \code{transaction}). A \code{credit_card_details} row extends a card account; \code{credit_card_invoice} groups a card's charges; \code{transfer} links two transaction legs; \code{audit_log} records every change. The full ERD and column list are in \code{DATABASE.md}.
+\end{tcolorbox}
+
+\subsection{Money and balances}
+\br{BR-01}{Money is stored as an integer number of cents in a ISO 4217 currency. A transaction's currency always equals its account's currency.}
+\br{BR-02}{Stored amounts are always positive. Direction comes from the type: \code{income} and \code{transfer_in} add; \code{expense} and \code{transfer_out} subtract.}
+\br{BR-03}{Balance is derived. \emph{Posted balance} = opening balance + posted transactions. \emph{Projected balance} = posted balance + pending transactions. Failed and deleted transactions never count.}
+\br{BR-04}{Rounding: every division of money rounds half up to the cent, except installment splitting (BR-14). Yield maths uses decimal arithmetic.}
+\br{BR-05}{Dates shown to the user, budget months and invoice cut-offs use America/Sao\_Paulo. Timestamps are stored in UTC.}
+
+\subsection{Workspaces and isolation}
+\br{BR-06}{A user owns at most one Personal and one Business workspace. Personal requires a valid CPF; Business requires a valid CNPJ (numeric or alphanumeric, mod-11 check digits). Type and tax ID cannot be changed after creation; the name can.}
+\br{BR-07}{Every record belongs to exactly one workspace and is readable only by that workspace's owner. Money moves between workspaces only through owner transfers (BR-10).}
+\br{BR-08}{Deleting a workspace deletes all its data. It requires password re-authentication and typing the workspace name.}
+
+\subsection{Transactions and transfers}
+\br{BR-09}{Allowed status changes: pending $\rightarrow$ posted, pending $\rightarrow$ failed, failed $\rightarrow$ pending, posted $\rightarrow$ pending. Transactions are never hard-deleted by the user: deleting sets a deleted flag and the item stays restorable in the Trash for 30 days, then it is purged.}
+\br{BR-10}{A transfer creates two legs with the same moment and status. Kinds: \emph{internal} (same workspace), \emph{owner withdrawal} (Business to Personal) and \emph{owner contribution} (Personal to Business). Amounts must be equal for equal currencies; cross-currency transfers state both amounts. A leg cannot be edited or deleted alone: deleting a transfer deletes both legs. Editing means delete and recreate. Transfers carry no category and are excluded from income and expense totals and from budgets.}
+
+\subsection{Credit cards}
+\br{BR-11}{A credit card is an account whose balance is negative while money is owed. Used limit = $-$(projected balance); available limit = limit $-$ used limit.}
+\br{BR-12}{A charge belongs to the invoice of its purchase date: if the day is on or before the closing day, the invoice closing in that month; otherwise the next one. Closing and due days beyond a month's length move to that month's last day. The due date is in the closing month if the due day is after the closing day, otherwise in the next month.}
+\br{BR-13}{Invoice status: \emph{open} (cycle running), \emph{closed} (cycle ended), \emph{paid}. Invoice total is derived from its transactions. Paying an invoice is a transfer from another account to the card; a paid invoice locks its transactions; deleting that payment reopens it.}
+\br{BR-14}{Installment purchases (2--48 parts) create one charge per part on consecutive invoices. Cents left over by integer division go to the first part. The first part is posted; later parts are pending.}
+
+\subsection{Budgets, recurrence, tax, audit}
+\br{BR-15}{A budget is a monthly limit for one expense category. The limit for a month is the latest budget version whose start month is not after it. Spending counts posted and pending expenses of that category in the month; transfers and failed items are excluded.}
+\br{BR-16}{The $n$-th occurrence of a recurring bill is computed from the start date and the index (not from the previous occurrence), so month-end dates do not drift. Generation is idempotent and never creates occurrences earlier than the day the template was created. Cancelling a template keeps generated instances.}
+\br{BR-17}{Tax reserve (Business) = monthly posted income $\times$ reserve rate, rounded half up to the cent. The rate is stored in basis points (1\% = 100). Tax payments are expenses in a category marked as tax.}
+\br{BR-18}{Every insert, update and delete of workspaces, accounts, transactions, categories, budgets and recurring bills is logged with old and new values, the acting user and the time. Logs are append-only and removed only when the account is erased.}
+\br{BR-19}{Sensitive actions require the account password again: delete account, delete workspace, change e-mail, change password and, when selected, switching workspace.}
+
+% ====================== 4 FUNCTIONAL REQUIREMENTS ======================
+\section{Functional requirements}
+
+\subsection{Authentication and security (A)}
+\req{FR-A01}{Sign up}{\PH}{A visitor can create an account with full name, e-mail and password. Passwords need at least 8 characters with a letter and a digit. Terms and privacy policy must be accepted and the accepted version stored.}
+{Invalid e-mail or weak password is rejected with a clear message; a profile and settings row exist after signup.}
+\req{FR-A02}{E-mail verification}{\PH}{Access to financial data requires a verified e-mail. An unverified user sees a verification screen with a resend action.}
+{Unverified accounts cannot create a workspace; after verification the app resumes onboarding.}
+\req{FR-A03}{Sign in and out}{\PH}{E-mail and password sign in. Sign out ends the current session; ``sign out on all devices'' ends every session.}
+{After sign out no cached financial data is readable; global sign out invalidates other devices' refresh tokens.}
+\req{FR-A04}{Password reset}{\PH}{Users can request a reset link by e-mail and set a new password.}
+{The reset response is identical for known and unknown e-mails (no account enumeration).}
+\req{FR-A05}{Change e-mail and password}{\PH}{Both require re-authentication with the current password (BR-19).}
+{Wrong current password blocks the change.}
+\req{FR-A06}{Delete account}{\PH}{The user can erase the account and all data, including audit logs, after re-authentication and typing a confirmation word.}
+{All rows owned by the user and the auth record are gone; other users are untouched.}
+\req{FR-A07}{Session lock}{\PH}{The app locks after inactivity (default 2 minutes, configurable from immediately to 15 minutes) and when returning from the background past that limit. Unlock uses biometrics or device PIN, with account password as fallback. Contents are hidden in the task switcher.}
+{No financial value is visible while locked; unlock failures never reveal data.}
+\req{FR-A08}{Biometric unlock}{\PM}{Fingerprint and Face ID can be enabled in settings as the unlock method. It is a second gate over the Supabase session, never a replacement for it.}
+{Disabling biometrics returns to PIN/password; enrolling a new fingerprint in the OS forces password re-entry.}
+\req{FR-A09}{Brute-force protection}{\PM}{After 5 failed password attempts in re-authentication prompts, further attempts are blocked for 5 minutes in the app, on top of server-side rate limits.}
+{The sixth attempt within the window is refused without contacting the server.}
+
+\subsection{Workspaces and onboarding (W)}
+\req{FR-W01}{Onboarding}{\PH}{After verification a guided flow collects: workspace type, name, tax ID (live validation with mask), first account (name, type, opening balance) and confirms default categories. State is saved so an interrupted flow resumes where it stopped.}
+{Killing the app mid-flow and reopening returns to the same step; finishing creates workspace, categories and account.}
+\req{FR-W02}{Second workspace}{\PH}{From settings the user can add the workspace type they do not have yet, using the same flow.}
+{A third workspace, or a second of the same type, is impossible in UI and database.}
+\req{FR-W03}{Tax ID validation}{\PH}{CPF and CNPJ are validated by check digits in the app and again in the database. CNPJ accepts letters in the first 12 positions (character value = ASCII code $-$ 48). Input shows the official mask and ignores punctuation.}
+{Valid numeric and alphanumeric CNPJs pass; repeated-digit and wrong-check-digit values fail.}
+\req{FR-W04}{Protected workspace switching}{\PH}{Changing the active workspace is never a single tap. The user chooses a protection level in settings: (1) \emph{Confirm} (default) --- a sheet names the current and target workspace with their colours and needs an explicit confirmation; (2) \emph{Biometric} --- device biometrics or PIN, falling back to the account password; (3) \emph{Password} --- the account password is re-entered and verified by the authentication service. The protection applies to every switch in both directions.}
+{With level Password, a wrong password never changes the active workspace; five failures lock switching for 5 minutes; a successful switch results in exactly one call that stores the new active workspace.}
+\req{FR-W05}{Workspace context}{\PH}{The current workspace (name, type, colour) is visible on every screen. On switching, all in-memory state, streams and caches of the old workspace are discarded before the new one loads.}
+{No list, total or draft from workspace A is ever rendered while workspace B is active.}
+\req{FR-W06}{Edit and delete workspace}{\PM}{The name and, for Business, the tax reserve rate can be edited. Deleting follows BR-08.}
+{Editing type or tax ID is not offered and is rejected by the database.}
+
+\subsection{Accounts (C)}
+\req{FR-C01}{Manage accounts}{\PH}{Create and edit accounts of type checking, savings, investment or credit card with name, currency and opening balance. Names are unique among active accounts of a workspace.}
+{Duplicate names are rejected; credit card accounts open the card settings form (FR-K01).}
+\req{FR-C02}{Archive accounts}{\PM}{Accounts with history are archived instead of deleted; archived accounts are hidden from pickers but keep their history. An account without transactions can be deleted.}
+{Archived accounts cannot receive new transactions in the UI.}
+\req{FR-C03}{Account overview}{\PH}{The accounts screen shows posted and projected balance per account and totals grouped by currency (BR-03).}
+{Balances equal opening balance plus signed transactions in tests with pending, failed and deleted items.}
+
+\subsection{Credit cards (K)}
+\req{FR-K01}{Card settings}{\PH}{A card has limit, closing day and due day (1--31, with last-day adjustment).}
+{Closing day 31 in February closes on the 28th or 29th.}
+\req{FR-K02}{Automatic invoice assignment}{\PH}{Each charge is attached to the correct invoice per BR-12; invoices are created on demand. Changing the date of a charge moves it to the right invoice unless that invoice is paid.}
+{A purchase one day before and one day after the closing day land on consecutive invoices.}
+\req{FR-K03}{Invoice lifecycle and screen}{\PH}{Invoices move open $\rightarrow$ closed automatically after the cycle ends and to paid on payment. The invoice screen lists its charges, total, due date and status, and offers navigation between months.}
+{Totals match the sum of charges minus refunds.}
+\req{FR-K04}{Installments}{\PH}{A charge can be split into 2--48 installments (BR-14); the list shows ``n/N''.}
+{Parts sum exactly to the total; each lands on a consecutive invoice.}
+\req{FR-K05}{Pay invoice}{\PH}{The user pays an invoice from a chosen account; this creates a transfer (BR-10) and marks the invoice paid.}
+{Deleting the payment reopens the invoice; a second payment is refused.}
+\req{FR-K06}{Limit usage}{\PM}{The card screen shows used and available limit (BR-11) with a progress bar and warning colours at 80\% and 100\%.}
+{Pending installments count as used limit.}
+
+\subsection{Transactions and transfers (T, X)}
+\req{FR-T01}{Create transaction}{\PH}{Create income or expense with account, category, amount, date and time, description, optional notes and status (default posted; pending for future dates).}
+{Amount must be positive; category kind must match the type; currency follows the account.}
+\req{FR-T02}{Edit transaction}{\PH}{Amount, category, date, description, notes and status can be edited; type, account and currency cannot (delete and recreate instead).}
+{Every edit produces an audit entry.}
+\req{FR-T03}{Delete, undo and Trash}{\PH}{Deleting offers a 10-second undo. Deleted items stay in a Trash screen for 30 days and can be restored (BR-09).}
+{Restored items return to balances; items older than 30 days no longer exist.}
+\req{FR-T04}{Status lifecycle}{\PH}{Users confirm pending items, mark them failed or return them to pending (BR-09). Pending items are visually distinct and counted only in projected balance.}
+{An invalid status change is not offered and is rejected by the database.}
+\req{FR-T05}{Search and filters}{\PM}{The transaction list searches by text and filters by date range, amount range, category, account, status and type, combinable, with removable filter chips. Lists are paginated (20 per page).}
+{Filters combine with AND; clearing a chip updates the list.}
+\req{FR-T06}{Receipts}{\PM}{A photo or file can be attached to a transaction and is stored privately for that user only.}
+{Another user can never obtain the file, even with its path.}
+\req{FR-X01}{Internal transfer}{\PH}{Move money between two accounts of the same workspace (BR-10).}
+{Both legs exist with equal amounts and appear in both account histories.}
+\req{FR-X02}{Owner withdrawal and contribution}{\PH}{A Business account can send money to a Personal account (pro-labore, distributions) and the reverse (capital contribution). Each side appears in its own workspace as an independent record, and the screen states both workspaces.}
+{Each workspace's totals change by exactly one leg; the reverse direction uses the contribution kind.}
+\req{FR-X03}{Cross-currency transfer}{\PM}{When accounts differ in currency the user enters both amounts; the implied rate is shown.}
+{The database refuses mismatched amounts for same-currency transfers.}
+
+\subsection{Categories and smart suggestions (G)}
+\req{FR-G01}{Default categories}{\PH}{Creating a workspace seeds a default category set suited to its type (Personal or Business), including an ``Impostos'' tax category for Business.}
+{A new workspace has the expected defaults and nothing else.}
+\req{FR-G02}{Manage categories}{\PM}{Create, rename, recolour, change icon and archive categories separately for income and expense. Names are unique per kind.}
+{Archived categories stay on old transactions but are hidden from new entries.}
+\req{FR-G03}{Smart categorization}{\PM}{When a description is typed, the app suggests the category most often used for similar descriptions in this workspace, only above a confidence threshold, entirely on-device. The user can always override.}
+{Below the threshold no suggestion appears; no description leaves the device.}
+
+\subsection{Budgets (B)}
+\req{FR-B01}{Monthly budgets}{\PH}{Set a monthly limit per expense category. A change takes effect from a chosen month and keeps history (BR-15).}
+{Changing next month's limit does not alter past months.}
+\req{FR-B02}{Budget progress}{\PH}{Show spent, remaining and percent per budget with a ring or bar. Under 80\% neutral, 80--100\% warning, above 100\% danger; colour is never the only signal.}
+{Spending that crosses 100\% flips the state and shows the overspent amount.}
+\req{FR-B03}{Budget alerts}{\PM}{Notify when spending reaches 80\% and 100\% of a budget (FR-N01).}
+{Each threshold notifies once per budget per month.}
+
+\subsection{Recurring bills (R)}
+\req{FR-R01}{Recurring templates}{\PH}{Define income or expense templates with amount, account, category, description, frequency (daily, weekly, monthly, yearly), interval, start and optional end date, and reminder lead days.}
+{Invalid end dates and non-positive amounts are rejected.}
+\req{FR-R02}{Automatic generation}{\PH}{The system creates pending transactions for the next 35 days, once per occurrence (BR-16), by a daily job and when the app starts.}
+{Running generation twice creates no duplicates; a template created today creates no past items.}
+\req{FR-R03}{Edit, pause, cancel}{\PM}{Pausing or cancelling stops future generation; editing a generated instance never changes the template.}
+{Cancelled templates keep their already generated transactions.}
+
+\subsection{Dashboard and reports (D)}
+\req{FR-D01}{Dashboard}{\PH}{For the active workspace the home screen shows: total balance by currency, month income vs expense chart, upcoming bills (7 days), top three budgets, pending items count and the last five transactions. It renders from cache within 1 second and refreshes in the background.}
+{All figures belong to the active workspace only.}
+\req{FR-D02}{Reports}{\PM}{Monthly summary, spending by category (donut), income vs expense (bars) and cash-flow trend for a chosen period and account filter.}
+{Totals equal the sum of the listed transactions for the same filters.}
+
+\subsection{Notifications (N)}
+\req{FR-N01}{Smart notifications}{\PH}{Push and local notifications for: card invoice due in 7 days and 1 day; balance below the user's threshold; recurring bill reminder (lead days); budget 80\% and 100\%; daily digest of pending items.}
+{Each type can be switched off individually; time-based alerts are scheduled locally and work offline.}
+\req{FR-N02}{Notification centre}{\PM}{An in-app list shows recent alerts and deep-links to the related item.}
+{Tapping an alert opens the correct workspace and item, after the switch protection if the workspace differs.}
+
+\subsection{Financial intelligence (I)}
+\req{FR-I01}{12-month forecast}{\PM}{Projects the balance 12 months ahead from: current projected balance, recurring templates, pending installments, and the average monthly non-recurring income and expense of up to the last six closed months. The method is explained on screen and the result is labelled an estimate.}
+{With no history the forecast uses only known items; recalculation runs off the UI thread.}
+\req{FR-I02}{Yield simulator}{\PM}{Inputs: principal, monthly contribution, period, and either a fixed annual rate or a percentage of CDI (rate entered by the user, optionally fetched from the Central Bank). Output: month-by-month table and final amount, gross and with an optional estimated income-tax table that the user can edit. Works offline and states it is not financial advice.}
+{Results are reproducible to the cent with decimal arithmetic.}
+\req{FR-I03}{Tax provisioning}{\PM}{For Business workspaces the reserve (BR-17) is calculated monthly and shown as a virtual ``tax reserve'' balance separate from account balances, reduced by tax-category expenses.}
+{Changing the rate affects only calculations from the chosen month on.}
+\req{FR-I04}{Receipt scanning}{\PM}{The camera reads a receipt on the device and pre-fills merchant, total and date. The user must review before saving; failure falls back to a blank form.}
+{No image is uploaded for recognition; the image is stored only if the user saves it as an attachment.}
+
+\subsection{Data portability and currency (E, M)}
+\req{FR-E01}{Export}{\PM}{Export the filtered transaction list to CSV (UTF-8, semicolon, comma decimal) and PDF.}
+{Exported totals match the screen.}
+\req{FR-E02}{Import OFX}{\PM}{Import bank statements (.ofx) into a chosen account with a preview, sign handling and duplicate detection by bank transaction id or by account, date, amount and memo.}
+{Importing the same file twice adds nothing the second time.}
+\req{FR-E03}{Export my data}{\PM}{Provide all of the user's data as a machine-readable file (LGPD portability).}
+{The file contains every table row owned by the user and none of anyone else's.}
+\req{FR-M01}{Multi-currency}{\PM}{Accounts and transactions may use BRL, USD, EUR or other ISO 4217 currencies. Totals are shown per currency.}
+{Amounts of different currencies are never added together silently.}
+\req{FR-M02}{Display conversion}{\PM}{Optionally convert totals to the workspace base currency using cached rates from a replaceable provider. Converted values are labelled with the rate date and are never stored as balances.}
+{Swapping the rate provider changes no business logic.}
+
+\subsection{Audit, settings and platform (U, S, Y)}
+\req{FR-U01}{Audit trail}{\PH}{Changes are logged automatically by the database (BR-18).}
+{Edits made outside the app (SQL, dashboard) are also logged.}
+\req{FR-U02}{Audit viewer}{\PM}{Read-only screen listing changes by table, record and date with before and after values.}
+{No edit or delete action exists on audit entries.}
+\req{FR-S01}{Appearance}{\PM}{Light, dark or system theme using the brand palette; stored per user.}
+{No hard-coded colour in widgets; contrast meets NFR-08.}
+\req{FR-S02}{Language}{\PM}{Portuguese (Brazil) and English; numbers, dates and money follow the locale.}
+{Switching language updates all visible strings and formats.}
+\req{FR-S03}{Force update}{\PH}{At launch the app compares its version with a minimum version stored remotely and blocks use below it with an update screen.}
+{The check works before login and fails open if the service is unreachable.}
+\req{FR-S04}{Privacy and terms}{\PM}{Users can read the privacy policy and terms, see which version they accepted, and re-accept when a new version is published.}
+{Users who have not accepted the current version cannot continue until they do.}
+\req{FR-Y01}{Offline reading}{\PH}{The last synchronised data of the active workspace is available without a connection, with a visible ``offline / last updated'' indicator.}
+{With airplane mode on, balances, lists and reports render from cache.}
+\req{FR-Y02}{Offline writing}{\PM}{Transactions and transfers created offline are queued and sent on reconnection with their client-generated ids. Concurrent edits to the same record resolve by latest update for descriptive fields and ask the user when amounts differ.}
+{Replaying the queue twice creates no duplicates; the user sees a conflict screen for amount conflicts.}
+
+% ================== 5 NON-FUNCTIONAL REQUIREMENTS ======================
+\section{Non-functional requirements}
+\begin{tabularx}{\textwidth}{@{}l >{\bfseries}l X@{}}
+\toprule
+\textbf{ID} & \textbf{Area} & \textbf{Requirement} \\
+\midrule
+NFR-01 & Data security & RLS enabled on every table; every policy chains to the workspace owner; no policy relies on ``authenticated'' alone; anonymous users can read nothing except public configuration. Clients cannot write audit logs or transfer legs directly. \\
+NFR-02 & Integrity & Money integers only; foreign keys tie an account, workspace and currency together; invalid states are rejected by constraints and triggers, not only by the UI. \\
+NFR-03 & Privacy (LGPD) & Data minimisation; CPF/CNPJ shown masked except on request; no personal data in logs or analytics; erasure and portability available in-app (FR-A06, FR-E03); no third-party tracking SDKs. \\
+NFR-04 & Transport and storage & TLS only; secrets never in the repository (build-time configuration); local cache encrypted or stored in the OS secure area for tokens; screen content hidden in app switcher. \\
+NFR-05 & Performance & Cold start to interactive in 2 s on a mid-range 2021 phone; cached dashboard in 1 s; lists paginated; heavy maths (forecast, yield, import) off the UI thread; any single query under 200 ms for 100\,000 transactions per workspace with the provided indexes. \\
+NFR-06 & Reliability & No data loss on crash or network cut during a save (atomic server functions for multi-row operations); idempotent generation and import. \\
+NFR-07 & Availability & Read access offline; graceful degradation messages instead of blank screens. \\
+NFR-08 & Accessibility & WCAG 2.1 AA: text contrast 4.5:1 (Energetic Gold and Structure Gray never carry text on white); touch targets 48\,dp; screen-reader labels; font scaling to 200\%; colour never the only signal. \\
+NFR-09 & Usability & Fast entry: a transaction can be created in at most 4 taps and one text field; destructive actions are always confirmable or undoable. \\
+NFR-10 & Maintainability & Clean Architecture layers with dependencies pointing inward; domain layer in pure Dart; one feature per folder; static analysis clean; documented decisions (ADRs). \\
+NFR-11 & Testability & Domain: unit tests (target 100\% of use cases and validators). Data: mapper and repository tests with fakes. Presentation: BLoC tests and golden tests of key screens. Database: automated scripts covering rules, RLS and triggers. \\
+NFR-12 & Portability & No platform code in domain and data layers; responsive layout tokens ready for tablet and desktop. \\
+NFR-13 & Observability & Crash reporting with personal data scrubbed; structured, privacy-safe error codes returned by server functions. \\
+NFR-14 & Localisation & All strings externalised; money, dates and number formats by locale. \\
+\bottomrule
+\end{tabularx}
+
+% =================== 6 EXTERNAL INTERFACES & DATA ======================
+\section{External interfaces and data}
+
+\subsection{Interfaces}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}l X@{}}
+\toprule
+Supabase Auth & E-mail/password, verification, reset, sessions, re-authentication. \\
+Supabase Database & PostgREST for tables and views; RPC functions for multi-row operations (workspace creation, transfers, installments, invoice payment, recurring generation, account deletion). \\
+Supabase Storage & Private bucket for receipts, path prefixed by user id. \\
+Scheduled jobs & Daily: generate recurring items, close due invoices, purge Trash, send due-date and digest notifications. \\
+Push (FCM / APNs) & Device tokens stored per user; messages contain no amounts or names. \\
+On-device OCR & Text recognition without network. \\
+Rates and CDI & Replaceable adapters; user-entered values always possible. \\
+Biometrics & OS biometric API through a Flutter plugin. \\
+\bottomrule
+\end{tabularx}
+
+\subsection{Data requirements}
+\begin{itemize}
+  \item Retention: user data until the user erases it; Trash 30 days; audit logs for the life of the account.
+  \item Erasure removes data, audit trail, attachments and the authentication record.
+  \item Backups follow the hosting provider's policy and must be stated in the privacy policy.
+  \item The authoritative schema is the SQL under \code{sql/}; \code{DATABASE.md} is generated from it and must not diverge.
+\end{itemize}
+
+% ============================ 7 BUILD PLAN =============================
+\section{Build plan and traceability}\label{sec:plan}
+The whole product is built, in this order, because later phases depend on earlier ones. No phase is optional.
+
+\begin{tabularx}{\textwidth}{@{}l >{\bfseries}l X@{}}
+\toprule
+\textbf{Phase} & \textbf{Name} & \textbf{Requirements} \\
+\midrule
+0 & Foundation & Repository, CI, theme tokens, dependency injection, error model, database scripts applied, \code{Money} type, tests harness \\
+1 & Identity and workspaces & FR-A01--A09, FR-W01--W06, FR-S01--S04 \\
+2 & Core ledger & FR-C01--C03, FR-G01--G02, FR-T01--T04, FR-X01--X02, FR-U01 \\
+3 & Cards, budgets, recurring & FR-K01--K06, FR-B01--B02, FR-R01--R03, FR-T05--T06 \\
+4 & Overview and alerts & FR-D01--D02, FR-N01--N02, FR-B03, FR-U02, FR-Y01 \\
+5 & Intelligence & FR-I01--I04, FR-G03 \\
+6 & Data and currency & FR-E01--E03, FR-M01--M02, FR-X03, FR-Y02 \\
+7 & Hardening and release & Accessibility audit, security review, LGPD review, performance pass, store assets, FR-S03 verification \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{Verification}
+Every acceptance line becomes at least one automated test at the cheapest level that can prove it: database script (rules, RLS, triggers), unit test (validators, money, forecast, yield), BLoC test (flows), golden test (screens), and a manual checklist for biometrics, notifications and OCR on real devices.
+
+% ======================= 8 RISKS AND OPEN POINTS =======================
+\section{Risks and open points}
+\begin{tabularx}{\textwidth}{@{}l X X@{}}
+\toprule
+\textbf{ID} & \textbf{Item} & \textbf{Handling} \\
+\midrule
+RK-1 & Offline writing and sync is the largest technical risk. & Schema prepared from day one; built late (FR-Y02) after online flows are stable. \\
+RK-2 & Tax, yield and forecast figures can be mistaken for advice. & Always labelled estimates; user-editable parameters; no legal rule hard-coded. \\
+RK-3 & CPF/CNPJ are personal data. & Minimisation, masking, erasure, RLS, no third-party SDKs (NFR-03). \\
+RK-4 & Push notifications depend on platform keys and background rules. & Local scheduling for time-based alerts; server push as complement. \\
+OP-1 & May one CPF/CNPJ be registered by more than one account? & Currently allowed (avoids leaking that a number is registered); revisit before launch. \\
+OP-2 & Colour meaning of income and expense in charts: guide pairs Tech Blue and Energetic Gold without assigning them. & Proposed: income blue, expense gold, always with sign and label; confirm with the visual identity owner. \\
+OP-3 & Exchange-rate and CDI providers. & Choose before Phase 6; adapters make the choice reversible. \\
+OP-4 & Server-enforced re-authentication for protected switching. & Optional hardening: check the age of the password sign-in in the session token inside the switch function. \\
+\bottomrule
+\end{tabularx}
+
+% ============================== APPENDIX ===============================
+\appendix
+\section{Changes from v3.0}
+\begin{itemize}
+  \item Audit trigger: v3.0 required a trigger running with the \emph{invoker's} rights, which would be blocked by the audit table's own access rules; the trigger now runs with definer rights and sets the actor from the session. The ``resolved'' status of that open question was wrong and is removed.
+  \item CNPJ validation extended to the alphanumeric format in force since July 2026.
+  \item Stored balances removed; invoice totals derived (D-01).
+  \item One transfer model (two linked legs) replaces the open question; owner withdrawal no longer breaks workspace isolation.
+  \item New requirements: e-mail verification, password reset, account deletion, installments, invoice payment, Trash, switch protection, privacy and terms, data export, offline reading and writing separated.
+  \item Requirements and design separated; sprint status and ``NEW'' badges removed; stable IDs per module; acceptance criteria added.
+  \item Brand palette and fonts aligned with the visual identity guide; accessible text colours defined.
+  \item ``Family budgets'' from the guide are not supported (single-owner workspaces, D-03) and are listed as out of scope.
+\end{itemize}
+
+\section{Status transitions of a transaction}
+\begin{center}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{from / to} & \textbf{pending} & \textbf{posted} & \textbf{failed} \\
+\midrule
+pending & --- & allowed & allowed \\
+posted  & allowed & --- & not allowed \\
+failed  & allowed & not allowed & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\end{document}
