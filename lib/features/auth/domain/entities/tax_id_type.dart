@@ -1,0 +1,1 @@
+enum TaxIdType { cpf, cnpj }
