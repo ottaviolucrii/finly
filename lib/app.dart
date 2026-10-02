@@ -38,3 +38,28 @@ class _PlaceholderHome extends StatelessWidget {
     );
   }
 }
+
+/// Shown instead of the app when the build has no Supabase configuration.
+class ConfigErrorApp extends StatelessWidget {
+  const ConfigErrorApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      home: const Scaffold(
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Missing configuration.\n\n'
+              'Run with:\nflutter run --dart-define-from-file=env.json',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
