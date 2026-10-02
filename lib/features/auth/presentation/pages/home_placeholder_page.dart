@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/theme/app_colors.dart';
+import 'package:finly/features/accounts/presentation/pages/accounts_page.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/auth/presentation/auth_messages.dart';
@@ -141,6 +142,17 @@ class _HomeView extends StatelessWidget {
                     Text('Olá, $firstName', style: text.headlineMedium),
                     const SizedBox(height: 4),
                     Text(user.email, style: text.bodyMedium),
+                    const SizedBox(height: 16),
+                    if (active != null)
+                      FilledButton.tonalIcon(
+                        icon: const Icon(Icons.account_balance_wallet_outlined),
+                        label: const Text('Contas'),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => AccountsPage(workspace: active),
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 24),
                     Text('Seus workspaces', style: text.titleMedium),
                     const SizedBox(height: 8),
