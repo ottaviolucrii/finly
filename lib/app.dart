@@ -2,7 +2,10 @@ import 'package:finly/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class FinlyApp extends StatelessWidget {
-  const FinlyApp({super.key});
+  const FinlyApp({super.key, this.home = const _PlaceholderHome()});
+
+  /// First screen. main.dart passes the auth gate; tests use the placeholder.
+  final Widget home;
 
   @override
   Widget build(BuildContext context) {
@@ -12,12 +15,11 @@ class FinlyApp extends StatelessWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
-      home: const _PlaceholderHome(),
+      home: home,
     );
   }
 }
 
-/// Temporary screen until the sign-in flow exists (Phase 1).
 class _PlaceholderHome extends StatelessWidget {
   const _PlaceholderHome();
 

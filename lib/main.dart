@@ -1,8 +1,11 @@
 import 'package:finly/app.dart';
 import 'package:finly/core/config/app_config.dart';
 import 'package:finly/core/di/injection.dart';
+import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:finly/features/auth/presentation/pages/auth_gate.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
@@ -21,7 +24,13 @@ Future<void> main() async {
 
   if (kDebugMode) await _checkConnection();
 
-  runApp(const FinlyApp());
+  // The bloc sits above MaterialApp so every pushed page can reach it.
+  runApp(
+    BlocProvider(
+      create: (_) => sl<AuthBloc>(),
+      child: const FinlyApp(home: AuthGate()),
+    ),
+  );
 }
 
 /// Debug-only: proves the URL, the key and anonymous RLS work.
