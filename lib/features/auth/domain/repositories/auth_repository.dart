@@ -21,6 +21,9 @@ abstract class AuthRepository {
   /// Ends this device's session, or every session when [allDevices] is true.
   Future<Either<Failure, void>> signOut({bool allDevices = false});
 
+  /// The user of the stored session, or null when nobody is signed in.
+  Future<Either<Failure, UserEntity?>> getCurrentUser();
+
   /// Changes the active workspace. Moves to a workspace repository later.
   Future<Either<Failure, UserEntity>> switchWorkspace(String workspaceId);
 }
