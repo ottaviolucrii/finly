@@ -1,3 +1,11 @@
+import 'package:finly/features/accounts/data/datasources/account_remote_data_source.dart';
+import 'package:finly/features/accounts/data/repositories/account_repository_impl.dart';
+import 'package:finly/features/accounts/domain/repositories/account_repository.dart';
+import 'package:finly/features/accounts/domain/usecases/archive_account_use_case.dart';
+import 'package:finly/features/accounts/domain/usecases/create_account_use_case.dart';
+import 'package:finly/features/accounts/domain/usecases/get_accounts_use_case.dart';
+import 'package:finly/features/accounts/presentation/cubit/account_form_cubit.dart';
+import 'package:finly/features/accounts/presentation/cubit/accounts_cubit.dart';
 import 'package:finly/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:finly/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:finly/features/auth/domain/repositories/auth_repository.dart';
@@ -52,5 +60,18 @@ void configureDependencies() {
     // workspaces: use cases and presentation
     ..registerLazySingleton(() => CreateWorkspaceUseCase(sl()))
     ..registerFactory(() => OnboardingCubit(sl()))
-    ..registerFactory(() => SwitchWorkspaceCubit(sl()));
+    ..registerFactory(() => SwitchWorkspaceCubit(sl()))
+    // accounts: data layer
+    ..registerLazySingleton<AccountRemoteDataSource>(
+      () => AccountRemoteDataSourceImpl(sl()),
+    )
+    ..registerLazySingleton<AccountRepository>(
+      () => AccountRepositoryImpl(sl()),
+    )
+    // accounts: use cases and presentation
+    ..registerLazySingleton(() => GetAccountsUseCase(sl()))
+    ..registerLazySingleton(() => CreateAccountUseCase(sl()))
+    ..registerLazySingleton(() => ArchiveAccountUseCase(sl()))
+    ..registerFactory(() => AccountsCubit(sl(), sl()))
+    ..registerFactory(() => AccountFormCubit(sl()));
 }
