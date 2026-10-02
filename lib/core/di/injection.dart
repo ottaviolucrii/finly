@@ -5,12 +5,14 @@ import 'package:finly/features/auth/domain/usecases/get_current_user_use_case.da
 import 'package:finly/features/auth/domain/usecases/sign_in_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/sign_out_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/sign_up_use_case.dart';
+import 'package:finly/features/auth/domain/usecases/switch_workspace_use_case.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/workspaces/data/datasources/workspace_remote_data_source.dart';
 import 'package:finly/features/workspaces/data/repositories/workspace_repository_impl.dart';
 import 'package:finly/features/workspaces/domain/repositories/workspace_repository.dart';
 import 'package:finly/features/workspaces/domain/usecases/create_workspace_use_case.dart';
 import 'package:finly/features/workspaces/presentation/cubit/onboarding_cubit.dart';
+import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_cubit.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -30,6 +32,7 @@ void configureDependencies() {
     ..registerLazySingleton(() => SignUpUseCase(sl()))
     ..registerLazySingleton(() => SignOutUseCase(sl()))
     ..registerLazySingleton(() => GetCurrentUserUseCase(sl()))
+    ..registerLazySingleton(() => SwitchWorkspaceUseCase(sl()))
     // auth: presentation (a new bloc each time it is requested)
     ..registerFactory(
       () => AuthBloc(
@@ -48,5 +51,6 @@ void configureDependencies() {
     )
     // workspaces: use cases and presentation
     ..registerLazySingleton(() => CreateWorkspaceUseCase(sl()))
-    ..registerFactory(() => OnboardingCubit(sl()));
+    ..registerFactory(() => OnboardingCubit(sl()))
+    ..registerFactory(() => SwitchWorkspaceCubit(sl()));
 }

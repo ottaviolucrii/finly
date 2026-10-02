@@ -18,3 +18,17 @@ String workspaceFailureMessage(Failure failure) {
       return 'Não foi possível criar o workspace. Tente novamente.';
   }
 }
+
+String switchWorkspaceFailureMessage(Failure failure) {
+  switch (failure.message) {
+    case 'invalid_workspace':
+    case 'forbidden':
+      return 'Você não tem acesso a este workspace.';
+    case 'not_authenticated':
+      return 'Sua sessão expirou. Entre novamente.';
+    case 'network_error':
+      return 'Sem conexão. Verifique sua internet.';
+    default:
+      return 'Não foi possível trocar de workspace. Tente novamente.';
+  }
+}
