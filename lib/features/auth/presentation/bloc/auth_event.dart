@@ -12,6 +12,11 @@ class AuthStarted extends AuthEvent {
   const AuthStarted();
 }
 
+/// Reloads the signed-in user (for example after a workspace was created).
+class UserRefreshRequested extends AuthEvent {
+  const UserRefreshRequested();
+}
+
 class SignInSubmitted extends AuthEvent {
   final String email;
   final String password;
