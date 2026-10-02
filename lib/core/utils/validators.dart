@@ -1,56 +1,85 @@
-class Validators{
+// Tax-ID rules mirror the database functions `is_valid_cpf` and
+/// `is_valid_cnpj` (sql/01_helpers.sql), so the app and the database
+/// always agree.
+class Validators {
+  const Validators._();
 
-  /// Validates a standard email format
-  static bool isValidEmail (String email){
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    return emailRegex.hasMatch(email);
-  }
+  static final RegExp _email = RegExp(
+    r'^[A-Za-z0-9._%+\-]+@([A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$',
+  );
+  static final RegExp _cpfShape = RegExp(r'^[0-9]{11}$');
+  static final RegExp _cnpjShape = RegExp(r'^[0-9A-Z]{12}[0-9]{2}$');
+  static final RegExp _repeatedDigit = RegExp(r'^(.)\1+$');
 
-  static bool isValidCPF(String cpf) {
-  final cleanCPF = cpf.replaceAll(RegExp(r'[^0-9]'), '');
-  if (cleanCPF.length != 11) return false;
-  if (RegExp(r'^(\d)\1+$').hasMatch(cleanCPF)) return false;
+  static const List<int> _cnpjWeights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  static const List<int> _cnpjWeights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
 
-  // First digit verification
-  int sum = 0;
-  for (int i = 0; i < 9; i++) {
-    sum += int.parse(cleanCPF[i]) * (10 - i);
-  }
-  int remainder = (sum * 10) % 11;
-  if (remainder == 10 || remainder == 11) remainder = 0;
-  if (remainder != int.parse(cleanCPF[9])) return false;
+  /// Removes masks (dots, slashes, dashes, spaces) and upper-cases letters.
+  /// "00.000.000/e08g-12" -> "00000000E08G12".
+  static String normalizeTaxId(String value) =>
+      value.replaceAll(RegExp(r'[^0-9A-Za-z]'), '').toUpperCase();
 
-  // Second digit verification
-  sum = 0;
-  for (int i = 0; i < 10; i++) {
-    sum += int.parse(cleanCPF[i]) * (11 - i);
-  }
-  remainder = (sum * 10) % 11;
-  if (remainder == 10 || remainder == 11) remainder = 0;
-  return remainder == int.parse(cleanCPF[10]);
-}
-
-  /// Validates a CNPJ using the official mathematical checksum.
-  static bool isValidCNPJ(String cnpj) {
-    final cleanCNPJ = cnpj.replaceAll(RegExp(r'[^0-9]'), '');
-    if (cleanCNPJ.length != 14) return false;
-    if (RegExp(r'^(\d)\1+$').hasMatch(cleanCNPJ)) return false;
-
-    List<int> digits = cleanCNPJ.split('').map((d) => int.parse(d)).toList();
-
-    // First digit verification
-    int calcDigit(List<int> weights, List<int> numbers) {
-      int sum = 0;
-      for (int i = 0; i < weights.length; i++) {
-        sum += numbers[i] * weights[i];
-      }
-      int res = sum % 11;
-      return res < 2 ? 0 : 11 - res;
+  /// Standard e-mail format. Accepts long TLDs such as `.solutions`.
+  static bool isValidEmail(String email) {
+    final value = email.trim();
+    if (value.isEmpty || value.length > 254 || value.contains('..')) {
+      return false;
     }
+    return _email.hasMatch(value);
+  }
 
-    if (calcDigit([5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2], digits) != digits[12]) return false;
-    if (calcDigit([6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2], digits) != digits[13]) return false;
+  /// At least 8 characters with at least one letter and one digit (SRS FR-A01).
+  static bool isValidPassword(String password) {
+    return password.length >= 8 &&
+        RegExp(r'[A-Za-z]').hasMatch(password) &&
+        RegExp(r'[0-9]').hasMatch(password);
+  }
 
-    return true;
+  /// 2 to 120 characters after trimming (matches the database check).
+  static bool isValidFullName(String name) {
+    final length = name.trim().length;
+    return length >= 2 && length <= 120;
+  }
+
+  /// CPF: 11 digits, two mod-11 check digits, repeated digits rejected.
+  static bool isValidCPF(String value) {
+    final cpf = normalizeTaxId(value);
+    if (!_cpfShape.hasMatch(cpf)) return false;
+    if (_repeatedDigit.hasMatch(cpf)) return false;
+
+    final digits = cpf.split('').map(int.parse).toList();
+    return _cpfCheckDigit(digits, 9) == digits[9] &&
+        _cpfCheckDigit(digits, 10) == digits[10];
+  }
+
+  static int _cpfCheckDigit(List<int> digits, int length) {
+    var sum = 0;
+    for (var i = 0; i < length; i++) {
+      sum += digits[i] * (length + 1 - i);
+    }
+    final remainder = (sum * 10) % 11;
+    return remainder == 10 ? 0 : remainder;
+  }
+
+  /// CNPJ, numeric or alphanumeric (IN RFB 2.229/2024): 12 characters
+  /// [0-9A-Z] followed by 2 numeric check digits. A character's value is its
+  /// ASCII code minus 48 ('0' = 0 ... '9' = 9, 'A' = 17 ... 'Z' = 42).
+  static bool isValidCNPJ(String value) {
+    final cnpj = normalizeTaxId(value);
+    if (!_cnpjShape.hasMatch(cnpj)) return false;
+    if (_repeatedDigit.hasMatch(cnpj)) return false;
+
+    final values = cnpj.codeUnits.map((unit) => unit - 48).toList();
+    return _cnpjCheckDigit(values, _cnpjWeights1) == values[12] &&
+        _cnpjCheckDigit(values, _cnpjWeights2) == values[13];
+  }
+
+  static int _cnpjCheckDigit(List<int> values, List<int> weights) {
+    var sum = 0;
+    for (var i = 0; i < weights.length; i++) {
+      sum += values[i] * weights[i];
+    }
+    final remainder = sum % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
   }
 }
