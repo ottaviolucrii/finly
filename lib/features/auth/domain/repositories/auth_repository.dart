@@ -1,26 +1,26 @@
-
-
 import 'package:dartz/dartz.dart';
 import 'package:finly/core/error/failure.dart';
+import 'package:finly/features/auth/domain/entities/sign_up_result.dart';
 import 'package:finly/features/auth/domain/entities/user_entity.dart';
-import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 
 abstract class AuthRepository {
-
-  /// Signs in a user with email and password.
-  Future<Either<Failure, UserEntity>> signIn (String email, String password);
-
-  /// Registers a new user and creates their first workspace
-  Future<Either<Failure, UserEntity>> signUp ({
+  /// Signs in with e-mail and password.
+  Future<Either<Failure, UserEntity>> signIn({
     required String email,
     required String password,
-    required String taxId,
+  });
+
+  /// Creates the account. The first workspace is created later, after the
+  /// e-mail is verified (onboarding).
+  Future<Either<Failure, SignUpResult>> signUp({
+    required String email,
+    required String password,
     required String fullName,
-    required WorkspaceType initialWorkspace,
-  }); 
+  });
 
-  Future<Either<Failure, void>> signOut ();
+  /// Ends this device's session, or every session when [allDevices] is true.
+  Future<Either<Failure, void>> signOut({bool allDevices = false});
 
-  Future<Either<Failure, UserEntity>> switchWorkspace (String workspaceId);
-
+  /// Changes the active workspace. Moves to a workspace repository later.
+  Future<Either<Failure, UserEntity>> switchWorkspace(String workspaceId);
 }
