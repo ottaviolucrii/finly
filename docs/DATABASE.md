@@ -1,0 +1,260 @@
+# Finly - Database
+
+The SQL under `sql/` is the **source of truth**. This file explains it and must not contradict it. It replaces the old `database.md` (5-table draft).
+
+## 1. How to apply
+
+| Order | File | Purpose |
+|---|---|---|
+| 0 | `99_reset_dev.sql` | *Dev only.* Wipes our objects so you can start clean (keeps `auth.users`). |
+| 1 | `00_types.sql` | Enums |
+| 2 | `01_helpers.sql` | Private schema, CPF/CNPJ validators, date helpers |
+| 3 | `02_tables.sql` | Tables, constraints, indexes, `app_config` seed |
+| 4 | `03_logic.sql` | Triggers, views, RPC functions |
+| 5 | `04_security.sql` | RLS policies and grants |
+| 6 | `05_storage.sql` | Receipts bucket and its policies (Supabase only) |
+| 7 | `06_jobs.sql` | Daily jobs (commented; enable `pg_cron` first) |
+
+Run them in the Supabase **SQL Editor**, one file at a time, in order. Your current dev project has the older 5-9 table draft: run `99_reset_dev.sql` first (there is no real data), then 00-05. Keep the files in git; never edit tables by hand in the dashboard without copying the change back into `sql/`.
+
+Verify locally without Docker or Supabase:
+
+```bash
+pip install pgserver "psycopg[binary]"
+python sql/tests/run_db_tests.py        # 61 checks: validators, RLS, transfers, invoices, recurring, audit, erasure
+```
+
+`sql/tests/00_mock_supabase.sql` only fakes `auth.users` and `auth.uid()` for that test. Never run it in Supabase.
+
+## 2. Entity-relationship diagram
+
+```mermaid
+erDiagram
+  profiles ||--|| user_settings : has
+  profiles ||--o{ workspaces : owns
+  profiles ||--o{ transfers : owns
+  profiles ||--o{ push_tokens : registers
+  workspaces ||--o{ accounts : contains
+  workspaces ||--o{ categories : defines
+  workspaces ||--o{ budgets : sets
+  workspaces ||--o{ recurring_transactions : schedules
+  workspaces ||--o{ transactions : contains
+  accounts ||--o| credit_card_details : "card settings"
+  credit_card_details ||--o{ credit_card_invoices : bills
+  accounts ||--o{ transactions : records
+  categories ||--o{ transactions : classifies
+  categories ||--o{ budgets : limits
+  credit_card_invoices ||--o{ transactions : groups
+  recurring_transactions ||--o{ transactions : generates
+  transfers ||--o{ transactions : "2 legs"
+  transfers ||--o| credit_card_invoices : "paid by"
+
+  profiles {
+    uuid id PK "= auth.users.id"
+    text full_name
+    uuid active_workspace_id FK
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  user_settings {
+    uuid user_id PK
+    theme_mode theme
+    text locale
+    int lock_timeout_seconds
+    bool biometric_enabled
+    switch_protection switch_protection
+    jsonb notification_prefs
+    bigint low_balance_cents
+    text accepted_terms_version
+  }
+  workspaces {
+    uuid id PK
+    uuid owner_id FK
+    text name
+    workspace_type type "personal | business"
+    tax_id_type tax_id_type "cpf | cnpj"
+    text tax_id "digits/letters, validated"
+    text base_currency
+    int tax_reserve_bps "1 percent = 100"
+  }
+  accounts {
+    uuid id PK
+    uuid workspace_id FK
+    text name
+    account_type type "checking savings investment credit_card"
+    text currency "ISO 4217"
+    bigint opening_balance_cents
+    timestamptz archived_at
+  }
+  credit_card_details {
+    uuid account_id PK
+    bigint limit_cents
+    smallint closing_day
+    smallint due_day
+  }
+  credit_card_invoices {
+    uuid id PK
+    uuid account_id FK
+    date reference_month
+    date period_start
+    date period_end
+    date due_date
+    invoice_status status "open closed paid"
+    uuid paid_by_transfer_id FK
+  }
+  categories {
+    uuid id PK
+    uuid workspace_id FK
+    text name
+    category_kind kind "income | expense"
+    text icon
+    text color
+    bool is_default
+    bool is_tax
+    timestamptz archived_at
+  }
+  transactions {
+    uuid id PK
+    uuid workspace_id FK
+    uuid account_id FK
+    text currency
+    uuid category_id FK
+    uuid invoice_id FK
+    uuid recurring_id FK
+    date scheduled_for
+    uuid transfer_id FK
+    uuid installment_group_id
+    smallint installment_number
+    smallint installment_total
+    transaction_type type "income expense transfer_in transfer_out"
+    transaction_status status "pending posted failed"
+    bigint amount_cents "always positive"
+    text description
+    text notes
+    timestamptz occurred_at
+    text receipt_path
+    timestamptz deleted_at "soft delete"
+  }
+  transfers {
+    uuid id PK
+    uuid owner_id FK
+    transfer_kind kind "internal owner_withdrawal owner_contribution"
+  }
+  budgets {
+    uuid id PK
+    uuid workspace_id FK
+    uuid category_id FK
+    date effective_from "first day of month"
+    bigint limit_cents
+    text currency
+  }
+  recurring_transactions {
+    uuid id PK
+    uuid workspace_id FK
+    uuid account_id FK
+    uuid category_id FK
+    transaction_type type "income | expense"
+    bigint amount_cents
+    text description
+    recurrence_frequency frequency
+    smallint interval_count
+    date start_date
+    date end_date
+    smallint lead_days
+    int generated_count
+    bool is_active
+  }
+  audit_logs {
+    bigint id PK
+    uuid owner_id
+    uuid workspace_id
+    text table_name
+    uuid record_id
+    audit_action action
+    jsonb old_data
+    jsonb new_data
+    uuid changed_by
+    timestamptz occurred_at
+  }
+  push_tokens {
+    uuid id PK
+    uuid user_id FK
+    text token UK
+    text platform
+  }
+  app_config {
+    text key PK
+    jsonb value
+  }
+```
+
+`audit_logs` is filled by triggers on workspaces, accounts, transactions, categories, budgets and recurring_transactions; it has no foreign keys on purpose (it is erased only by `delete_my_account()`).
+
+## 3. What changed from the earlier draft
+
+| Before | Now | Why |
+|---|---|---|
+| `password_hash` in users | removed; `profiles.id = auth.users.id` | Supabase Auth owns passwords |
+| `balance_cents` on accounts | `opening_balance_cents` + derived view | no drift, no races |
+| `tax_reserve_pct` float | `tax_reserve_bps` integer | no floats |
+| `transfer_in` / `transfer_out` rows unrelated | two legs linked by `transfers.id` | integrity + audit |
+| `type: credit` | `credit_card` | clearer |
+| negative amounts for expenses | amounts always positive | direction lives in `type` |
+| `CONFIRMED` | `posted` | single vocabulary with the SRS |
+| `tyoe`, `tranfer_out` typos | fixed | script now runs |
+| weak `auth.role() = 'authenticated'` policies | owner-chained policies | the earlier ones exposed all data |
+| `invoice.total_cents` stored | `invoice_totals` view | derived, cannot go stale |
+
+## 4. Security model
+
+- RLS is on for **every** table. Access is decided by `is_workspace_member(workspace_id)` (today: workspace owner) or `owns_account(account_id)`.
+- Anonymous users can read only `app_config` (needed for the force-update check).
+- Clients cannot: insert workspaces (use `create_workspace`), insert transfer legs (use `create_transfer`), write or delete audit rows, hard-delete transactions, change a workspace's type or tax ID.
+- Privileges are explicit (`04_security.sql` revokes everything first, then grants the minimum). Column-level grants limit which fields clients may update.
+- Internal functions live in schema `private`, which the API does not expose. Public RPCs are `SECURITY DEFINER`, set `search_path`, and check `auth.uid()` ownership themselves.
+
+## 5. RPC functions and views
+
+| Name | Purpose |
+|---|---|
+| `create_workspace(name, type, tax_id)` | Validates tax ID, enforces one per type, seeds default categories, sets active workspace |
+| `switch_workspace(workspace_id)` | Ownership check, stores active workspace |
+| `create_transfer(from, to, amount, description, occurred_at, kind, to_amount, status)` | Two legs; enforces kind rules and currency rules |
+| `delete_transfer(transfer_id)` | Soft-deletes both legs; reopens an invoice this transfer had paid |
+| `create_installments(account, category, total, n, description, purchase_at)` | N charges on consecutive invoices; remainder to the first |
+| `pay_invoice(invoice, from_account, paid_at)` | Creates the payment transfer and marks the invoice paid |
+| `generate_my_recurring(until)` | Creates pending instances (default 35 days ahead), idempotent |
+| `delete_my_account()` | Erases the user's data, audit trail and auth record |
+| `is_valid_cpf(text)`, `is_valid_cnpj(text)` | Check-digit validators (CNPJ accepts letters) |
+| view `account_balances` | posted and projected balance per account |
+| view `invoice_totals` | invoice total per invoice |
+| view `monthly_category_spend` | spent per category per month (America/Sao_Paulo) for budgets and forecast |
+
+Private jobs (scheduled in `06_jobs.sql`): `generate_all_recurring`, `close_due_invoices`, `purge_deleted`.
+
+Stable error keys the app maps (see ARCHITECTURE section 5): `invalid_tax_id`, `workspace_type_already_exists`, `forbidden`, `not authenticated`, `invoice already paid`, `invalid status change`, `transfer legs are managed through ...`.
+
+## 6. Business rules enforced in the database
+
+| Rule | How |
+|---|---|
+| One Personal and one Business per user; Personal=CPF, Business=CNPJ | unique `(owner_id, type)` + check constraints |
+| Valid CPF/CNPJ (incl. alphanumeric CNPJ) | `CHECK` calling the validators |
+| Type and tax ID immutable | trigger |
+| Account, workspace and currency agree on every transaction | composite foreign key `(account_id, workspace_id, currency)` |
+| Category kind matches transaction type | trigger |
+| Budgets only for expense categories | composite foreign key on `category_kind` |
+| Only a credit-card account can have card details | foreign key `(account_id, 'credit_card')` |
+| Charges attach to the correct invoice; paid invoice locks its charges | trigger |
+| Transfer legs managed only through functions | RLS + trigger |
+| Status changes: posted and failed never jump to each other | trigger |
+| Recurring generation never duplicates | unique `(recurring_id, scheduled_for)` |
+| Audit is append-only | trigger (bypassed only by account erasure) |
+
+## 7. What stays in the app (not in the database)
+
+Password policy, session lock, switch protection prompts, notification scheduling, forecast, yield and tax-reserve calculations, OCR parsing, OFX parsing, CSV/PDF export, the 10-second undo, and all display formatting.
+
+## 8. Mapping to Dart enums
+
+Postgres enum labels equal Dart enum names, so `Enum.values.byName(value)` works both ways: `WorkspaceType {personal, business}`, `TaxIdType {cpf, cnpj}`, `AccountType {checking, savings, investment, credit_card}` (Dart: `creditCard` needs an explicit map, since `byName` is case-sensitive: use a small `fromDb/toDb` extension for that one), `TransactionType`, `TransactionStatus`, `CategoryKind`, `InvoiceStatus`, `RecurrenceFrequency`, `TransferKind`, `SwitchProtection`, `ThemeMode`.

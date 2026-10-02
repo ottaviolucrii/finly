@@ -15,7 +15,7 @@ abstract class AuthRepository {
     required String email,
     required String password,
     required String taxId,
-    required String name,
+    required String fullName,
     required WorkspaceType initialWorkspace,
   }); 
 

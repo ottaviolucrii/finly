@@ -1,61 +1,58 @@
+<p align="center"><img src="assets/finly_logo_stacked.png" alt="Finly - Inteligência Financeira" width="220"></p>
+
 # Finly - Financial Intelligence System
 
-**Finly** is a robust, enterprise-grade personal and business finance management application. Built with **Flutter** and **Dart**, the project is designed to demonstrate high-level architectural patterns, scalability, and strict adherence to software engineering best practices.
+**Finly** is a personal and business finance manager built with **Flutter** and **Supabase**. One login gives access to two isolated workspaces - **Personal (CPF)** and **Business (CNPJ)** - with accounts, credit cards, budgets, recurring bills, forecasting and more.
 
----
+## Developer
 
-## 👨‍💻 Developer Information
 * **Name:** Ottavio Lucri de Souza
 * **Education:** Student at Federal University of Itajubá (UNIFEI)
-* **Focus:** Mobile Development & Software Architecture
+* **Focus:** Mobile development and software architecture
 
----
+## Documentation
 
-## 🏛 Architecture & Principles
+| Document | What it is |
+|---|---|
+| [`Finly_SRS_v4`](Finly_SRS_v4.tex) | Requirements: what the system does and the rules it follows |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layers, folders, state management, error handling, decisions (ADRs) |
+| [`docs/DATABASE.md`](docs/DATABASE.md) | ERD, security model, RPC functions, how to apply the SQL |
+| [`docs/UI_GUIDE.md`](docs/UI_GUIDE.md) | Brand tokens, accessibility, components, screens |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Build order and checklists (single place for status) |
+| [`sql/`](sql) | Authoritative schema, RLS, triggers, RPCs, DB tests |
 
-The project is built using **Clean Architecture**, ensuring a complete separation of concerns and high testability. The code is divided into three primary layers:
+## Architecture in one paragraph
 
-1.  **Domain Layer:** The "heart" of the application, containing purely Dart code (Entities, Use Cases, and Repository Interfaces). It has zero dependencies on external frameworks.
-2.  **Data Layer:** Responsible for data persistence and external integrations (Supabase, OCR APIs, Local Storage).
-3.  **Presentation Layer:** Handles UI state management (BLoC/Provider) and user interactions.
+Clean Architecture, feature-first. `presentation` (BLoC) -> `domain` (entities, use cases, repository interfaces, pure Dart) <- `data` (Supabase and local cache). Errors are values (`Either<Failure, T>` with `dartz`). Money is an integer number of cents. The database enforces isolation and integrity itself (RLS, constraints, triggers, RPC functions), so a bug in the app cannot leak or corrupt data.
 
-### Key Engineering Principles:
-* **SOLID:** Strict adherence to all five principles, particularly the **Dependency Inversion Principle (DIP)**.
-* **Functional Error Handling:** Utilizing the `dartz` package for `Either<Failure, Success>` patterns, avoiding excessive try-catch blocks.
-* **Offline-First:** Designed with **UUIDs** to ensure data integrity during synchronization without internet connectivity.
+## Key features
 
----
+* **Dual workspaces** with protected switching and strict data isolation
+* **Accounts and credit cards** with automatic invoices, installments and invoice payment
+* **Transactions and transfers** (pending/posted/failed, trash with undo, owner withdrawals between workspaces)
+* **Budgets, recurring bills, dashboard and reports**
+* **Intelligence:** 12-month forecast, yield simulator, tax reserve for businesses, receipt OCR, smart categories
+* **Security and privacy:** biometric/PIN lock, audit trail, LGPD erasure and export
+* **Brazilian specifics:** CPF and CNPJ (including alphanumeric CNPJ) validation by check digits
 
-## 🚀 Key Features
+## Tech stack
 
-### 🏢 Dual-Workspace Environment
-Unlike standard trackers, Finly allows users to toggle between **Personal (CPF)** and **Business (CNPJ)** workspaces within a single login, maintaining complete data isolation.
+Flutter and Dart · Supabase (PostgreSQL, Auth, Storage, Edge Functions) · BLoC · get_it · go_router · Drift · dartz and equatable · Google ML Kit · FCM
 
-### 📊 Financial Intelligence
-* **12-Month Forecasting:** Predictive cash-flow analysis based on scheduled transactions and historical data.
-* **Investment Yield Simulator:** Real-time growth calculations for assets (e.g., CDI/Fixed Income).
-* **Credit Card Engine:** Deep tracking of statements, limits, and due dates.
+## Getting started
 
-### 🛡 Robustness & Security
-* **Audit Logging:** Read-only records of every financial modification for data integrity.
-* **Biometric Authentication:** Secure access via FaceID/Fingerprint.
-* **Receipt OCR:** Automated expense entry using Optical Character Recognition.
+```bash
+flutter pub get
+flutter run --dart-define=SUPABASE_URL=<url> --dart-define=SUPABASE_ANON_KEY=<anon key>
+```
 
----
+Database: apply `sql/00` to `sql/05` in the Supabase SQL editor (see `docs/DATABASE.md`). Check the rules locally with:
 
-## 🛠 Tech Stack
-* **Frontend:** Flutter & Dart
-* **Backend:** Supabase (PostgreSQL, Auth, Storage)
-* **State Management:** BLoC / Provider
-* **Local DB:** Drift (SQLite) / Hive
-* **Packages:** Equatable, Dartz, Google ML Kit
+```bash
+pip install pgserver "psycopg[binary]"
+python sql/tests/run_db_tests.py
+```
 
----
+## Roadmap
 
-## 📅 Project Roadmap
-- [x] **Sprint 1:** Domain Layer setup (Entities & Use Cases)
-- [ ] **Sprint 2:** Data Layer integration (Supabase Auth & Database)
-- [ ] **Sprint 3:** Core Features (Transaction Flow & Credit Cards)
-- [ ] **Sprint 4:** Advanced Intelligence (OCR & Forecasting)
-
----
+Tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md): Phase 0 foundation · 1 identity and workspaces · 2 core ledger · 3 cards, budgets, recurring · 4 overview and alerts · 5 intelligence · 6 data and currency · 7 hardening and release.
