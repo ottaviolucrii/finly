@@ -24,6 +24,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         _getCurrentUser = getCurrentUser,
         super(const AuthState.initial()) {
     on<AuthStarted>(_onAuthStarted);
+    on<UserRefreshRequested>(_onUserRefreshRequested);
     on<SignInSubmitted>(_onSignInSubmitted);
     on<SignUpSubmitted>(_onSignUpSubmitted);
     on<SignOutRequested>(_onSignOutRequested);
@@ -45,6 +46,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           ? const AuthState.unauthenticated()
           : AuthState.authenticated(user),
     ));
+  }
+
+  /// Reloads the user. If it fails, the current state is kept.
+  Future<void> _onUserRefreshRequested(
+    UserRefreshRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    final result = await _getCurrentUser(const NoParams());
+    result.fold(
+      (_) {},
+      (user) {
+        if (user != null) emit(AuthState.authenticated(user));
+      },
+    );
   }
 
   Future<void> _onSignInSubmitted(

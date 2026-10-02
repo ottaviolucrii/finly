@@ -4,6 +4,7 @@ import 'package:finly/features/auth/presentation/pages/home_placeholder_page.dar
 import 'package:finly/features/auth/presentation/pages/sign_in_page.dart';
 import 'package:finly/features/auth/presentation/pages/splash_page.dart';
 import 'package:finly/features/auth/presentation/pages/verify_email_page.dart';
+import 'package:finly/features/workspaces/presentation/pages/onboarding_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -17,7 +18,15 @@ class AuthGate extends StatelessWidget {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state.status == AuthStatus.initial) return const SplashPage();
-        if (state.user != null) return const HomePlaceholderPage();
+
+        final user = state.user;
+        if (user != null) {
+          // Signed in but no workspace yet: onboarding.
+          return user.workspaces.isEmpty
+              ? const OnboardingPage()
+              : const HomePlaceholderPage();
+        }
+
         if (state.status == AuthStatus.emailVerificationPending) {
           return VerifyEmailPage(email: state.email ?? '');
         }

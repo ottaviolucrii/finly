@@ -1,3 +1,4 @@
+import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/auth/presentation/auth_messages.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
@@ -5,7 +6,7 @@ import 'package:finly/features/auth/presentation/bloc/auth_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// Temporary home after sign-in. Replaced by onboarding and the dashboard.
+/// Temporary home after sign-in. Replaced by the dashboard (Phase 4).
 class HomePlaceholderPage extends StatelessWidget {
   const HomePlaceholderPage({super.key});
 
@@ -31,6 +32,7 @@ class HomePlaceholderPage extends StatelessWidget {
         final user = state.user;
         if (user == null) return const SizedBox.shrink();
         final firstName = user.fullName.trim().split(' ').first;
+        final workspace = user.activeWorkspace;
 
         return Scaffold(
           appBar: AppBar(title: const Text('Finly')),
@@ -44,9 +46,20 @@ class HomePlaceholderPage extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(user.email, style: text.bodyMedium),
                   const SizedBox(height: 24),
+                  if (workspace != null) ...[
+                    Text(workspace.name, style: text.titleLarge),
+                    const SizedBox(height: 4),
+                    Text(
+                      workspace.type == WorkspaceType.personal
+                          ? 'Workspace pessoal (CPF)'
+                          : 'Workspace da empresa (CNPJ)',
+                      style: text.bodyMedium,
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                   Text(
-                    'Login funcionando. O próximo passo é criar seu primeiro '
-                    'workspace (Pessoal ou Empresa).',
+                    'Login e workspace funcionando. O próximo passo são as '
+                    'contas e as transações.',
                     style: text.bodyLarge,
                   ),
                   const Spacer(),
