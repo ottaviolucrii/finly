@@ -78,6 +78,7 @@ void main() {
     },
     act: (cubit) => cubit.loadOtherAccounts('w2'),
     expect: () => [
+      const TransferFormState(status: TransferFormStatus.loading),
       const TransferFormState(
         status: TransferFormStatus.ready,
         otherAccounts: [otherAccount],
@@ -97,6 +98,7 @@ void main() {
     },
     act: (cubit) => cubit.loadOtherAccounts('w2'),
     expect: () => [
+      const TransferFormState(status: TransferFormStatus.loading),
       const TransferFormState(
         status: TransferFormStatus.loadFailed,
         failure: NetworkFailure('network_error'),
