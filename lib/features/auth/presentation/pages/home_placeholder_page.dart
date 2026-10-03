@@ -7,6 +7,7 @@ import 'package:finly/features/auth/presentation/auth_messages.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_state.dart';
+import 'package:finly/features/transactions/presentation/pages/transactions_page.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_cubit.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_state.dart';
 import 'package:finly/features/workspaces/presentation/pages/onboarding_page.dart';
@@ -144,14 +145,29 @@ class _HomeView extends StatelessWidget {
                     Text(user.email, style: text.bodyMedium),
                     const SizedBox(height: 16),
                     if (active != null)
-                      FilledButton.tonalIcon(
-                        icon: const Icon(Icons.account_balance_wallet_outlined),
-                        label: const Text('Contas'),
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => AccountsPage(workspace: active),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          FilledButton.tonalIcon(
+                            icon: const Icon(Icons.account_balance_wallet_outlined),
+                            label: const Text('Contas'),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => AccountsPage(workspace: active),
+                              ),
+                            ),
                           ),
-                        ),
+                          FilledButton.tonalIcon(
+                            icon: const Icon(Icons.receipt_long_outlined),
+                            label: const Text('Transações'),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => TransactionsPage(workspace: active),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     const SizedBox(height: 24),
                     Text('Seus workspaces', style: text.titleMedium),
