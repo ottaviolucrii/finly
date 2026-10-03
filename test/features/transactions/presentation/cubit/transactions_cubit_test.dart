@@ -16,6 +16,7 @@ import 'package:finly/features/transactions/domain/usecases/get_transactions_use
 import 'package:finly/features/transactions/domain/usecases/restore_transaction_use_case.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_state.dart';
+import 'package:finly/features/transfers/domain/usecases/delete_transfer_use_case.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -31,6 +32,8 @@ class MockDelete extends Mock implements DeleteTransactionUseCase {}
 
 class MockRestore extends Mock implements RestoreTransactionUseCase {}
 
+class MockDeleteTransfer extends Mock implements DeleteTransferUseCase {}
+
 void main() {
   late MockGetTransactions getTransactions;
   late MockGetAccounts getAccounts;
@@ -38,10 +41,15 @@ void main() {
   late MockConfirm confirm;
   late MockDelete delete;
   late MockRestore restore;
+  late MockDeleteTransfer deleteTransfer;
 
   final occurredAt = DateTime(2026, 10, 2, 12);
 
-  TransactionEntity transaction(String id, TransactionStatus status) {
+  TransactionEntity transaction(
+    String id,
+    TransactionStatus status, {
+    String? transferId,
+  }) {
     return TransactionEntity(
       id: id,
       workspaceId: 'w1',
@@ -53,12 +61,15 @@ void main() {
       currency: 'BRL',
       description: 'Mercado',
       occurredAt: occurredAt,
+      transferId: transferId,
     );
   }
 
   final first = transaction('t1', TransactionStatus.posted);
   final second = transaction('t2', TransactionStatus.posted);
   final pending = transaction('t1', TransactionStatus.pending);
+  final legOut = transaction('l1', TransactionStatus.posted, transferId: 'tr1');
+  final legIn = transaction('l2', TransactionStatus.posted, transferId: 'tr1');
 
   const account = AccountEntity(
     id: 'a1',
@@ -87,6 +98,7 @@ void main() {
     confirm = MockConfirm();
     delete = MockDelete();
     restore = MockRestore();
+    deleteTransfer = MockDeleteTransfer();
 
     when(() => getAccounts('w1')).thenAnswer(
       (_) async => const Right<Failure, List<AccountEntity>>([account]),
@@ -103,6 +115,7 @@ void main() {
         confirmTransaction: confirm,
         deleteTransaction: delete,
         restoreTransaction: restore,
+        deleteTransfer: deleteTransfer,
       );
 
   void stubTransactions(List<TransactionEntity> list) {
@@ -247,5 +260,47 @@ void main() {
       loaded([first, second]),
     ],
     verify: (_) => verify(() => restore('t1')).called(1),
+  );
+
+  blocTest<TransactionsCubit, TransactionsState>(
+    'deleteTransfer removes both ends from the list and calls the server once',
+    build: () {
+      when(() => deleteTransfer('tr1'))
+          .thenAnswer((_) async => const Right<Failure, void>(null));
+      return buildCubit();
+    },
+    seed: () => loaded([legOut, legIn, first]),
+    act: (cubit) => cubit.deleteTransfer(legOut),
+    expect: () => [loaded([first])],
+    verify: (_) => verify(() => deleteTransfer('tr1')).called(1),
+  );
+
+  blocTest<TransactionsCubit, TransactionsState>(
+    'deleteTransfer puts both ends back when the server refuses',
+    build: () {
+      when(() => deleteTransfer('tr1')).thenAnswer(
+        (_) async =>
+            const Left<Failure, void>(PermissionFailure('forbidden')),
+      );
+      return buildCubit();
+    },
+    seed: () => loaded([legOut, legIn, first]),
+    act: (cubit) => cubit.deleteTransfer(legOut),
+    expect: () => [
+      loaded([first]),
+      loaded(
+        [legOut, legIn, first],
+        actionFailure: const PermissionFailure('forbidden'),
+      ),
+    ],
+  );
+
+  blocTest<TransactionsCubit, TransactionsState>(
+    'deleteTransfer ignores a transaction that is not part of a transfer',
+    build: buildCubit,
+    seed: () => loaded([first]),
+    act: (cubit) => cubit.deleteTransfer(first),
+    expect: () => <TransactionsState>[],
+    verify: (_) => verifyNever(() => deleteTransfer(any())),
   );
 }

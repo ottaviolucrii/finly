@@ -14,6 +14,7 @@ class TransactionModel extends TransactionEntity {
     required super.currency,
     required super.description,
     required super.occurredAt,
+    super.transferId,
   });
 
   /// [map] is a row of the `transactions` table. Timestamps arrive in UTC
@@ -30,6 +31,7 @@ class TransactionModel extends TransactionEntity {
       currency: map['currency'] as String,
       description: map['description'] as String,
       occurredAt: DateTime.parse(map['occurred_at'] as String).toLocal(),
+      transferId: map['transfer_id'] as String?,
     );
   }
 }

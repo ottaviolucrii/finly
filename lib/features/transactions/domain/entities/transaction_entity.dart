@@ -17,6 +17,9 @@ class TransactionEntity extends Equatable {
   final String description;
   final DateTime occurredAt;
 
+  /// Set when this entry is one end of a transfer. Both ends share the id.
+  final String? transferId;
+
   const TransactionEntity({
     required this.id,
     required this.workspaceId,
@@ -28,6 +31,7 @@ class TransactionEntity extends Equatable {
     required this.currency,
     required this.description,
     required this.occurredAt,
+    this.transferId,
   });
 
   Money get amount => Money(amountCents, currency);
@@ -36,6 +40,8 @@ class TransactionEntity extends Equatable {
   int get signedCents => type.isCredit ? amountCents : -amountCents;
 
   bool get isPending => status == TransactionStatus.pending;
+
+  bool get isTransferLeg => transferId != null;
 
   @override
   List<Object?> get props => [
@@ -49,5 +55,6 @@ class TransactionEntity extends Equatable {
         currency,
         description,
         occurredAt,
+        transferId,
       ];
 }
