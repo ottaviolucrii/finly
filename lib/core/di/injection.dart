@@ -15,6 +15,15 @@ import 'package:finly/features/auth/domain/usecases/sign_out_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/sign_up_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/switch_workspace_use_case.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:finly/features/cards/data/datasources/card_remote_data_source.dart';
+import 'package:finly/features/cards/data/repositories/card_repository_impl.dart';
+import 'package:finly/features/cards/domain/repositories/card_repository.dart';
+import 'package:finly/features/cards/domain/usecases/create_card_use_case.dart';
+import 'package:finly/features/cards/domain/usecases/create_installments_use_case.dart';
+import 'package:finly/features/cards/domain/usecases/get_cards_use_case.dart';
+import 'package:finly/features/cards/domain/usecases/get_invoice_transactions_use_case.dart';
+import 'package:finly/features/cards/domain/usecases/get_invoices_use_case.dart';
+import 'package:finly/features/cards/domain/usecases/pay_invoice_use_case.dart';
 import 'package:finly/features/categories/data/datasources/category_remote_data_source.dart';
 import 'package:finly/features/categories/data/repositories/category_repository_impl.dart';
 import 'package:finly/features/categories/domain/repositories/category_repository.dart';
@@ -125,6 +134,17 @@ void configureDependencies() {
     ..registerLazySingleton(() => CreateTransferUseCase(sl()))
     ..registerLazySingleton(() => DeleteTransferUseCase(sl()))
     ..registerFactory(() => TransferFormCubit(sl(), sl()))
+    // cards
+    ..registerLazySingleton<CardRemoteDataSource>(
+      () => CardRemoteDataSourceImpl(sl()),
+    )
+    ..registerLazySingleton<CardRepository>(() => CardRepositoryImpl(sl()))
+    ..registerLazySingleton(() => GetCardsUseCase(sl()))
+    ..registerLazySingleton(() => CreateCardUseCase(sl()))
+    ..registerLazySingleton(() => GetInvoicesUseCase(sl()))
+    ..registerLazySingleton(() => GetInvoiceTransactionsUseCase(sl()))
+    ..registerLazySingleton(() => CreateInstallmentsUseCase(sl()))
+    ..registerLazySingleton(() => PayInvoiceUseCase(sl()))
     // transactions: presentation
     ..registerFactory(
       () => TransactionsCubit(
