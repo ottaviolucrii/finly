@@ -15,6 +15,10 @@ import 'package:finly/features/auth/domain/usecases/sign_out_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/sign_up_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/switch_workspace_use_case.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:finly/features/categories/data/datasources/category_remote_data_source.dart';
+import 'package:finly/features/categories/data/repositories/category_repository_impl.dart';
+import 'package:finly/features/categories/domain/repositories/category_repository.dart';
+import 'package:finly/features/categories/domain/usecases/get_categories_use_case.dart';
 import 'package:finly/features/transactions/data/datasources/transaction_remote_data_source.dart';
 import 'package:finly/features/transactions/data/repositories/transaction_repository_impl.dart';
 import 'package:finly/features/transactions/domain/repositories/transaction_repository.dart';
@@ -23,6 +27,8 @@ import 'package:finly/features/transactions/domain/usecases/create_transaction_u
 import 'package:finly/features/transactions/domain/usecases/delete_transaction_use_case.dart';
 import 'package:finly/features/transactions/domain/usecases/get_transactions_use_case.dart';
 import 'package:finly/features/transactions/domain/usecases/restore_transaction_use_case.dart';
+import 'package:finly/features/transactions/presentation/cubit/transaction_form_cubit.dart';
+import 'package:finly/features/transactions/presentation/cubit/transactions_cubit.dart';
 import 'package:finly/features/workspaces/data/datasources/workspace_remote_data_source.dart';
 import 'package:finly/features/workspaces/data/repositories/workspace_repository_impl.dart';
 import 'package:finly/features/workspaces/domain/repositories/workspace_repository.dart';
@@ -82,6 +88,14 @@ void configureDependencies() {
     ..registerLazySingleton(() => ArchiveAccountUseCase(sl()))
     ..registerFactory(() => AccountsCubit(sl(), sl()))
     ..registerFactory(() => AccountFormCubit(sl()))
+    // categories
+    ..registerLazySingleton<CategoryRemoteDataSource>(
+      () => CategoryRemoteDataSourceImpl(sl()),
+    )
+    ..registerLazySingleton<CategoryRepository>(
+      () => CategoryRepositoryImpl(sl()),
+    )
+    ..registerLazySingleton(() => GetCategoriesUseCase(sl()))
     // transactions: data layer
     ..registerLazySingleton<TransactionRemoteDataSource>(
       () => TransactionRemoteDataSourceImpl(sl()),
@@ -94,5 +108,17 @@ void configureDependencies() {
     ..registerLazySingleton(() => CreateTransactionUseCase(sl()))
     ..registerLazySingleton(() => ConfirmTransactionUseCase(sl()))
     ..registerLazySingleton(() => DeleteTransactionUseCase(sl()))
-    ..registerLazySingleton(() => RestoreTransactionUseCase(sl()));
+    ..registerLazySingleton(() => RestoreTransactionUseCase(sl()))
+    // transactions: presentation
+    ..registerFactory(
+      () => TransactionsCubit(
+        getTransactions: sl(),
+        getAccounts: sl(),
+        getCategories: sl(),
+        confirmTransaction: sl(),
+        deleteTransaction: sl(),
+        restoreTransaction: sl(),
+      ),
+    )
+    ..registerFactory(() => TransactionFormCubit(sl()));
 }
