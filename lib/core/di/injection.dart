@@ -15,6 +15,14 @@ import 'package:finly/features/auth/domain/usecases/sign_out_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/sign_up_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/switch_workspace_use_case.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:finly/features/transactions/data/datasources/transaction_remote_data_source.dart';
+import 'package:finly/features/transactions/data/repositories/transaction_repository_impl.dart';
+import 'package:finly/features/transactions/domain/repositories/transaction_repository.dart';
+import 'package:finly/features/transactions/domain/usecases/confirm_transaction_use_case.dart';
+import 'package:finly/features/transactions/domain/usecases/create_transaction_use_case.dart';
+import 'package:finly/features/transactions/domain/usecases/delete_transaction_use_case.dart';
+import 'package:finly/features/transactions/domain/usecases/get_transactions_use_case.dart';
+import 'package:finly/features/transactions/domain/usecases/restore_transaction_use_case.dart';
 import 'package:finly/features/workspaces/data/datasources/workspace_remote_data_source.dart';
 import 'package:finly/features/workspaces/data/repositories/workspace_repository_impl.dart';
 import 'package:finly/features/workspaces/domain/repositories/workspace_repository.dart';
@@ -73,5 +81,18 @@ void configureDependencies() {
     ..registerLazySingleton(() => CreateAccountUseCase(sl()))
     ..registerLazySingleton(() => ArchiveAccountUseCase(sl()))
     ..registerFactory(() => AccountsCubit(sl(), sl()))
-    ..registerFactory(() => AccountFormCubit(sl()));
+    ..registerFactory(() => AccountFormCubit(sl()))
+    // transactions: data layer
+    ..registerLazySingleton<TransactionRemoteDataSource>(
+      () => TransactionRemoteDataSourceImpl(sl()),
+    )
+    ..registerLazySingleton<TransactionRepository>(
+      () => TransactionRepositoryImpl(sl()),
+    )
+    // transactions: use cases
+    ..registerLazySingleton(() => GetTransactionsUseCase(sl()))
+    ..registerLazySingleton(() => CreateTransactionUseCase(sl()))
+    ..registerLazySingleton(() => ConfirmTransactionUseCase(sl()))
+    ..registerLazySingleton(() => DeleteTransactionUseCase(sl()))
+    ..registerLazySingleton(() => RestoreTransactionUseCase(sl()));
 }
