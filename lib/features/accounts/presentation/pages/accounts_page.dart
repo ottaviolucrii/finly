@@ -183,9 +183,14 @@ class _AccountTile extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(accountTypeIcon(account.type), color: scheme.primary),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(accountTypeIcon(account.type), color: scheme.primary),
+            ),
             const SizedBox(width: 16),
+            // The name gets the full width; the balance sits below it.
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,21 +198,23 @@ class _AccountTile extends StatelessWidget {
                   Text(
                     account.name,
                     style: text.titleMedium,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(accountTypeLabel(account.type), style: text.bodySmall),
+                  const SizedBox(height: 6),
+                  Text(
+                    balance.format(),
+                    style: text.titleLarge?.copyWith(
+                      color: balance.isNegative ? scheme.error : null,
+                    ),
+                  ),
                   if (account.hasPendingEffect)
                     Text(
                       'Previsto: ${account.projectedBalance.format()}',
                       style: text.bodySmall,
                     ),
                 ],
-              ),
-            ),
-            Text(
-              balance.format(),
-              style: text.titleMedium?.copyWith(
-                color: balance.isNegative ? scheme.error : null,
               ),
             ),
             PopupMenuButton<String>(

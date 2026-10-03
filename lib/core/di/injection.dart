@@ -29,6 +29,12 @@ import 'package:finly/features/transactions/domain/usecases/get_transactions_use
 import 'package:finly/features/transactions/domain/usecases/restore_transaction_use_case.dart';
 import 'package:finly/features/transactions/presentation/cubit/transaction_form_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_cubit.dart';
+import 'package:finly/features/transfers/data/datasources/transfer_remote_data_source.dart';
+import 'package:finly/features/transfers/data/repositories/transfer_repository_impl.dart';
+import 'package:finly/features/transfers/domain/repositories/transfer_repository.dart';
+import 'package:finly/features/transfers/domain/usecases/create_transfer_use_case.dart';
+import 'package:finly/features/transfers/domain/usecases/delete_transfer_use_case.dart';
+import 'package:finly/features/transfers/presentation/cubit/transfer_form_cubit.dart';
 import 'package:finly/features/workspaces/data/datasources/workspace_remote_data_source.dart';
 import 'package:finly/features/workspaces/data/repositories/workspace_repository_impl.dart';
 import 'package:finly/features/workspaces/domain/repositories/workspace_repository.dart';
@@ -109,6 +115,16 @@ void configureDependencies() {
     ..registerLazySingleton(() => ConfirmTransactionUseCase(sl()))
     ..registerLazySingleton(() => DeleteTransactionUseCase(sl()))
     ..registerLazySingleton(() => RestoreTransactionUseCase(sl()))
+    // transfers
+    ..registerLazySingleton<TransferRemoteDataSource>(
+      () => TransferRemoteDataSourceImpl(sl()),
+    )
+    ..registerLazySingleton<TransferRepository>(
+      () => TransferRepositoryImpl(sl()),
+    )
+    ..registerLazySingleton(() => CreateTransferUseCase(sl()))
+    ..registerLazySingleton(() => DeleteTransferUseCase(sl()))
+    ..registerFactory(() => TransferFormCubit(sl(), sl()))
     // transactions: presentation
     ..registerFactory(
       () => TransactionsCubit(
@@ -118,6 +134,7 @@ void configureDependencies() {
         confirmTransaction: sl(),
         deleteTransaction: sl(),
         restoreTransaction: sl(),
+        deleteTransfer: sl(),
       ),
     )
     ..registerFactory(() => TransactionFormCubit(sl()));

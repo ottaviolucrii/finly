@@ -9,6 +9,7 @@ import 'package:finly/features/transactions/domain/usecases/delete_transaction_u
 import 'package:finly/features/transactions/domain/usecases/get_transactions_use_case.dart';
 import 'package:finly/features/transactions/domain/usecases/restore_transaction_use_case.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_state.dart';
+import 'package:finly/features/transfers/domain/usecases/delete_transfer_use_case.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class TransactionsCubit extends Cubit<TransactionsState> {
@@ -18,6 +19,7 @@ class TransactionsCubit extends Cubit<TransactionsState> {
   final ConfirmTransactionUseCase _confirmTransaction;
   final DeleteTransactionUseCase _deleteTransaction;
   final RestoreTransactionUseCase _restoreTransaction;
+  final DeleteTransferUseCase _deleteTransfer;
   String? _workspaceId;
 
   TransactionsCubit({
@@ -27,12 +29,14 @@ class TransactionsCubit extends Cubit<TransactionsState> {
     required ConfirmTransactionUseCase confirmTransaction,
     required DeleteTransactionUseCase deleteTransaction,
     required RestoreTransactionUseCase restoreTransaction,
+    required DeleteTransferUseCase deleteTransfer,
   })  : _getTransactions = getTransactions,
         _getAccounts = getAccounts,
         _getCategories = getCategories,
         _confirmTransaction = confirmTransaction,
         _deleteTransaction = deleteTransaction,
         _restoreTransaction = restoreTransaction,
+        _deleteTransfer = deleteTransfer,
         super(const TransactionsState());
 
   Future<void> load(String workspaceId) async {
@@ -128,6 +132,26 @@ class TransactionsCubit extends Cubit<TransactionsState> {
     await result.fold<Future<void>>(
       (failure) async => emit(state.withData(actionFailure: failure)),
       (_) => reload(),
+    );
+  }
+
+  /// Deletes a whole transfer (both entries) from one of its ends. There is
+  /// no undo: the database restores single transactions, not transfers.
+  Future<void> deleteTransfer(TransactionEntity leg) async {
+    final transferId = leg.transferId;
+    if (transferId == null) return;
+
+    final previous = state;
+    emit(previous.withData(
+      transactions: previous.transactions
+          .where((t) => t.transferId != transferId)
+          .toList(),
+    ));
+
+    final result = await _deleteTransfer(transferId);
+    result.fold(
+      (failure) => emit(previous.withData(actionFailure: failure)),
+      (_) {},
     );
   }
 }

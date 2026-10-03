@@ -4,6 +4,7 @@ import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
+import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
@@ -12,6 +13,7 @@ import 'package:finly/features/transactions/presentation/cubit/transactions_stat
 import 'package:finly/features/transactions/presentation/pages/transaction_form_page.dart';
 import 'package:finly/features/transactions/presentation/transaction_messages.dart';
 import 'package:finly/features/transactions/presentation/transaction_style.dart';
+import 'package:finly/features/transfers/presentation/pages/transfer_form_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -60,6 +62,59 @@ class _TransactionsView extends StatelessWidget {
     if (created == true) await cubit.reload();
   }
 
+  Future<void> _openTransferForm(
+    BuildContext context,
+    TransactionsState state,
+  ) async {
+    if (state.accounts.isEmpty) {
+      _showMessage(context, 'Crie uma conta antes de transferir.');
+      return;
+    }
+
+    // The user's other workspace, when there is one.
+    WorkspaceEntity? other;
+    final user = context.read<AuthBloc>().state.user;
+    for (final candidate in user?.workspaces ?? const <WorkspaceEntity>[]) {
+      if (candidate.id != workspace.id) other = candidate;
+    }
+
+    final cubit = context.read<TransactionsCubit>();
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => TransferFormPage(
+          workspace: workspace,
+          accounts: state.accounts,
+          otherWorkspace: other,
+        ),
+      ),
+    );
+    if (created == true) await cubit.reload();
+  }
+
+  Future<bool> _confirmTransferDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir transferência?'),
+        content: const Text(
+          'As duas pontas da transferência serão excluídas e os saldos '
+          'voltam ao que eram. Não é possível desfazer por aqui.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isBusiness = workspace.type == WorkspaceType.business;
@@ -98,6 +153,13 @@ class _TransactionsView extends StatelessWidget {
             title: const Text('Transações'),
             backgroundColor: isBusiness ? AppColors.deepBlue : null,
             foregroundColor: isBusiness ? AppColors.white : null,
+            actions: [
+              IconButton(
+                tooltip: 'Transferir',
+                icon: const Icon(Icons.swap_horiz),
+                onPressed: () => _openTransferForm(context, state),
+              ),
+            ],
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _openForm(context, state),
@@ -148,7 +210,12 @@ class _TransactionsView extends StatelessWidget {
           account: accountById[transaction.accountId],
           category: categoryById[transaction.categoryId],
           onConfirm: () => cubit.confirm(transaction.id),
-          onDelete: () => cubit.delete(transaction),
+          onDelete: () => transaction.isTransferLeg
+              ? cubit.deleteTransfer(transaction)
+              : cubit.delete(transaction),
+          confirmDelete: transaction.isTransferLeg
+              ? () => _confirmTransferDelete(context)
+              : null,
         ),
       );
     }
@@ -167,12 +234,16 @@ class _TransactionTile extends StatelessWidget {
   final VoidCallback onConfirm;
   final VoidCallback onDelete;
 
+  /// Asks before deleting (used for transfers). Null means no question.
+  final Future<bool> Function()? confirmDelete;
+
   const _TransactionTile({
     required this.transaction,
     required this.account,
     required this.category,
     required this.onConfirm,
     required this.onDelete,
+    required this.confirmDelete,
   });
 
   @override
@@ -192,13 +263,16 @@ class _TransactionTile extends StatelessWidget {
         : transactionTypeIcon(transaction.type);
 
     final subtitle = [
-      category?.name ?? 'Sem categoria',
+      category?.name ??
+          (transaction.isTransferLeg ? 'Transferência' : 'Sem categoria'),
       account?.name ?? 'Conta',
     ].join(' · ');
 
     return Dismissible(
       key: ValueKey(transaction.id),
       direction: DismissDirection.endToStart,
+      confirmDismiss:
+          confirmDelete == null ? null : (_) => confirmDelete!.call(),
       onDismissed: (_) => onDelete(),
       background: Container(
         alignment: Alignment.centerRight,
@@ -259,7 +333,11 @@ class _TransactionTile extends StatelessWidget {
               ),
               PopupMenuButton<String>(
                 tooltip: 'Mais opções',
-                onSelected: (_) => onDelete(),
+                onSelected: (_) async {
+                  final ask = confirmDelete;
+                  if (ask != null && !await ask()) return;
+                  onDelete();
+                },
                 itemBuilder: (_) => const [
                   PopupMenuItem(value: 'delete', child: Text('Excluir')),
                 ],
