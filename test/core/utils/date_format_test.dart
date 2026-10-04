@@ -9,6 +9,14 @@ void main() {
     });
   });
 
+  group('monthYearLabel', () {
+    test('uses the short Portuguese month name and the year', () {
+      expect(monthYearLabel(DateTime(2026, 3)), 'mar/2026');
+      expect(monthYearLabel(DateTime(2026, 1, 15)), 'jan/2026');
+      expect(monthYearLabel(DateTime(2026, 12)), 'dez/2026');
+    });
+  });
+
   group('dayLabel', () {
     final now = DateTime(2026, 10, 2, 0, 1);
 
