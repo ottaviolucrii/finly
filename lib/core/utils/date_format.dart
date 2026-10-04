@@ -1,9 +1,28 @@
+const List<String> _monthNames = [
+  'jan',
+  'fev',
+  'mar',
+  'abr',
+  'mai',
+  'jun',
+  'jul',
+  'ago',
+  'set',
+  'out',
+  'nov',
+  'dez',
+];
+
 /// "02/10/2026".
 String formatDateBr(DateTime date) {
   final day = date.day.toString().padLeft(2, '0');
   final month = date.month.toString().padLeft(2, '0');
   return '$day/$month/${date.year}';
 }
+
+/// "mar/2026": the month and year, for invoices.
+String monthYearLabel(DateTime date) =>
+    '${_monthNames[date.month - 1]}/${date.year}';
 
 /// "Hoje", "Ontem" or the date. Compares calendar days, not 24-hour spans,
 /// so a late-night entry is still "Ontem" the next morning.

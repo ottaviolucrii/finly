@@ -7,6 +7,7 @@ import 'package:finly/features/auth/presentation/auth_messages.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_state.dart';
+import 'package:finly/features/cards/presentation/pages/cards_page.dart';
 import 'package:finly/features/transactions/presentation/pages/transactions_page.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_cubit.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_state.dart';
@@ -164,6 +165,15 @@ class _HomeView extends StatelessWidget {
                             onPressed: () => Navigator.of(context).push(
                               MaterialPageRoute<void>(
                                 builder: (_) => TransactionsPage(workspace: active),
+                              ),
+                            ),
+                          ),
+                          FilledButton.tonalIcon(
+                            icon: const Icon(Icons.credit_card),
+                            label: const Text('Cartões'),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => CardsPage(workspace: active),
                               ),
                             ),
                           ),

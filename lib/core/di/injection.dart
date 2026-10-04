@@ -24,6 +24,10 @@ import 'package:finly/features/cards/domain/usecases/get_cards_use_case.dart';
 import 'package:finly/features/cards/domain/usecases/get_invoice_transactions_use_case.dart';
 import 'package:finly/features/cards/domain/usecases/get_invoices_use_case.dart';
 import 'package:finly/features/cards/domain/usecases/pay_invoice_use_case.dart';
+import 'package:finly/features/cards/presentation/cubit/card_form_cubit.dart';
+import 'package:finly/features/cards/presentation/cubit/cards_cubit.dart';
+import 'package:finly/features/cards/presentation/cubit/invoice_detail_cubit.dart';
+import 'package:finly/features/cards/presentation/cubit/invoices_cubit.dart';
 import 'package:finly/features/categories/data/datasources/category_remote_data_source.dart';
 import 'package:finly/features/categories/data/repositories/category_repository_impl.dart';
 import 'package:finly/features/categories/domain/repositories/category_repository.dart';
@@ -134,7 +138,7 @@ void configureDependencies() {
     ..registerLazySingleton(() => CreateTransferUseCase(sl()))
     ..registerLazySingleton(() => DeleteTransferUseCase(sl()))
     ..registerFactory(() => TransferFormCubit(sl(), sl()))
-    // cards
+    // cards: data layer and use cases
     ..registerLazySingleton<CardRemoteDataSource>(
       () => CardRemoteDataSourceImpl(sl()),
     )
@@ -145,6 +149,11 @@ void configureDependencies() {
     ..registerLazySingleton(() => GetInvoiceTransactionsUseCase(sl()))
     ..registerLazySingleton(() => CreateInstallmentsUseCase(sl()))
     ..registerLazySingleton(() => PayInvoiceUseCase(sl()))
+    // cards: presentation
+    ..registerFactory(() => CardsCubit(sl()))
+    ..registerFactory(() => CardFormCubit(sl()))
+    ..registerFactory(() => InvoicesCubit(sl()))
+    ..registerFactory(() => InvoiceDetailCubit(sl()))
     // transactions: presentation
     ..registerFactory(
       () => TransactionsCubit(

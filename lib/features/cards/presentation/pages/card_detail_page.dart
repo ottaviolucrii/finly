@@ -1,0 +1,198 @@
+import 'package:finly/core/di/injection.dart';
+import 'package:finly/core/money/money.dart';
+import 'package:finly/core/theme/app_colors.dart';
+import 'package:finly/core/utils/date_format.dart';
+import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
+import 'package:finly/features/auth/domain/entities/workspace_type.dart';
+import 'package:finly/features/cards/domain/entities/credit_card_entity.dart';
+import 'package:finly/features/cards/domain/entities/invoice_entity.dart';
+import 'package:finly/features/cards/presentation/card_messages.dart';
+import 'package:finly/features/cards/presentation/card_style.dart';
+import 'package:finly/features/cards/presentation/cubit/invoices_cubit.dart';
+import 'package:finly/features/cards/presentation/cubit/invoices_state.dart';
+import 'package:finly/features/cards/presentation/pages/invoice_detail_page.dart';
+import 'package:finly/features/cards/presentation/widgets/card_usage_summary.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+/// One card: its limit and its invoices.
+class CardDetailPage extends StatelessWidget {
+  final WorkspaceEntity workspace;
+  final CreditCardEntity card;
+
+  const CardDetailPage({super.key, required this.workspace, required this.card});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => sl<InvoicesCubit>()..load(card.accountId),
+      child: _CardDetailView(workspace: workspace, card: card),
+    );
+  }
+}
+
+class _CardDetailView extends StatelessWidget {
+  final WorkspaceEntity workspace;
+  final CreditCardEntity card;
+
+  const _CardDetailView({required this.workspace, required this.card});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final isBusiness = workspace.type == WorkspaceType.business;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(card.name),
+        backgroundColor: isBusiness ? AppColors.deepBlue : null,
+        foregroundColor: isBusiness ? AppColors.white : null,
+      ),
+      body: BlocBuilder<InvoicesCubit, InvoicesState>(
+        builder: (context, state) {
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Fecha dia ${card.closingDay} · vence dia ${card.dueDay}',
+                        style: text.bodySmall,
+                      ),
+                      const SizedBox(height: 12),
+                      CardUsageSummary(card: card),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('Faturas', style: text.titleMedium),
+              const SizedBox(height: 8),
+              ..._invoices(context, state),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _invoices(BuildContext context, InvoicesState state) {
+    final text = Theme.of(context).textTheme;
+
+    if (state.status == InvoicesStatus.failure) {
+      return [
+        Text(cardFailureMessage(state.failure!)),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: () => context.read<InvoicesCubit>().reload(),
+          child: const Text('Tentar de novo'),
+        ),
+      ];
+    }
+    if (state.status != InvoicesStatus.loaded && state.invoices.isEmpty) {
+      return const [
+        Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    }
+    if (state.invoices.isEmpty) {
+      return [
+        Text(
+          'Nenhuma fatura ainda. A primeira aparece quando você lança uma '
+          'compra neste cartão.',
+          style: text.bodyMedium,
+        ),
+      ];
+    }
+
+    return [
+      for (final invoice in state.invoices)
+        _InvoiceTile(
+          invoice: invoice,
+          currency: card.currency,
+          onTap: () => Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (_) => InvoiceDetailPage(
+                workspace: workspace,
+                card: card,
+                invoice: invoice,
+              ),
+            ),
+          ),
+        ),
+    ];
+  }
+}
+
+class _InvoiceTile extends StatelessWidget {
+  final InvoiceEntity invoice;
+  final String currency;
+  final VoidCallback onTap;
+
+  const _InvoiceTile({
+    required this.invoice,
+    required this.currency,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      monthYearLabel(invoice.referenceMonth),
+                      style: text.titleMedium,
+                    ),
+                    Text(
+                      'Vence ${formatDateBr(invoice.dueDate)}',
+                      style: text.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    Money(invoice.totalCents, currency).format(),
+                    style: text.titleMedium,
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(invoiceStatusIcon(invoice.status), size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        invoiceStatusLabel(invoice.status),
+                        style: text.bodySmall,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
