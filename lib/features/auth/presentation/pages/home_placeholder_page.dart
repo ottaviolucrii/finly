@@ -9,6 +9,7 @@ import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_state.dart';
 import 'package:finly/features/budgets/presentation/pages/budgets_page.dart';
 import 'package:finly/features/cards/presentation/pages/cards_page.dart';
+import 'package:finly/features/recurring/presentation/pages/recurring_page.dart';
 import 'package:finly/features/transactions/presentation/pages/transactions_page.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_cubit.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_state.dart';
@@ -84,7 +85,7 @@ class _HomeView extends StatelessWidget {
           listener: (context, state) {
             if (state.status == SwitchWorkspaceStatus.success) {
               // Reload the user so the new active workspace shows everywhere.
-                            final switched = state.user;
+              final switched = state.user;
               context.read<AuthBloc>().add(
                     switched != null
                         ? UserReplaced(switched)
@@ -189,6 +190,15 @@ class _HomeView extends StatelessWidget {
                             onPressed: () => Navigator.of(context).push(
                               MaterialPageRoute<void>(
                                 builder: (_) => BudgetsPage(workspace: active),
+                              ),
+                            ),
+                          ),
+                          FilledButton.tonalIcon(
+                            icon: const Icon(Icons.repeat),
+                            label: const Text('Recorrências'),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => RecurringPage(workspace: active),
                               ),
                             ),
                           ),
