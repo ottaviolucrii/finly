@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:finly/core/error/failure.dart';
@@ -25,7 +27,7 @@ void main() {
   setUp(() => switchWorkspace = MockSwitchWorkspace());
 
   blocTest<SwitchWorkspaceCubit, SwitchWorkspaceState>(
-    'emits switching then success',
+    'emits switching then success carrying the updated user',
     build: () {
       when(() => switchWorkspace(params))
           .thenAnswer((_) async => const Right<Failure, UserEntity>(user));
@@ -34,7 +36,10 @@ void main() {
     act: (cubit) => cubit.switchTo('w2'),
     expect: () => [
       const SwitchWorkspaceState(status: SwitchWorkspaceStatus.switching),
-      const SwitchWorkspaceState(status: SwitchWorkspaceStatus.success),
+      const SwitchWorkspaceState(
+        status: SwitchWorkspaceStatus.success,
+        user: user,
+      ),
     ],
   );
 
@@ -66,5 +71,59 @@ void main() {
     },
     act: (cubit) => cubit.switchTo('w2'),
     verify: (_) => verify(() => switchWorkspace(params)).called(1),
+  );
+
+  blocTest<SwitchWorkspaceCubit, SwitchWorkspaceState>(
+    'a call that never answers ends in a failure instead of staying stuck',
+    build: () {
+      when(() => switchWorkspace(params)).thenAnswer(
+        (_) => Completer<Either<Failure, UserEntity>>().future,
+      );
+      return SwitchWorkspaceCubit(
+        switchWorkspace,
+        timeout: const Duration(milliseconds: 20),
+      );
+    },
+    act: (cubit) => cubit.switchTo('w2'),
+    wait: const Duration(milliseconds: 100),
+    expect: () => [
+      const SwitchWorkspaceState(status: SwitchWorkspaceStatus.switching),
+      const SwitchWorkspaceState(
+        status: SwitchWorkspaceStatus.failure,
+        failure: NetworkFailure('network_error'),
+      ),
+    ],
+  );
+
+  blocTest<SwitchWorkspaceCubit, SwitchWorkspaceState>(
+    'an unexpected error also ends in a failure instead of staying stuck',
+    build: () {
+      when(() => switchWorkspace(params)).thenThrow(StateError('boom'));
+      return SwitchWorkspaceCubit(switchWorkspace);
+    },
+    act: (cubit) => cubit.switchTo('w2'),
+    expect: () => [
+      const SwitchWorkspaceState(status: SwitchWorkspaceStatus.switching),
+      const SwitchWorkspaceState(
+        status: SwitchWorkspaceStatus.failure,
+        failure: RuleFailure('unexpected_error'),
+      ),
+    ],
+  );
+
+  blocTest<SwitchWorkspaceCubit, SwitchWorkspaceState>(
+    'a new switch can start after a failure',
+    build: () {
+      when(() => switchWorkspace(params)).thenAnswer(
+        (_) async =>
+            const Left<Failure, UserEntity>(NetworkFailure('network_error')),
+      );
+      return SwitchWorkspaceCubit(switchWorkspace);
+    },
+    act: (cubit) async {
+      await cubit.switchTo('w2');
+      await cubit.switchTo('w2');
+    },
+    verify: (_) => verify(() => switchWorkspace(params)).called(2),
   );
 }

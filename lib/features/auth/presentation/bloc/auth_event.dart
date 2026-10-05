@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:finly/features/auth/domain/entities/user_entity.dart';
 
 sealed class AuthEvent extends Equatable {
   const AuthEvent();
@@ -15,6 +16,17 @@ class AuthStarted extends AuthEvent {
 /// Reloads the signed-in user (for example after a workspace was created).
 class UserRefreshRequested extends AuthEvent {
   const UserRefreshRequested();
+}
+
+/// Replaces the signed-in user with one that is already loaded (for example
+/// the user returned by a workspace switch), with no extra network call.
+class UserReplaced extends AuthEvent {
+  final UserEntity user;
+
+  const UserReplaced(this.user);
+
+  @override
+  List<Object?> get props => [user];
 }
 
 class SignInSubmitted extends AuthEvent {
