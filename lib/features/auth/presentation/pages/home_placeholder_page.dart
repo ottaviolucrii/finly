@@ -7,6 +7,7 @@ import 'package:finly/features/auth/presentation/auth_messages.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_state.dart';
+import 'package:finly/features/budgets/presentation/pages/budgets_page.dart';
 import 'package:finly/features/cards/presentation/pages/cards_page.dart';
 import 'package:finly/features/transactions/presentation/pages/transactions_page.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_cubit.dart';
@@ -83,7 +84,12 @@ class _HomeView extends StatelessWidget {
           listener: (context, state) {
             if (state.status == SwitchWorkspaceStatus.success) {
               // Reload the user so the new active workspace shows everywhere.
-              context.read<AuthBloc>().add(const UserRefreshRequested());
+                            final switched = state.user;
+              context.read<AuthBloc>().add(
+                    switched != null
+                        ? UserReplaced(switched)
+                        : const UserRefreshRequested(),
+                  );
               _showMessage(context, 'Workspace alterado.');
             } else if (state.status == SwitchWorkspaceStatus.failure &&
                 state.failure != null) {
@@ -174,6 +180,15 @@ class _HomeView extends StatelessWidget {
                             onPressed: () => Navigator.of(context).push(
                               MaterialPageRoute<void>(
                                 builder: (_) => CardsPage(workspace: active),
+                              ),
+                            ),
+                          ),
+                          FilledButton.tonalIcon(
+                            icon: const Icon(Icons.pie_chart_outline),
+                            label: const Text('Orçamentos'),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => BudgetsPage(workspace: active),
                               ),
                             ),
                           ),

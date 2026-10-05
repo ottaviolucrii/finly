@@ -15,6 +15,15 @@ import 'package:finly/features/auth/domain/usecases/sign_out_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/sign_up_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/switch_workspace_use_case.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:finly/features/budgets/data/datasources/budget_remote_data_source.dart';
+import 'package:finly/features/budgets/data/repositories/budget_repository_impl.dart';
+import 'package:finly/features/budgets/domain/repositories/budget_repository.dart';
+import 'package:finly/features/budgets/domain/usecases/delete_budget_use_case.dart';
+import 'package:finly/features/budgets/domain/usecases/get_budget_overview_use_case.dart';
+import 'package:finly/features/budgets/domain/usecases/save_budget_use_case.dart';
+import 'package:finly/features/budgets/domain/usecases/stop_budget_use_case.dart';
+import 'package:finly/features/budgets/presentation/cubit/budget_form_cubit.dart';
+import 'package:finly/features/budgets/presentation/cubit/budgets_cubit.dart';
 import 'package:finly/features/cards/data/datasources/card_remote_data_source.dart';
 import 'package:finly/features/cards/data/repositories/card_repository_impl.dart';
 import 'package:finly/features/cards/domain/repositories/card_repository.dart';
@@ -167,6 +176,20 @@ void configureDependencies() {
     ..registerFactory(
       () => InstallmentFormCubit(getCategories: sl(), createInstallments: sl()),
     )
+    // budgets: data layer and use cases
+    ..registerLazySingleton<BudgetRemoteDataSource>(
+      () => BudgetRemoteDataSourceImpl(sl()),
+    )
+    ..registerLazySingleton<BudgetRepository>(() => BudgetRepositoryImpl(sl()))
+    ..registerLazySingleton(() => GetBudgetOverviewUseCase(sl(), sl()))
+    ..registerLazySingleton(() => SaveBudgetUseCase(sl()))
+    ..registerLazySingleton(() => DeleteBudgetUseCase(sl()))
+    ..registerLazySingleton(() => StopBudgetUseCase(sl()))
+    // budgets: presentation
+    ..registerFactory(
+      () => BudgetsCubit(getOverview: sl(), stopBudget: sl()),
+    )
+    ..registerFactory(() => BudgetFormCubit(sl()))
     // transactions: presentation
     ..registerFactory(
       () => TransactionsCubit(
