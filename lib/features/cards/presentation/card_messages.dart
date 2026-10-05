@@ -8,6 +8,13 @@ String cardFailureMessage(Failure failure) {
   if (code.contains('invoice already paid')) {
     return 'Esta fatura já foi paga.';
   }
+  if (code.contains('nothing to pay')) {
+    return 'Esta fatura não tem nada a pagar.';
+  }
+  if (code.contains('amounts must match') ||
+      code.contains('destination amount')) {
+    return 'A conta de pagamento deve usar a mesma moeda do cartão.';
+  }
 
   switch (code) {
     case 'invalid_account_name':
@@ -18,6 +25,12 @@ String cardFailureMessage(Failure failure) {
       return 'Informe um limite maior que zero.';
     case 'invalid_day':
       return 'Os dias de fechamento e de vencimento vão de 1 a 31.';
+    case 'invalid_installments':
+      return 'O número de parcelas vai de 2 a 48.';
+    case 'invalid_amount':
+      return 'Informe um valor válido para a compra.';
+    case 'invalid_description':
+      return 'Informe uma descrição (até 200 caracteres).';
     case 'already_exists':
       return 'Já existe uma conta com esse nome neste workspace.';
     case 'invalid_workspace':

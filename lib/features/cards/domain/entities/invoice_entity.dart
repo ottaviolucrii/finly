@@ -33,6 +33,17 @@ class InvoiceEntity extends Equatable {
   /// Something is still owed on this invoice.
   bool get needsPayment => !isPaid && totalCents > 0;
 
+  /// The status to show on [today]. An open invoice whose cycle already ended
+  /// is shown as closed, even if the daily database job that closes invoices
+  /// has not run yet.
+  InvoiceStatus statusOn(DateTime today) {
+    if (status != InvoiceStatus.open) return status;
+
+    final lastDay = DateTime(periodEnd.year, periodEnd.month, periodEnd.day);
+    final day = DateTime(today.year, today.month, today.day);
+    return day.isAfter(lastDay) ? InvoiceStatus.closed : InvoiceStatus.open;
+  }
+
   @override
   List<Object?> get props => [
         id,

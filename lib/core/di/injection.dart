@@ -26,6 +26,7 @@ import 'package:finly/features/cards/domain/usecases/get_invoices_use_case.dart'
 import 'package:finly/features/cards/domain/usecases/pay_invoice_use_case.dart';
 import 'package:finly/features/cards/presentation/cubit/card_form_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/cards_cubit.dart';
+import 'package:finly/features/cards/presentation/cubit/installment_form_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/invoice_detail_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/invoices_cubit.dart';
 import 'package:finly/features/categories/data/datasources/category_remote_data_source.dart';
@@ -152,8 +153,20 @@ void configureDependencies() {
     // cards: presentation
     ..registerFactory(() => CardsCubit(sl()))
     ..registerFactory(() => CardFormCubit(sl()))
-    ..registerFactory(() => InvoicesCubit(sl()))
-    ..registerFactory(() => InvoiceDetailCubit(sl()))
+    ..registerFactory(
+      () => InvoicesCubit(getInvoices: sl(), getCards: sl()),
+    )
+    ..registerFactory(
+      () => InvoiceDetailCubit(
+        getTransactions: sl(),
+        getInvoices: sl(),
+        getAccounts: sl(),
+        payInvoice: sl(),
+      ),
+    )
+    ..registerFactory(
+      () => InstallmentFormCubit(getCategories: sl(), createInstallments: sl()),
+    )
     // transactions: presentation
     ..registerFactory(
       () => TransactionsCubit(

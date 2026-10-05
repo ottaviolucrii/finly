@@ -10,12 +10,13 @@ import 'package:finly/features/cards/presentation/card_messages.dart';
 import 'package:finly/features/cards/presentation/card_style.dart';
 import 'package:finly/features/cards/presentation/cubit/invoices_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/invoices_state.dart';
+import 'package:finly/features/cards/presentation/pages/installment_form_page.dart';
 import 'package:finly/features/cards/presentation/pages/invoice_detail_page.dart';
 import 'package:finly/features/cards/presentation/widgets/card_usage_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// One card: its limit and its invoices.
+/// One card: its limit, installment purchases and its invoices.
 class CardDetailPage extends StatelessWidget {
   final WorkspaceEntity workspace;
   final CreditCardEntity card;
@@ -25,7 +26,7 @@ class CardDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<InvoicesCubit>()..load(card.accountId),
+      create: (_) => sl<InvoicesCubit>()..load(card),
       child: _CardDetailView(workspace: workspace, card: card),
     );
   }
@@ -36,6 +37,38 @@ class _CardDetailView extends StatelessWidget {
   final CreditCardEntity card;
 
   const _CardDetailView({required this.workspace, required this.card});
+
+  Future<void> _openInstallments(
+    BuildContext context,
+    CreditCardEntity current,
+  ) async {
+    final cubit = context.read<InvoicesCubit>();
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => InstallmentFormPage(card: current),
+      ),
+    );
+    if (created == true) await cubit.reload();
+  }
+
+  Future<void> _openInvoice(
+    BuildContext context,
+    CreditCardEntity current,
+    InvoiceEntity invoice,
+  ) async {
+    final cubit = context.read<InvoicesCubit>();
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => InvoiceDetailPage(
+          workspace: workspace,
+          card: current,
+          invoice: invoice,
+        ),
+      ),
+    );
+    // Paying changes the invoice and the used limit.
+    await cubit.reload();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +83,8 @@ class _CardDetailView extends StatelessWidget {
       ),
       body: BlocBuilder<InvoicesCubit, InvoicesState>(
         builder: (context, state) {
+          final current = state.card ?? card;
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -60,19 +95,28 @@ class _CardDetailView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Fecha dia ${card.closingDay} · vence dia ${card.dueDay}',
+                        'Fecha dia ${current.closingDay} · vence dia ${current.dueDay}',
                         style: text.bodySmall,
                       ),
                       const SizedBox(height: 12),
-                      CardUsageSummary(card: card),
+                      CardUsageSummary(card: current),
                     ],
                   ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.tonalIcon(
+                  icon: const Icon(Icons.splitscreen),
+                  label: const Text('Compra parcelada'),
+                  onPressed: () => _openInstallments(context, current),
                 ),
               ),
               const SizedBox(height: 16),
               Text('Faturas', style: text.titleMedium),
               const SizedBox(height: 8),
-              ..._invoices(context, state),
+              ..._invoices(context, state, current),
             ],
           );
         },
@@ -80,7 +124,11 @@ class _CardDetailView extends StatelessWidget {
     );
   }
 
-  List<Widget> _invoices(BuildContext context, InvoicesState state) {
+  List<Widget> _invoices(
+    BuildContext context,
+    InvoicesState state,
+    CreditCardEntity current,
+  ) {
     final text = Theme.of(context).textTheme;
 
     if (state.status == InvoicesStatus.failure) {
@@ -111,20 +159,14 @@ class _CardDetailView extends StatelessWidget {
       ];
     }
 
+    final today = DateTime.now();
     return [
       for (final invoice in state.invoices)
         _InvoiceTile(
           invoice: invoice,
-          currency: card.currency,
-          onTap: () => Navigator.of(context).push<void>(
-            MaterialPageRoute<void>(
-              builder: (_) => InvoiceDetailPage(
-                workspace: workspace,
-                card: card,
-                invoice: invoice,
-              ),
-            ),
-          ),
+          currency: current.currency,
+          today: today,
+          onTap: () => _openInvoice(context, current, invoice),
         ),
     ];
   }
@@ -133,17 +175,20 @@ class _CardDetailView extends StatelessWidget {
 class _InvoiceTile extends StatelessWidget {
   final InvoiceEntity invoice;
   final String currency;
+  final DateTime today;
   final VoidCallback onTap;
 
   const _InvoiceTile({
     required this.invoice,
     required this.currency,
+    required this.today,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final status = invoice.statusOn(today);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -178,12 +223,9 @@ class _InvoiceTile extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(invoiceStatusIcon(invoice.status), size: 14),
+                      Icon(invoiceStatusIcon(status), size: 14),
                       const SizedBox(width: 4),
-                      Text(
-                        invoiceStatusLabel(invoice.status),
-                        style: text.bodySmall,
-                      ),
+                      Text(invoiceStatusLabel(status), style: text.bodySmall),
                     ],
                   ),
                 ],
