@@ -41,7 +41,12 @@ found; cosmetic items are done in batches.
 - [ ] Recurring: clearing an end date does not bring back the occurrences that the end date removed (a gap stays; generated_count already moved past them)
 - [x] Dashboard: balance, month, charts, budgets and upcoming items
 - [x] Reports: monthly report with the month before beside it (summary, spending by category, biggest expenses), month arrows, currency chips
-- [ ] Reports: export (CSV / PDF) and a custom period
+- [x] Reports: export the month as CSV through the share sheet (; separator, decimal comma, ISO dates, Windows-1252 text, formula-safe cells)
+- [ ] Export: characters outside Windows-1252 (emoji, other alphabets) become "?" in the CSV; an .xlsx export would remove the encoding and locale problems for good
+- [ ] Export: amounts use a decimal comma; a spreadsheet set to the US locale reads them as text (set the spreadsheet locale to Brazil)
+- [ ] Reports: export as PDF, and a custom period
+- [ ] Export: only from the report screen (the transactions list and the filters cannot export), capped at 10,000 transactions per month
+- [ ] Export my data (LGPD portability): one file with everything of the user
 - [ ] Reports: the biggest expenses list is not tappable (no jump to the transaction)
 
 ## Auth and privacy
@@ -74,6 +79,7 @@ found; cosmetic items are done in batches.
 - [x] GitHub Actions (.github/workflows/ci.yml): flutter analyze, flutter test and the database tests on every PR and push to develop and main
 - [x] ARCHITECTURE.md, DATABASE.md, ROADMAP.md and README.md match the code; docs/SUPABASE_SETUP.md added
 - [x] HomePlaceholderPage renamed to HomePage
+- [x] share_plus added (the share sheet for exports), behind a FileSharer interface in core/share so tests never touch the platform
 - [ ] The database tests cannot run on Windows without a manual fix (the embedded Postgres has no time zone database): use CI, or copy the tzdata files into .venv-db
 - [ ] Protect develop and main on GitHub: require a pull request and the two CI checks before merging
 - [ ] Pin the Flutter version in CI (flutter-version) after the first green run, so a new stable release cannot break a PR by surprise
@@ -95,7 +101,7 @@ found; cosmetic items are done in batches.
 - Accounts (create, edit, archive, restore), categories (create, edit, archive, restore)
 - Transactions (create, edit, search, filters including period, pagination, trash), transfers (same workspace and owner)
 - Credit cards (create, edit, archive), budgets, recurring bills (create, edit, pause, delete)
-- Dashboard with balance, month, charts, budgets and upcoming items; monthly report
+- Dashboard with balance, month, charts, budgets and upcoming items; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 785 automated tests
+- About 820 automated tests

@@ -6,6 +6,10 @@ String reportsFailureMessage(Failure failure) {
   switch (failure.message) {
     case 'invalid_workspace':
       return 'Workspace inválido.';
+    case 'nothing_to_export':
+      return 'Não há transações neste mês para exportar.';
+    case 'share_failed':
+      return 'Não foi possível abrir o compartilhamento. Tente de novo.';
     case 'forbidden':
       return 'Você não tem acesso a este workspace.';
     case 'not_authenticated':
