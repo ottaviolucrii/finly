@@ -35,4 +35,15 @@ abstract class DashboardRepository {
     String workspaceId,
     DateTime month,
   );
+
+  /// The biggest expenses in [currency] from [from] (included) to [to]
+  /// (excluded), biggest first. Pending ones count; failed and deleted ones
+  /// do not.
+  Future<Either<Failure, List<TransactionEntity>>> getTopExpenses(
+    String workspaceId, {
+    required DateTime from,
+    required DateTime to,
+    required String currency,
+    required int limit,
+  });
 }

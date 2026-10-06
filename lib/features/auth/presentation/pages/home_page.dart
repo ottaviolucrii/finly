@@ -14,6 +14,7 @@ import 'package:finly/features/categories/presentation/pages/categories_page.dar
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import 'package:finly/features/dashboard/presentation/widgets/dashboard_view.dart';
 import 'package:finly/features/recurring/presentation/pages/recurring_page.dart';
+import 'package:finly/features/reports/presentation/pages/reports_page.dart';
 import 'package:finly/features/settings/presentation/pages/settings_page.dart';
 import 'package:finly/features/transactions/presentation/pages/transactions_page.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_cubit.dart';
@@ -91,14 +92,17 @@ class _HomeView extends StatelessWidget {
               // Show the new active workspace everywhere.
               final switched = state.user;
               context.read<AuthBloc>().add(
-                    switched != null
-                        ? UserReplaced(switched)
-                        : const UserRefreshRequested(),
-                  );
+                switched != null
+                    ? UserReplaced(switched)
+                    : const UserRefreshRequested(),
+              );
               _showMessage(context, 'Workspace alterado.');
             } else if (state.status == SwitchWorkspaceStatus.failure &&
                 state.failure != null) {
-              _showMessage(context, switchWorkspaceFailureMessage(state.failure!));
+              _showMessage(
+                context,
+                switchWorkspaceFailureMessage(state.failure!),
+              );
             }
           },
         ),
@@ -110,7 +114,8 @@ class _HomeView extends StatelessWidget {
 
           final active = user.activeWorkspace;
           final isBusiness = active?.type == WorkspaceType.business;
-          final switching = context.watch<SwitchWorkspaceCubit>().state.status ==
+          final switching =
+              context.watch<SwitchWorkspaceCubit>().state.status ==
               SwitchWorkspaceStatus.switching;
 
           // The other workspace, when the user has two.
@@ -122,8 +127,9 @@ class _HomeView extends StatelessWidget {
             }
           }
 
-          final chipColor =
-              isBusiness ? AppColors.white : Theme.of(context).colorScheme.primary;
+          final chipColor = isBusiness
+              ? AppColors.white
+              : Theme.of(context).colorScheme.primary;
 
           return Scaffold(
             appBar: AppBar(
@@ -239,14 +245,24 @@ class _HomeBody extends StatelessWidget {
               FilledButton.tonalIcon(
                 icon: const Icon(Icons.repeat),
                 label: const Text('Recorrências'),
-                onPressed: () =>
-                    openAndRefresh(context, RecurringPage(workspace: workspace)),
+                onPressed: () => openAndRefresh(
+                  context,
+                  RecurringPage(workspace: workspace),
+                ),
               ),
               FilledButton.tonalIcon(
                 icon: const Icon(Icons.category_outlined),
                 label: const Text('Categorias'),
+                onPressed: () => openAndRefresh(
+                  context,
+                  CategoriesPage(workspace: workspace),
+                ),
+              ),
+              FilledButton.tonalIcon(
+                icon: const Icon(Icons.bar_chart),
+                label: const Text('Relatórios'),
                 onPressed: () =>
-                    openAndRefresh(context, CategoriesPage(workspace: workspace)),
+                    openAndRefresh(context, ReportsPage(workspace: workspace)),
               ),
             ],
           ),
