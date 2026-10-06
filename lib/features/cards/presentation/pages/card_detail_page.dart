@@ -8,15 +8,19 @@ import 'package:finly/features/cards/domain/entities/credit_card_entity.dart';
 import 'package:finly/features/cards/domain/entities/invoice_entity.dart';
 import 'package:finly/features/cards/presentation/card_messages.dart';
 import 'package:finly/features/cards/presentation/card_style.dart';
+import 'package:finly/features/cards/presentation/cubit/card_archive_cubit.dart';
+import 'package:finly/features/cards/presentation/cubit/card_archive_state.dart';
 import 'package:finly/features/cards/presentation/cubit/invoices_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/invoices_state.dart';
+import 'package:finly/features/cards/presentation/pages/card_edit_page.dart';
 import 'package:finly/features/cards/presentation/pages/installment_form_page.dart';
 import 'package:finly/features/cards/presentation/pages/invoice_detail_page.dart';
 import 'package:finly/features/cards/presentation/widgets/card_usage_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// One card: its limit, installment purchases and its invoices.
+/// One card: its limit, installment purchases, its invoices, and the menu to
+/// edit or archive it.
 class CardDetailPage extends StatelessWidget {
   final WorkspaceEntity workspace;
   final CreditCardEntity card;
@@ -25,8 +29,11 @@ class CardDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<InvoicesCubit>()..load(card),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => sl<InvoicesCubit>()..load(card)),
+        BlocProvider(create: (_) => sl<CardArchiveCubit>()),
+      ],
       child: _CardDetailView(workspace: workspace, card: card),
     );
   }
@@ -37,6 +44,67 @@ class _CardDetailView extends StatelessWidget {
   final CreditCardEntity card;
 
   const _CardDetailView({required this.workspace, required this.card});
+
+  CreditCardEntity _current(BuildContext context) =>
+      context.read<InvoicesCubit>().state.card ?? card;
+
+  Future<void> _openEdit(BuildContext context) async {
+    final cubit = context.read<InvoicesCubit>();
+    final current = _current(context);
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => CardEditPage(card: current)),
+    );
+    // The card is read again, so the name, limit and days show right away.
+    if (saved == true) await cubit.reload();
+  }
+
+  Future<void> _archive(BuildContext context) async {
+    final current = _current(context);
+    final archiveCubit = context.read<CardArchiveCubit>();
+
+    if (current.usedCents > 0) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Este cartão está em uso'),
+          content: Text(
+            'Ainda há ${current.used.format()} em aberto. Pague as faturas '
+            'antes de arquivar: um cartão arquivado some das listas e você '
+            'não conseguiria mais pagá-las.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Entendi'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Arquivar cartão?'),
+        content: Text(
+          '"${current.name}" sai da lista de cartões, mas o histórico é '
+          'mantido. Você pode restaurá-lo em Contas, na seção "Arquivadas".',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Arquivar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await archiveCubit.archive(current.accountId);
+  }
 
   Future<void> _openInstallments(
     BuildContext context,
@@ -75,51 +143,98 @@ class _CardDetailView extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final isBusiness = workspace.type == WorkspaceType.business;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(card.name),
-        backgroundColor: isBusiness ? AppColors.deepBlue : null,
-        foregroundColor: isBusiness ? AppColors.white : null,
-      ),
-      body: BlocBuilder<InvoicesCubit, InvoicesState>(
-        builder: (context, state) {
-          final current = state.card ?? card;
+    return BlocListener<CardArchiveCubit, CardArchiveState>(
+      listenWhen: (previous, current) => previous.status != current.status,
+      listener: (context, state) {
+        final messenger = ScaffoldMessenger.of(context);
+        if (state.status == CardArchiveStatus.failure && state.failure != null) {
+          messenger
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(content: Text(cardFailureMessage(state.failure!))),
+            );
+        }
+        if (state.status == CardArchiveStatus.archived) {
+          messenger
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Cartão arquivado. Para trazê-lo de volta, use Contas, '
+                  'seção "Arquivadas".',
+                ),
+              ),
+            );
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(card.name),
+          backgroundColor: isBusiness ? AppColors.deepBlue : null,
+          foregroundColor: isBusiness ? AppColors.white : null,
+          actions: [
+            PopupMenuButton<String>(
+              tooltip: 'Mais opções',
+              onSelected: (value) {
+                if (value == 'edit') {
+                  _openEdit(context);
+                } else {
+                  _archive(context);
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'edit', child: Text('Editar cartão')),
+                PopupMenuItem(value: 'archive', child: Text('Arquivar cartão')),
+              ],
+            ),
+          ],
+        ),
+        body: BlocBuilder<InvoicesCubit, InvoicesState>(
+          builder: (context, state) {
+            final current = state.card ?? card;
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Fecha dia ${current.closingDay} · vence dia ${current.dueDay}',
-                        style: text.bodySmall,
-                      ),
-                      const SizedBox(height: 12),
-                      CardUsageSummary(card: current),
-                    ],
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          current.name,
+                          style: text.titleMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Fecha dia ${current.closingDay} · vence dia ${current.dueDay}',
+                          style: text.bodySmall,
+                        ),
+                        const SizedBox(height: 12),
+                        CardUsageSummary(card: current),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton.tonalIcon(
-                  icon: const Icon(Icons.splitscreen),
-                  label: const Text('Compra parcelada'),
-                  onPressed: () => _openInstallments(context, current),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.tonalIcon(
+                    icon: const Icon(Icons.splitscreen),
+                    label: const Text('Compra parcelada'),
+                    onPressed: () => _openInstallments(context, current),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text('Faturas', style: text.titleMedium),
-              const SizedBox(height: 8),
-              ..._invoices(context, state, current),
-            ],
-          );
-        },
+                const SizedBox(height: 16),
+                Text('Faturas', style: text.titleMedium),
+                const SizedBox(height: 8),
+                ..._invoices(context, state, current),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

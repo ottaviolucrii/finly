@@ -39,6 +39,25 @@ class CardRepositoryImpl implements CardRepository {
   }
 
   @override
+  Future<Either<Failure, void>> updateCard({
+    required String accountId,
+    required String name,
+    required int limitCents,
+    required int closingDay,
+    required int dueDay,
+  }) {
+    return _guard<void>(
+      () => _remote.updateCard(
+        accountId: accountId,
+        name: name,
+        limitCents: limitCents,
+        closingDay: closingDay,
+        dueDay: dueDay,
+      ),
+    );
+  }
+
+  @override
   Future<Either<Failure, List<InvoiceEntity>>> getInvoices(String accountId) {
     return _guard<List<InvoiceEntity>>(() => _remote.getInvoices(accountId));
   }

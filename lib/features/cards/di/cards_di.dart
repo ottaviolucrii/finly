@@ -7,6 +7,9 @@ import 'package:finly/features/cards/domain/usecases/get_cards_use_case.dart';
 import 'package:finly/features/cards/domain/usecases/get_invoice_transactions_use_case.dart';
 import 'package:finly/features/cards/domain/usecases/get_invoices_use_case.dart';
 import 'package:finly/features/cards/domain/usecases/pay_invoice_use_case.dart';
+import 'package:finly/features/cards/domain/usecases/update_card_use_case.dart';
+import 'package:finly/features/cards/presentation/cubit/card_archive_cubit.dart';
+import 'package:finly/features/cards/presentation/cubit/card_edit_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/card_form_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/cards_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/installment_form_cubit.dart';
@@ -24,6 +27,7 @@ void registerCardsModule(GetIt sl) {
     ..registerLazySingleton<CardRepository>(() => CardRepositoryImpl(sl()))
     ..registerLazySingleton(() => GetCardsUseCase(sl()))
     ..registerLazySingleton(() => CreateCardUseCase(sl()))
+    ..registerLazySingleton(() => UpdateCardUseCase(sl()))
     ..registerLazySingleton(() => GetInvoicesUseCase(sl()))
     ..registerLazySingleton(() => GetInvoiceTransactionsUseCase(sl()))
     ..registerLazySingleton(() => CreateInstallmentsUseCase(sl()))
@@ -31,6 +35,8 @@ void registerCardsModule(GetIt sl) {
     // presentation
     ..registerFactory(() => CardsCubit(sl()))
     ..registerFactory(() => CardFormCubit(sl()))
+    ..registerFactory(() => CardEditCubit(sl()))
+    ..registerFactory(() => CardArchiveCubit(sl()))
     ..registerFactory(
       () => InvoicesCubit(getInvoices: sl(), getCards: sl()),
     )

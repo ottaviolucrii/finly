@@ -16,6 +16,14 @@ abstract class CardRemoteDataSource {
     required int dueDay,
   });
 
+  Future<void> updateCard({
+    required String accountId,
+    required String name,
+    required int limitCents,
+    required int closingDay,
+    required int dueDay,
+  });
+
   Future<List<InvoiceModel>> getInvoices(String accountId);
 
   Future<List<TransactionModel>> getInvoiceTransactions(String invoiceId);
@@ -107,6 +115,29 @@ class CardRemoteDataSourceImpl implements CardRemoteDataSource {
       },
     );
     return id as String;
+  }
+
+  @override
+  Future<void> updateCard({
+    required String accountId,
+    required String name,
+    required int limitCents,
+    required int closingDay,
+    required int dueDay,
+  }) async {
+    // The name goes first: it is the only part that can clash with another
+    // account (a unique index). The settings are range-checked by the app
+    // and by the database, so they are unlikely to fail after it.
+    await _client.from('accounts').update({'name': name}).eq('id', accountId);
+
+    await _client
+        .from('credit_card_details')
+        .update({
+          'limit_cents': limitCents,
+          'closing_day': closingDay,
+          'due_day': dueDay,
+        })
+        .eq('account_id', accountId);
   }
 
   @override
