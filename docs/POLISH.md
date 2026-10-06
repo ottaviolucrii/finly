@@ -35,6 +35,7 @@ found; cosmetic items are done in batches.
 - [x] Recurring: edit (description, amount, category, end date) and delete (pending occurrences removed, history kept)
 - [ ] Recurring: notification before the due date (lead days; the column exists but nothing uses it yet)
 - [ ] Recurring: the schedule (frequency, interval, start date) cannot be edited; delete and create another
+- [ ] Recurring: clearing an end date does not bring back the occurrences that the end date removed (a gap stays; generated_count already moved past them)
 - [x] Dashboard: balance, month, charts, budgets and upcoming items
 
 ## Auth and privacy
@@ -44,11 +45,13 @@ found; cosmetic items are done in batches.
 - [x] Delete account (password and typed confirmation; erases every workspace)
 - [ ] Delete account was only covered by tests and the local database check: try it end to end with a throwaway account
 - [x] Forgot password: a one-time code by e-mail (no deep link), then a new password; signs the other devices out
-- [ ] Supabase "Reset Password" e-mail template must show {{ .Token }} (done by hand in the dashboard; not versioned)
-- [ ] Set up custom SMTP in Supabase: the built-in sender allows only a few e-mails per hour for the whole project
+- [x] Supabase dashboard settings written down in docs/SUPABASE_SETUP.md (the Reset Password template must show {{ .Token }})
+- [ ] Set Minimum password length to 8 and the letters-and-digits requirement in Supabase, so the server matches the app
+- [ ] Set up custom SMTP in Supabase (needs an owned domain): the built-in sender allows only 2 e-mails per hour for the whole project
 - [ ] Change e-mail (needs the confirmation-link page or a code flow like the password reset)
 - [ ] Sign-up confirmation could use a code too, which also fixes the localhost error on the link
 - [ ] Session lock, biometrics, protected switch beyond "confirm" (FR-A07, FR-A08, FR-W04)
+- [ ] Move the session from supabase_flutter's default storage to secure storage
 - [ ] Terms acceptance version
 - [ ] Leaked-password protection toggle in Supabase Auth (plan-dependent, needs a paid plan)
 
@@ -60,8 +63,9 @@ found; cosmetic items are done in batches.
 - [x] injection.dart split into one module per feature (features/<name>/di), with a test that builds every bloc and cubit
 - [x] View monthly_flow (sql/11) sums income and expenses per month in the database, so charts never download every transaction
 - [x] Functions update_recurring and delete_recurring (sql/12), tested on real data inside a rolled-back transaction
-- [ ] Add checks for monthly_flow (sql/11) and update_recurring / delete_recurring (sql/12) to sql/tests/run_db_tests.py
+- [x] Database tests cover monthly_flow and update_recurring / delete_recurring (83 checks)
 - [x] GitHub Actions (.github/workflows/ci.yml): flutter analyze, flutter test and the database tests on every PR and push to develop and main
+- [x] ARCHITECTURE.md, DATABASE.md, ROADMAP.md and README.md match the code; docs/SUPABASE_SETUP.md added
 - [ ] Protect develop and main on GitHub: require a pull request and the two CI checks before merging
 - [ ] Pin the Flutter version in CI (flutter-version) after the first green run, so a new stable release cannot break a PR by surprise
 - [ ] Security advisor: tables are visible in the GraphQL schema to signed-in users (protected by RLS); consider revoking select where GraphQL is not used
@@ -74,10 +78,10 @@ found; cosmetic items are done in batches.
 - [ ] Rename HomePlaceholderPage to HomePage
 - [ ] Cubit tests should also feed data-layer models (not only base entities), to catch runtime type traps such as firstWhere with orElse
 - [ ] Widget and golden tests for the main screens
-- [ ] Update ARCHITECTURE.md, DATABASE.md and ROADMAP.md (functions create_credit_card, update_recurring and delete_recurring, the budget end marker, the cron jobs, the monthly_flow view, CI, the password recovery flow, the new features)
+- [ ] UI_GUIDE.md: record the colours the code really uses for chips and charts once the chip colour is decided
 
 ## Done so far (for the record)
-- Database: 14 tables, 4 views, RLS everywhere, 67 local checks (sql/00 to sql/12), two daily jobs
+- Database: 14 tables, 4 views, RLS everywhere, 83 local checks (sql/00 to sql/12), two daily jobs
 - Auth, workspaces and the protected workspace switch (never stuck, with a timeout)
 - Settings: change password, sign out everywhere, delete account; forgot password by e-mail code
 - Accounts (create, edit, archive, restore), categories (create, edit, archive, restore)
@@ -85,5 +89,5 @@ found; cosmetic items are done in batches.
 - Credit cards (create, edit, archive), budgets, recurring bills (create, edit, pause, delete)
 - Dashboard with balance, month, charts, budgets and upcoming items
 - Errors never leave a screen loading; wiring split by feature
-- Continuous integration on GitHub
-- About 737 automated tests
+- Continuous integration on GitHub; documentation up to date
+- About 740 automated tests
