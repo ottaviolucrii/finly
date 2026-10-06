@@ -17,6 +17,15 @@ class AccountRepositoryImpl implements AccountRepository {
   }
 
   @override
+  Future<Either<Failure, List<AccountEntity>>> getArchivedAccounts(
+    String workspaceId,
+  ) {
+    return _guard<List<AccountEntity>>(
+      () => _remote.getArchivedAccounts(workspaceId),
+    );
+  }
+
+  @override
   Future<Either<Failure, AccountEntity>> createAccount({
     required String workspaceId,
     required String name,
@@ -36,8 +45,28 @@ class AccountRepositoryImpl implements AccountRepository {
   }
 
   @override
+  Future<Either<Failure, AccountEntity>> updateAccount({
+    required String accountId,
+    required String name,
+    int? openingBalanceCents,
+  }) {
+    return _guard<AccountEntity>(
+      () => _remote.updateAccount(
+        accountId: accountId,
+        name: name,
+        openingBalanceCents: openingBalanceCents,
+      ),
+    );
+  }
+
+  @override
   Future<Either<Failure, void>> archiveAccount(String accountId) {
     return _guard<void>(() => _remote.archiveAccount(accountId));
+  }
+
+  @override
+  Future<Either<Failure, void>> restoreAccount(String accountId) {
+    return _guard<void>(() => _remote.restoreAccount(accountId));
   }
 
   /// Runs [action]; exceptions become Left(Failure). Programming errors
