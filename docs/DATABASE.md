@@ -20,14 +20,15 @@ The SQL under `sql/` is the **source of truth**. This file explains it and must 
 | 11 | `10_schedule_jobs.sql` | Schedules the two daily jobs with `pg_cron` (**Supabase only**) |
 | 12 | `11_monthly_flow.sql` | View `monthly_flow` for the dashboard chart |
 | 13 | `12_recurring_edit_delete.sql` | `update_recurring`, `delete_recurring` |
+| 14 | `13_schedule_purge.sql` | Schedules the daily purge of the trash (**Supabase only**) |
 
-The Supabase project `Finly` (region sa-east-1) has `00` to `05`, `07` to `12` applied. Run a file in the Supabase **SQL Editor** (or as a migration), once, in order. Keep every change in git: never edit tables by hand in the dashboard without copying the change back into `sql/`.
+The Supabase project `Finly` (region sa-east-1) has `00` to `05`, `07` to `13` applied. Run a file in the Supabase **SQL Editor** (or as a migration), once, in order. Keep every change in git: never edit tables by hand in the dashboard without copying the change back into `sql/`.
 
 Verify locally without Docker or Supabase (CI runs the same on every pull request):
 
 ```bash
 pip install pgserver "psycopg[binary]"
-python sql/tests/run_db_tests.py        # 83 checks (applies 00-04, 07-09, 11, 12)
+python sql/tests/run_db_tests.py        # 85 checks (applies 00-04, 07-09, 11, 12)
 ```
 
 `sql/tests/00_mock_supabase.sql` only fakes `auth.users` and `auth.uid()` for that test. Never run it in Supabase. File `10` needs `pg_cron`, which only Supabase has, so the test does not apply it.
@@ -241,7 +242,7 @@ erDiagram
 | view `monthly_category_spend` | spent per category per month (America/Sao_Paulo; pending counts, like in budgets) |
 | view `monthly_flow` | posted income and expenses per workspace, currency and month (America/Sao_Paulo); transfers excluded |
 
-Private jobs: `close_due_invoices` and `generate_all_recurring` are scheduled by `10_schedule_jobs.sql` with `pg_cron` at 03:05 and 03:15 UTC (00:05 and 00:15 in Sao Paulo); `purge_deleted` is not scheduled yet. Check them with `select * from cron.job_run_details order by start_time desc limit 10;`.
+Private jobs: `close_due_invoices` and `generate_all_recurring` are scheduled by `10_schedule_jobs.sql` with `pg_cron` at 03:05 and 03:15 UTC (00:05 and 00:15 in Sao Paulo); `purge_deleted` (removes for good what was deleted more than 30 days ago) is scheduled by `13_schedule_purge.sql` at 03:25 UTC. Check them with `select * from cron.job_run_details order by start_time desc limit 10;`.
 
 Stable error keys the app maps (see ARCHITECTURE section 5): `invalid_tax_id`, `workspace_type_already_exists`, `forbidden`, `not authenticated`, `invoice already paid`, `invalid status change`, `category kind does not match transaction type`, `transfer legs are managed through ...`.
 

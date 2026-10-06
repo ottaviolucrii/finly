@@ -223,7 +223,21 @@ def main():
           len(ids2) >= 3 and rows2[0] == (False, True, True, "posted"), rows2)
     check("pending occurrences are removed and detached",
           all(r == (True, True, True, "pending") for r in rows2[1:]), rows2)
-
+        # ---- trash purge ------------------------------------------------------
+    print("trash purge")
+    old = one(conn, ins, (ws_p, chk, cat_food, 'expense', 'posted', 100, 'Velha'))
+    recent = one(conn, ins, (ws_p, chk, cat_food, 'expense', 'posted', 100, 'Recente'))
+    conn.execute("update public.transactions set deleted_at = now() - interval '40 days' where id=%s", (old,))
+    conn.execute("update public.transactions set deleted_at = now() - interval '5 days' where id=%s", (recent,))
+    check("a soft-deleted transaction is still visible to its owner (the trash screen reads it)",
+          one(conn, "select count(*) from public.transactions where id=%s and deleted_at is not null", (recent,)) == 1)
+    conn.execute("reset role")
+    purged = one(conn, "select private.purge_deleted()")
+    as_user(conn, A)
+    check("purge_deleted removes only what was deleted more than 30 days ago",
+          purged >= 1
+          and one(conn, "select count(*) from public.transactions where id=%s", (old,)) == 0
+          and one(conn, "select count(*) from public.transactions where id=%s", (recent,)) == 1, purged)
     # ---- budgets & views --------------------------------------------------
     print("budgets")
     check("budget only for expense categories", raises(conn, "insert into public.budgets(workspace_id,category_id,effective_from,limit_cents) values (%s,%s,date_trunc('month',now())::date,100000)", (ws_p, cat_sal)))
