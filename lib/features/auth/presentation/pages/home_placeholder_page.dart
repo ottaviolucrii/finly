@@ -14,6 +14,7 @@ import 'package:finly/features/categories/presentation/pages/categories_page.dar
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import 'package:finly/features/dashboard/presentation/widgets/dashboard_view.dart';
 import 'package:finly/features/recurring/presentation/pages/recurring_page.dart';
+import 'package:finly/features/settings/presentation/pages/settings_page.dart';
 import 'package:finly/features/transactions/presentation/pages/transactions_page.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_cubit.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_state.dart';
@@ -133,7 +134,7 @@ class _HomeView extends StatelessWidget {
               actions: [
                 if (active != null)
                   Padding(
-                    padding: const EdgeInsets.only(right: 12),
+                    padding: const EdgeInsets.only(right: 4),
                     child: _WorkspaceChip(
                       workspace: active,
                       color: chipColor,
@@ -142,6 +143,15 @@ class _HomeView extends StatelessWidget {
                           : () => _openSwitchSheet(context, active, other!),
                     ),
                   ),
+                IconButton(
+                  tooltip: 'Configurações',
+                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (_) => SettingsPage(user: user),
+                    ),
+                  ),
+                ),
               ],
             ),
             body: SafeArea(
@@ -318,7 +328,7 @@ class _WorkspaceChip extends StatelessWidget {
         customBorder: const StadiumBorder(),
         onTap: onTap,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 200),
+          constraints: const BoxConstraints(maxWidth: 180),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Row(

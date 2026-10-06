@@ -15,6 +15,7 @@ found; cosmetic items are done in batches.
 - [ ] Check dark and light mode, 200% font scale and TalkBack on every screen
 - [ ] Dashboard: charts (spending by category, cash flow over the months)
 - [ ] Transactions of an archived category show "Categoria arquivada" instead of the real name
+- [ ] Home: six shortcut buttons wrap onto two lines; consider a bottom navigation bar
 
 ## Missing in finished features
 - [x] Transactions: edit, search and filters (type, status, account, category), pagination (20 per page)
@@ -31,9 +32,12 @@ found; cosmetic items are done in batches.
 - [x] Dashboard: balance, month, budgets and upcoming items
 
 ## Auth and privacy
-- [ ] Settings screen (next step)
-- [ ] Password reset, change e-mail and password, delete account
-- [ ] Sign out of all devices from the settings screen
+- [x] Settings screen (profile, security, privacy)
+- [x] Change password (asks for the current one, signs the other devices out)
+- [x] Sign out of all devices
+- [x] Delete account (password and typed confirmation; erases every workspace)
+- [ ] Delete account was only covered by tests and the local database check: try it end to end with a throwaway account
+- [ ] Change e-mail (needs the confirmation-link page) and forgot-password reset (needs a deep link)
 - [ ] E-mail confirmation link opens a localhost error (needs a landing page or deep link)
 - [ ] Session lock, biometrics, protected switch beyond "confirm" (FR-A07, FR-A08, FR-W04)
 - [ ] Terms acceptance version
@@ -45,7 +49,7 @@ found; cosmetic items are done in batches.
 - [ ] All texts are hard-coded in Portuguese (move to localisation: pt-BR and en)
 - [ ] Offline: no local cache yet (FR-Y01)
 - [ ] Dates use the phone's time zone; the database uses America/Sao_Paulo for budget months
-- [ ] Split lib/core/di/injection.dart into one file per feature (it is over 250 lines)
+- [ ] Split lib/core/di/injection.dart into one file per feature (it is over 280 lines)
 - [ ] Move switchWorkspace from the auth repository to the workspace repository
 - [ ] Remove the unused DeleteBudgetUseCase (budgets are stopped, not deleted)
 - [ ] Move isoDate from the budgets domain to core/utils (recurring and dashboard use it)
@@ -58,7 +62,8 @@ found; cosmetic items are done in batches.
 ## Done so far (for the record)
 - Database: 14 tables, 3 views, RLS everywhere, 67 local checks (sql/00 to sql/09)
 - Auth, workspaces and the protected workspace switch (never stuck, with a timeout)
+- Settings: change password, sign out everywhere, delete account
 - Accounts (create, edit, archive, restore), categories (create, edit, archive, restore)
 - Transactions (create, edit, search, filters, pagination), transfers (same workspace and owner)
 - Credit cards, budgets, recurring bills, dashboard
-- About 600 automated tests
+- About 620 automated tests

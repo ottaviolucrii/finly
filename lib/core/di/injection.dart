@@ -14,6 +14,8 @@ import 'package:finly/features/accounts/presentation/cubit/archived_accounts_cub
 import 'package:finly/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:finly/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:finly/features/auth/domain/repositories/auth_repository.dart';
+import 'package:finly/features/auth/domain/usecases/change_password_use_case.dart';
+import 'package:finly/features/auth/domain/usecases/delete_account_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/get_current_user_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/sign_in_use_case.dart';
 import 'package:finly/features/auth/domain/usecases/sign_out_use_case.dart';
@@ -67,6 +69,8 @@ import 'package:finly/features/recurring/domain/usecases/get_recurring_use_case.
 import 'package:finly/features/recurring/domain/usecases/set_recurring_active_use_case.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_cubit.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_form_cubit.dart';
+import 'package:finly/features/settings/presentation/cubit/change_password_cubit.dart';
+import 'package:finly/features/settings/presentation/cubit/delete_account_cubit.dart';
 import 'package:finly/features/transactions/data/datasources/transaction_remote_data_source.dart';
 import 'package:finly/features/transactions/data/repositories/transaction_repository_impl.dart';
 import 'package:finly/features/transactions/domain/repositories/transaction_repository.dart';
@@ -111,6 +115,8 @@ void configureDependencies() {
     ..registerLazySingleton(() => SignOutUseCase(sl()))
     ..registerLazySingleton(() => GetCurrentUserUseCase(sl()))
     ..registerLazySingleton(() => SwitchWorkspaceUseCase(sl()))
+    ..registerLazySingleton(() => ChangePasswordUseCase(sl()))
+    ..registerLazySingleton(() => DeleteAccountUseCase(sl()))
     // auth: presentation (a new bloc each time it is requested)
     ..registerFactory(
       () => AuthBloc(
@@ -120,6 +126,9 @@ void configureDependencies() {
         getCurrentUser: sl(),
       ),
     )
+    // settings: presentation
+    ..registerFactory(() => ChangePasswordCubit(sl()))
+    ..registerFactory(() => DeleteAccountCubit(sl()))
     // workspaces: data layer
     ..registerLazySingleton<WorkspaceRemoteDataSource>(
       () => WorkspaceRemoteDataSourceImpl(sl()),
