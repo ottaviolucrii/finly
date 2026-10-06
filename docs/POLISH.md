@@ -55,6 +55,9 @@ found; cosmetic items are done in batches.
 - [x] injection.dart split into one module per feature (features/<name>/di), with a test that builds every bloc and cubit
 - [x] View monthly_flow (sql/11) sums income and expenses per month in the database, so charts never download every transaction
 - [ ] Add a check for monthly_flow to sql/tests/run_db_tests.py
+- [x] GitHub Actions (.github/workflows/ci.yml): flutter analyze, flutter test and the database tests on every PR and push to develop and main
+- [ ] Protect develop and main on GitHub: require a pull request and the two CI checks before merging
+- [ ] Pin the Flutter version in CI (flutter-version) after the first green run, so a new stable release cannot break a PR by surprise
 - [ ] Security advisor: tables are visible in the GraphQL schema to signed-in users (protected by RLS); consider revoking select where GraphQL is not used
 - [ ] All texts are hard-coded in Portuguese (move to localisation: pt-BR and en)
 - [ ] Offline: no local cache yet (FR-Y01)
@@ -64,9 +67,8 @@ found; cosmetic items are done in batches.
 - [ ] Move isoDate from the budgets domain to core/utils (recurring and dashboard use it)
 - [ ] Rename HomePlaceholderPage to HomePage
 - [ ] Cubit tests should also feed data-layer models (not only base entities), to catch runtime type traps such as firstWhere with orElse
-- [ ] GitHub Actions: analyze, tests, database tests
 - [ ] Widget and golden tests for the main screens
-- [ ] Update ARCHITECTURE.md, DATABASE.md and ROADMAP.md (functions create_credit_card and the budget end marker, the cron jobs, the monthly_flow view, the new features)
+- [ ] Update ARCHITECTURE.md, DATABASE.md and ROADMAP.md (functions create_credit_card and the budget end marker, the cron jobs, the monthly_flow view, CI, the new features)
 
 ## Done so far (for the record)
 - Database: 14 tables, 4 views, RLS everywhere, 67 local checks (sql/00 to sql/11), two daily jobs
@@ -77,4 +79,5 @@ found; cosmetic items are done in batches.
 - Credit cards (create, edit, archive), budgets, recurring bills
 - Dashboard with balance, month, charts, budgets and upcoming items
 - Errors never leave a screen loading; wiring split by feature
-- About 680 automated tests
+- Continuous integration on GitHub
+- About 686 automated tests
