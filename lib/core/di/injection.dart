@@ -5,6 +5,7 @@ import 'package:finly/features/cards/di/cards_di.dart';
 import 'package:finly/features/categories/di/categories_di.dart';
 import 'package:finly/features/dashboard/di/dashboard_di.dart';
 import 'package:finly/features/recurring/di/recurring_di.dart';
+import 'package:finly/features/trash/di/trash_di.dart';
 import 'package:finly/features/reports/di/reports_di.dart';
 import 'package:finly/features/settings/di/settings_di.dart';
 import 'package:finly/features/transactions/di/transactions_di.dart';
@@ -31,6 +32,7 @@ void registerFeatureModules(GetIt sl) {
   registerAccountsModule(sl);
   registerCategoriesModule(sl);
   registerTransactionsModule(sl);
+  registerTrashModule(sl);
   registerTransfersModule(sl);
   registerCardsModule(sl);
   registerBudgetsModule(sl);

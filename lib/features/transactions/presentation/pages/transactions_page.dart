@@ -11,6 +11,7 @@ import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
+import 'package:finly/features/trash/presentation/pages/trash_page.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_state.dart';
@@ -120,6 +121,22 @@ class _TransactionsViewState extends State<_TransactionsView> {
       ),
     );
     if (result != null) await cubit.setFilter(result);
+  }
+
+  Future<void> _openTrash() async {
+    final cubit = context.read<TransactionsCubit>();
+    final state = cubit.state;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => TrashPage(
+          workspace: _workspace,
+          accounts: state.accounts,
+          categories: state.categories,
+        ),
+      ),
+    );
+    // Something may have been restored.
+    await cubit.reload();
   }
 
   Future<void> _openForm(TransactionsState state) async {
@@ -277,6 +294,11 @@ class _TransactionsViewState extends State<_TransactionsView> {
                 tooltip: 'Transferir',
                 icon: const Icon(Icons.swap_horiz),
                 onPressed: () => _openTransferForm(state),
+              ),
+              IconButton(
+                tooltip: 'Lixeira',
+                icon: const Icon(Icons.delete_outline),
+                onPressed: _openTrash,
               ),
             ],
           ),

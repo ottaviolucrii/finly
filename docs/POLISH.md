@@ -16,12 +16,15 @@ found; cosmetic items are done in batches.
 - [ ] Charts and report: the income/expense totals are posted only, the category spending includes pending (same rule as budgets); consider unifying
 - [ ] Charts are drawn by hand (no chart package); revisit if more chart types are needed
 - [ ] Selected chips are gold (brand secondary): decide whether to use Tech Blue via a chip theme
-- [ ] Check dark and light mode, 200% font scale and TalkBack on every screen (charts and report included)
+- [ ] Check dark and light mode, 200% font scale and TalkBack on every screen (charts, report and trash included)
 - [ ] Home: seven shortcut buttons wrap onto three lines; consider a bottom navigation bar
 
 ## Missing in finished features
 - [x] Transactions: edit, search and filters (type, status, account, category, period), pagination (20 per page)
+- [x] Transactions: trash screen (Lixeira): deleted ones stay 30 days and can be restored; a daily job removes them for good after that
 - [ ] Transactions: "move to another account" (delete and recreate in one step)
+- [ ] Trash: deleted transfers are not listed and cannot be restored (restoring one leg alone is not allowed); a "restore transfer" function would be needed
+- [ ] Trash: no "delete now" button (the app cannot hard-delete; the daily job does it after 30 days)
 - [ ] Transfers: undo after delete (needs a database function)
 - [x] Accounts: rename, correct the opening balance, list and restore archived accounts
 - [x] Categories: create, rename, recolour, archive and restore (FR-G02)
@@ -61,12 +64,13 @@ found; cosmetic items are done in batches.
 ## Technical
 - [x] Data layer catches unexpected errors: a bug shows "Algo deu errado" with a retry, never an endless spinner (details in the console)
 - [x] Network errors that reach the app unwrapped say "Sem conexão"
-- [x] Database jobs scheduled with pg_cron (sql/10): invoices close at 00:05 and recurring bills generate at 00:15 (Sao Paulo time)
-- [ ] Check the jobs worked: select * from cron.job_run_details order by start_time desc limit 10
+- [x] Database jobs scheduled with pg_cron: invoices close at 00:05 and recurring bills generate at 00:15 (sql/10), the trash is purged at 00:25 (sql/13), all in Sao Paulo time
+- [x] The first two jobs ran and succeeded on 2026-10-06 (checked in cron.job_run_details)
+- [ ] Check that finly-purge-deleted ran: select * from cron.job_run_details order by start_time desc limit 10
 - [x] injection.dart split into one module per feature (features/<name>/di), with a test that builds every bloc and cubit
 - [x] View monthly_flow (sql/11) sums income and expenses per month in the database, so charts and reports never download every transaction
 - [x] Functions update_recurring and delete_recurring (sql/12), tested on real data inside a rolled-back transaction
-- [x] Database tests cover monthly_flow and update_recurring / delete_recurring (83 checks)
+- [x] Database tests cover monthly_flow, update_recurring / delete_recurring and purge_deleted (85 checks)
 - [x] GitHub Actions (.github/workflows/ci.yml): flutter analyze, flutter test and the database tests on every PR and push to develop and main
 - [x] ARCHITECTURE.md, DATABASE.md, ROADMAP.md and README.md match the code; docs/SUPABASE_SETUP.md added
 - [x] HomePlaceholderPage renamed to HomePage
@@ -85,13 +89,13 @@ found; cosmetic items are done in batches.
 - [ ] UI_GUIDE.md: record the colours the code really uses for chips and charts once the chip colour is decided
 
 ## Done so far (for the record)
-- Database: 14 tables, 4 views, RLS everywhere, 83 local checks (sql/00 to sql/12), two daily jobs
+- Database: 14 tables, 4 views, RLS everywhere, 85 local checks (sql/00 to sql/13), three daily jobs
 - Auth, workspaces and the protected workspace switch (never stuck, with a timeout)
 - Settings: change password, sign out everywhere, delete account; forgot password by e-mail code
 - Accounts (create, edit, archive, restore), categories (create, edit, archive, restore)
-- Transactions (create, edit, search, filters including period, pagination), transfers (same workspace and owner)
+- Transactions (create, edit, search, filters including period, pagination, trash), transfers (same workspace and owner)
 - Credit cards (create, edit, archive), budgets, recurring bills (create, edit, pause, delete)
 - Dashboard with balance, month, charts, budgets and upcoming items; monthly report
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 770 automated tests
+- About 785 automated tests
