@@ -4,6 +4,7 @@ import 'package:finly/features/accounts/presentation/cubit/account_form_cubit.da
 import 'package:finly/features/accounts/presentation/cubit/accounts_cubit.dart';
 import 'package:finly/features/accounts/presentation/cubit/archived_accounts_cubit.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:finly/features/auth/presentation/cubit/password_recovery_cubit.dart';
 import 'package:finly/features/budgets/presentation/cubit/budget_form_cubit.dart';
 import 'package:finly/features/budgets/presentation/cubit/budgets_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/card_archive_cubit.dart';
@@ -54,6 +55,7 @@ void main() {
   test('every bloc and cubit can be built from the wiring', () async {
     final built = <BlocBase<Object?>>[
       di<AuthBloc>(),
+      di<PasswordRecoveryCubit>(),
       di<SwitchWorkspaceCubit>(),
       di<OnboardingCubit>(),
       di<AccountsCubit>(),
@@ -85,7 +87,7 @@ void main() {
       di<DeleteAccountCubit>(),
     ];
 
-    expect(built, hasLength(30));
+    expect(built, hasLength(31));
     for (final bloc in built) {
       await bloc.close();
     }

@@ -65,6 +65,26 @@ class AuthRepositoryImpl implements AuthRepository {
     return _guard<void>(() => _remote.deleteAccount(password: password));
   }
 
+  @override
+  Future<Either<Failure, void>> requestPasswordReset({required String email}) {
+    return _guard<void>(() => _remote.requestPasswordReset(email: email));
+  }
+
+  @override
+  Future<Either<Failure, void>> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) {
+    return _guard<void>(
+      () => _remote.resetPassword(
+        email: email,
+        code: code,
+        newPassword: newPassword,
+      ),
+    );
+  }
+
   /// Runs [action]; exceptions become Left(Failure). Programming errors
   /// (Error) are mapped to an unknown_error failure and logged.
   Future<Either<Failure, T>> _guard<T>(Future<T> Function() action) async {

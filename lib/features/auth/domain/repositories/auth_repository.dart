@@ -37,4 +37,18 @@ abstract class AuthRepository {
   /// Checks [password] again, then erases the user and everything they own.
   /// There is no way back.
   Future<Either<Failure, void>> deleteAccount({required String password});
+
+  /// Sends a one-time code to [email] to reset the password. It succeeds even
+  /// when no account has that e-mail, so the app never reveals which e-mails
+  /// are registered.
+  Future<Either<Failure, void>> requestPasswordReset({required String email});
+
+  /// Checks the one-time [code] sent to [email], sets [newPassword], signs the
+  /// other devices out, and leaves nobody signed in on this one: the person
+  /// signs in again with the new password.
+  Future<Either<Failure, void>> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  });
 }
