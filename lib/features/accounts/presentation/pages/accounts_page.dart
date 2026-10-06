@@ -1,5 +1,4 @@
 import 'package:finly/core/di/injection.dart';
-import 'package:finly/core/money/money.dart';
 import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/accounts/presentation/account_messages.dart';
@@ -9,6 +8,7 @@ import 'package:finly/features/accounts/presentation/cubit/accounts_state.dart';
 import 'package:finly/features/accounts/presentation/pages/account_form_page.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
+import 'package:finly/features/dashboard/domain/dashboard_rules.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -124,20 +124,14 @@ class _AccountList extends StatelessWidget {
 
   const _AccountList({required this.accounts, required this.onArchive});
 
-  /// Total of posted balances per currency (currencies are never mixed).
-  Map<String, int> _totalsByCurrency() {
-    final totals = <String, int>{};
-    for (final account in accounts) {
-      totals[account.currency] =
-          (totals[account.currency] ?? 0) + account.postedBalanceCents;
-    }
-    return totals;
-  }
-
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final totals = _totalsByCurrency();
+    final scheme = Theme.of(context).colorScheme;
+
+    // Credit cards are not part of the total (it is what you have); what is
+    // owed on them is shown on its own line, like on the dashboard.
+    final totals = totalsByCurrency(accounts);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
@@ -150,11 +144,20 @@ class _AccountList extends StatelessWidget {
               children: [
                 Text('Saldo total', style: text.titleMedium),
                 const SizedBox(height: 8),
-                for (final entry in totals.entries)
+                for (final total in totals) ...[
                   Text(
-                    Money(entry.value, entry.key).format(),
-                    style: text.headlineSmall,
+                    total.posted.format(),
+                    style: text.headlineSmall?.copyWith(
+                      color: total.posted.isNegative ? scheme.error : null,
+                    ),
                   ),
+                  if (total.cardDebtCents > 0)
+                    Text(
+                      'Cartões em uso: ${total.cardDebt.format()}',
+                      style: text.bodySmall,
+                    ),
+                  const SizedBox(height: 4),
+                ],
               ],
             ),
           ),

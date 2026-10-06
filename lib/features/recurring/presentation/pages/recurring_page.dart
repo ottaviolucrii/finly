@@ -154,50 +154,62 @@ class _RecurringTile extends StatelessWidget {
         : (next == null ? 'Encerrada' : 'Próxima: ${formatDateBr(next)}');
     final sign = item.type.isCredit ? '+' : '-';
 
+    // The description gets a full line (two at most) and the amount its own
+    // line, so nothing is cut off on a narrow phone or with a large font.
     return Opacity(
       opacity: item.isActive ? 1 : 0.6,
       child: Card(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.repeat, color: scheme.primary),
-              const SizedBox(width: 16),
-              Expanded(
+              Row(
+                children: [
+                  Icon(Icons.repeat, color: scheme.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      item.description,
+                      style: text.titleMedium,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    tooltip: 'Mais opções',
+                    onSelected: (_) => onToggle(),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'toggle',
+                        child: Text(item.isActive ? 'Pausar' : 'Retomar'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 36, right: 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.description,
-                      style: text.titleMedium,
-                      overflow: TextOverflow.ellipsis,
+                      '$sign ${item.amount.format()}',
+                      style: text.titleLarge?.copyWith(
+                        color: item.type.isCredit ? scheme.primary : null,
+                      ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       '${frequencyLabel(item.frequency, item.intervalCount)} · '
                       '${account?.name ?? 'Conta'}',
                       style: text.bodySmall,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(status, style: text.bodySmall),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '$sign ${item.amount.format()}',
-                style: text.titleMedium?.copyWith(
-                  color: item.type.isCredit ? scheme.primary : null,
-                ),
-              ),
-              PopupMenuButton<String>(
-                tooltip: 'Mais opções',
-                onSelected: (_) => onToggle(),
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'toggle',
-                    child: Text(item.isActive ? 'Pausar' : 'Retomar'),
-                  ),
-                ],
               ),
             ],
           ),

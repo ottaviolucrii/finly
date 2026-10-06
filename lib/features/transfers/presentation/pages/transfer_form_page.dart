@@ -6,6 +6,7 @@ import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/transfers/domain/entities/transfer_kind.dart';
 import 'package:finly/features/transfers/presentation/cubit/transfer_form_cubit.dart';
 import 'package:finly/features/transfers/presentation/cubit/transfer_form_state.dart';
+import 'package:finly/features/transfers/presentation/exchange_rate.dart';
 import 'package:finly/features/transfers/presentation/transfer_messages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -171,7 +172,7 @@ class _TransferFormViewState extends State<_TransferFormView> {
                 children: [
                   Text(
                     transferFailureMessage(state.failure!),
-                    textAlign: TextAlign.center, 
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
                   FilledButton(
@@ -220,7 +221,22 @@ class _TransferFormViewState extends State<_TransferFormView> {
     final ownerAvailable = _canOwner && state.otherAccounts.isNotEmpty;
     final ownerLabel = _isBusiness ? 'Retirada' : 'Aporte';
 
-        return Align(
+    // The exchange rate the two typed amounts imply, to catch a typo.
+    String? rate;
+    if (crossCurrency) {
+      final sent = Money.tryParse(_amount.text, from.currency);
+      final got = Money.tryParse(_received.text, to.currency);
+      if (sent != null && got != null) {
+        rate = exchangeRateLabel(
+          fromCurrency: from.currency,
+          toCurrency: to.currency,
+          fromCents: sent.cents,
+          toCents: got.cents,
+        );
+      }
+    }
+
+    return Align(
       alignment: Alignment.topCenter,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -254,7 +270,9 @@ class _TransferFormViewState extends State<_TransferFormView> {
                   Text(
                     '$ownerLabel para ${widget.otherWorkspace?.name ?? ''}',
                     style: text.titleMedium,
-                  ),
+                  )
+                else
+                  Text('Entre contas deste workspace', style: text.titleMedium),
                 if (_mode == _Mode.owner) ...[
                   const SizedBox(height: 8),
                   Text(
@@ -319,6 +337,7 @@ class _TransferFormViewState extends State<_TransferFormView> {
                     FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                   ],
                   textInputAction: TextInputAction.next,
+                  onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     labelText: 'Valor que sai (${from.currency})',
                     prefixText: '${Money.symbolFor(from.currency)} ',
@@ -342,10 +361,13 @@ class _TransferFormViewState extends State<_TransferFormView> {
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                     ],
                     textInputAction: TextInputAction.next,
+                    onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       labelText: 'Valor que chega (${to.currency})',
                       prefixText: '${Money.symbolFor(to.currency)} ',
-                      helperText: 'As moedas são diferentes: informe os dois valores.',
+                      helperText:
+                          'As moedas são diferentes: informe os dois valores.',
+                      helperMaxLines: 2,
                       border: const OutlineInputBorder(),
                     ),
                     validator: (value) {
@@ -355,6 +377,11 @@ class _TransferFormViewState extends State<_TransferFormView> {
                           : null;
                     },
                   ),
+                  if (rate != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(rate, style: text.titleSmall),
+                    ),
                 ],
                 const SizedBox(height: 16),
                 TextFormField(
