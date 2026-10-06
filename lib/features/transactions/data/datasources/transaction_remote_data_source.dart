@@ -1,4 +1,6 @@
+import 'package:finly/features/transactions/data/like_pattern.dart';
 import 'package:finly/features/transactions/data/models/transaction_model.dart';
+import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,6 +10,8 @@ abstract class TransactionRemoteDataSource {
   Future<List<TransactionModel>> getTransactions(
     String workspaceId, {
     required int limit,
+    required int offset,
+    required TransactionFilter filter,
   });
 
   Future<TransactionModel> createTransaction({
@@ -45,16 +49,36 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
   Future<List<TransactionModel>> getTransactions(
     String workspaceId, {
     required int limit,
+    required int offset,
+    required TransactionFilter filter,
   }) async {
     // Row Level Security limits this to the user's own workspaces; the
     // filters pick the workspace and hide soft-deleted rows.
-    final rows = await _client
+    var query = _client
         .from('transactions')
         .select()
         .eq('workspace_id', workspaceId)
-        .filter('deleted_at', 'is', 'null')
+        .filter('deleted_at', 'is', 'null');
+
+    final search = filter.search.trim();
+    if (search.isNotEmpty) {
+      query = query.ilike('description', '%${escapeLikePattern(search)}%');
+    }
+    final type = filter.type;
+    if (type != null) query = query.eq('type', type.dbValue);
+    final status = filter.status;
+    if (status != null) query = query.eq('status', status.dbValue);
+    final accountId = filter.accountId;
+    if (accountId != null) query = query.eq('account_id', accountId);
+    final categoryId = filter.categoryId;
+    if (categoryId != null) query = query.eq('category_id', categoryId);
+
+    // The id breaks ties, so a row never repeats or goes missing between
+    // two pages.
+    final rows = await query
         .order('occurred_at', ascending: false)
-        .limit(limit);
+        .order('id')
+        .range(offset, offset + limit - 1);
 
     return rows.map(TransactionModel.fromMap).toList();
   }

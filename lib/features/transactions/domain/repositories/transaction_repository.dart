@@ -1,14 +1,17 @@
 import 'package:dartz/dartz.dart';
 import 'package:finly/core/error/failure.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
+import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
 
 abstract class TransactionRepository {
-  /// Newest first, deleted ones excluded.
+  /// One page, newest first, deleted ones excluded, narrowed by [filter].
   Future<Either<Failure, List<TransactionEntity>>> getTransactions(
     String workspaceId, {
-    int limit = 50,
+    int limit = 20,
+    int offset = 0,
+    TransactionFilter filter = const TransactionFilter(),
   });
 
   Future<Either<Failure, TransactionEntity>> createTransaction({

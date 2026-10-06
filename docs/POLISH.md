@@ -16,8 +16,8 @@ found; cosmetic items are done in batches.
 - [ ] Dashboard: charts (spending by category, cash flow over the months)
 
 ## Missing in finished features
-- [ ] Transactions: edit, search and filters, pagination (20 per page)
-- [ ] Transfers: undo after delete (needs a database function)
+- [x] Transactions: edit, search and filters (type, status, account, category), pagination (20 per page)
+- [ ] Transactions: filter by date range, "move to another account"- [ ] Transfers: undo after delete (needs a database function)
 - [ ] Accounts: rename, list and unarchive archived accounts
 - [ ] Categories: create, rename, recolour, archive (FR-G02)
 - [x] Credit cards: create, limit bar, invoices, installments, pay invoice

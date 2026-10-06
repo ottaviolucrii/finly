@@ -3,6 +3,7 @@ import 'package:finly/core/error/error_mapper.dart';
 import 'package:finly/core/error/failure.dart';
 import 'package:finly/features/transactions/data/datasources/transaction_remote_data_source.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
+import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
 import 'package:finly/features/transactions/domain/repositories/transaction_repository.dart';
@@ -15,10 +16,17 @@ class TransactionRepositoryImpl implements TransactionRepository {
   @override
   Future<Either<Failure, List<TransactionEntity>>> getTransactions(
     String workspaceId, {
-    int limit = 50,
+    int limit = 20,
+    int offset = 0,
+    TransactionFilter filter = const TransactionFilter(),
   }) {
     return _guard<List<TransactionEntity>>(
-      () => _remote.getTransactions(workspaceId, limit: limit),
+      () => _remote.getTransactions(
+        workspaceId,
+        limit: limit,
+        offset: offset,
+        filter: filter,
+      ),
     );
   }
 

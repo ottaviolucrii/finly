@@ -6,6 +6,7 @@ import 'package:finly/features/transactions/data/datasources/transaction_remote_
 import 'package:finly/features/transactions/data/models/transaction_model.dart';
 import 'package:finly/features/transactions/data/repositories/transaction_repository_impl.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
+import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,6 +37,7 @@ void main() {
     registerFallbackValue(TransactionType.expense);
     registerFallbackValue(TransactionStatus.posted);
     registerFallbackValue(DateTime(2026));
+    registerFallbackValue(const TransactionFilter());
   });
 
   setUp(() {
@@ -58,8 +60,12 @@ void main() {
   }
 
   test('getTransactions returns the transactions', () async {
-    when(() => remote.getTransactions('w1', limit: 50))
-        .thenAnswer((_) async => [model]);
+    when(() => remote.getTransactions(
+          'w1',
+          limit: 20,
+          offset: 0,
+          filter: const TransactionFilter(),
+        )).thenAnswer((_) async => [model]);
 
     final result = await repository.getTransactions('w1');
 
@@ -67,6 +73,36 @@ void main() {
       (failure) => fail('expected transactions, got $failure'),
       (transactions) => expect(transactions, [model]),
     );
+  });
+
+  test('getTransactions passes the page and the filter to the data source',
+      () async {
+    const filter = TransactionFilter(
+      search: 'mercado',
+      type: TransactionType.expense,
+      accountId: 'a1',
+    );
+    when(() => remote.getTransactions(
+          'w1',
+          limit: 20,
+          offset: 40,
+          filter: filter,
+        )).thenAnswer((_) async => []);
+
+    final result = await repository.getTransactions(
+      'w1',
+      limit: 20,
+      offset: 40,
+      filter: filter,
+    );
+
+    expect(result.isRight(), isTrue);
+    verify(() => remote.getTransactions(
+          'w1',
+          limit: 20,
+          offset: 40,
+          filter: filter,
+        )).called(1);
   });
 
   test('createTransaction returns the created transaction', () async {
@@ -161,8 +197,12 @@ void main() {
   });
 
   test('a timeout becomes NetworkFailure', () async {
-    when(() => remote.getTransactions('w1', limit: 50))
-        .thenThrow(TimeoutException('slow'));
+    when(() => remote.getTransactions(
+          any(),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          filter: any(named: 'filter'),
+        )).thenThrow(TimeoutException('slow'));
 
     final result = await repository.getTransactions('w1');
 
