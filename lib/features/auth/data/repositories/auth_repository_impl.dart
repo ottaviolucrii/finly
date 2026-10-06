@@ -47,6 +47,24 @@ class AuthRepositoryImpl implements AuthRepository {
     return _guard<UserEntity>(() => _remote.switchWorkspace(workspaceId));
   }
 
+  @override
+  Future<Either<Failure, void>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) {
+    return _guard<void>(
+      () => _remote.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteAccount({required String password}) {
+    return _guard<void>(() => _remote.deleteAccount(password: password));
+  }
+
   /// Runs [action]; exceptions become Left(Failure). Programming errors
   /// (Error, not Exception) are not caught on purpose.
   Future<Either<Failure, T>> _guard<T>(Future<T> Function() action) async {

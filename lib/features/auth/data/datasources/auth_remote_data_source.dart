@@ -18,6 +18,13 @@ abstract class AuthRemoteDataSource {
   Future<UserModel?> currentUser();
 
   Future<UserModel> switchWorkspace(String workspaceId);
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
+
+  Future<void> deleteAccount({required String password});
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -90,6 +97,50 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       params: {'p_workspace_id': workspaceId},
     );
     return _loadUser(user.id, user.email ?? '');
+  }
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _confirmPassword(currentPassword);
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
+
+    // A password change should end the sessions of every other device. The
+    // password is already changed, so a failure here is not worth failing for.
+    try {
+      await _client.auth.signOut(scope: SignOutScope.others);
+    } catch (_) {
+      // Ignored on purpose.
+    }
+  }
+
+  @override
+  Future<void> deleteAccount({required String password}) async {
+    await _confirmPassword(password);
+
+    // Database function (sql/03_logic.sql): erases the user and, by cascade,
+    // every row they own, including the audit trail.
+    await _client.rpc('delete_my_account');
+
+    // The user no longer exists on the server; clear the local session.
+    try {
+      await _client.auth.signOut(scope: SignOutScope.local);
+    } catch (_) {
+      // Ignored on purpose: the account is already gone.
+    }
+  }
+
+  /// Signing in again proves the person at the keyboard knows the password,
+  /// not only that the phone is unlocked.
+  Future<void> _confirmPassword(String password) async {
+    final user = _client.auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) {
+      throw const AuthException('not_authenticated');
+    }
+    await _client.auth.signInWithPassword(email: email, password: password);
   }
 
   Future<UserModel> _loadUser(String id, String email) async {

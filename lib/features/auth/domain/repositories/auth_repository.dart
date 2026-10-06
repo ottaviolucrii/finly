@@ -26,4 +26,15 @@ abstract class AuthRepository {
 
   /// Changes the active workspace. Moves to a workspace repository later.
   Future<Either<Failure, UserEntity>> switchWorkspace(String workspaceId);
+
+  /// Checks [currentPassword] again, sets [newPassword], and signs the other
+  /// devices out.
+  Future<Either<Failure, void>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
+
+  /// Checks [password] again, then erases the user and everything they own.
+  /// There is no way back.
+  Future<Either<Failure, void>> deleteAccount({required String password});
 }
