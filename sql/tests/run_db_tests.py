@@ -4,8 +4,8 @@ Finly database tests on a throw-away local Postgres (no Docker needed).
     pip install pgserver "psycopg[binary]"
     python sql/tests/run_db_tests.py
 
-Applies 00..09, 11 and 12 (+ the Supabase mock; 10 needs pg_cron, which only
-Supabase has) and checks the business rules: tax-id validation, RLS isolation,
+Applies 00..09, 11, 12 and 14 (+ the Supabase mock; 10 and 13 need pg_cron, which
+only Supabase has) and checks the business rules: tax-id validation, RLS isolation,
 derived balances, monthly flow, transfers, credit card invoices/installments,
 recurring generation, edit and delete, audit log and account deletion.
 """
@@ -15,7 +15,7 @@ import pgserver, psycopg
 SQL = pathlib.Path(__file__).resolve().parent.parent
 FILES = ["tests/00_mock_supabase.sql", "00_types.sql", "01_helpers.sql",
          "02_tables.sql", "03_logic.sql", "04_security.sql", "07_hardening.sql", "08_credit_card.sql", "09_budget_end_marker.sql",
-         "11_monthly_flow.sql", "12_recurring_edit_delete.sql"]
+         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql"]
 
 passed = failed = 0
 def check(name, cond, extra=""):
@@ -150,6 +150,17 @@ def main():
     check("balance restored after delete_transfer", one(conn, "select posted_balance_cents from public.account_balances where account_id=%s", (sav,)) == 0)
     check("transfer legs do not count in monthly_flow", flow() == (300000, 4500), flow())
 
+    # ---- restore transfer -------------------------------------------------
+    print("restore transfer")
+    conn.execute("select public.restore_transfer(%s)", (tr,))
+    check("restore_transfer brings both legs back", one(conn, "select count(*) from public.transactions where transfer_id=%s and deleted_at is null", (tr,)) == 2)
+    check("the restored transfer moves the balances again", one(conn, "select posted_balance_cents from public.account_balances where account_id=%s", (sav,)) == 50000)
+    check("restoring a transfer that is not deleted is refused", raises(conn, "select public.restore_transfer(%s)", (tr,), contains="not deleted"))
+    as_user(conn, B)
+    check("another user cannot restore A's transfer", raises(conn, "select public.restore_transfer(%s)", (tr,), contains="forbidden"))
+    as_user(conn, A)
+    conn.execute("select public.delete_transfer(%s)", (tr,))
+
     # ---- credit card ------------------------------------------------------
     print("credit card")
     card = one(conn, "insert into public.accounts(workspace_id,name,type) values (%s,'Cartao','credit_card') returning id", (ws_p,))
@@ -181,6 +192,7 @@ def main():
     check("paying twice rejected", raises(conn, "select public.pay_invoice(%s,%s)", (i1, chk), contains="already paid"))
     conn.execute("select public.delete_transfer(%s)", (pay,))
     check("deleting payment reopens invoice", one(conn, "select status from public.credit_card_invoices where id=%s", (i1,)) in ("open", "closed"))
+    check("a card payment cannot be restored (the invoice has to be paid again)", raises(conn, "select public.restore_transfer(%s)", (pay,), contains="card payment"))
 
     # ---- recurring --------------------------------------------------------
     print("recurring")
@@ -223,7 +235,8 @@ def main():
           len(ids2) >= 3 and rows2[0] == (False, True, True, "posted"), rows2)
     check("pending occurrences are removed and detached",
           all(r == (True, True, True, "pending") for r in rows2[1:]), rows2)
-        # ---- trash purge ------------------------------------------------------
+
+    # ---- trash purge ------------------------------------------------------
     print("trash purge")
     old = one(conn, ins, (ws_p, chk, cat_food, 'expense', 'posted', 100, 'Velha'))
     recent = one(conn, ins, (ws_p, chk, cat_food, 'expense', 'posted', 100, 'Recente'))
@@ -238,6 +251,7 @@ def main():
           purged >= 1
           and one(conn, "select count(*) from public.transactions where id=%s", (old,)) == 0
           and one(conn, "select count(*) from public.transactions where id=%s", (recent,)) == 1, purged)
+
     # ---- budgets & views --------------------------------------------------
     print("budgets")
     check("budget only for expense categories", raises(conn, "insert into public.budgets(workspace_id,category_id,effective_from,limit_cents) values (%s,%s,date_trunc('month',now())::date,100000)", (ws_p, cat_sal)))
