@@ -1,4 +1,6 @@
 import 'package:finly/features/dashboard/data/models/cash_flow_entry_model.dart';
+import 'package:finly/features/dashboard/data/models/category_spend_entry_model.dart';
+import 'package:finly/features/dashboard/data/models/monthly_flow_entry_model.dart';
 import 'package:finly/features/transactions/data/models/transaction_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -14,12 +16,30 @@ abstract class DashboardRemoteDataSource {
     required DateTime from,
     required DateTime to,
   });
+
+  Future<List<MonthlyFlowEntryModel>> getMonthlyFlow(
+    String workspaceId, {
+    required DateTime from,
+    required DateTime to,
+  });
+
+  Future<List<CategorySpendEntryModel>> getCategorySpend(
+    String workspaceId,
+    DateTime month,
+  );
 }
 
 class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
   final SupabaseClient _client;
 
   const DashboardRemoteDataSourceImpl(this._client);
+
+  /// "2026-10-01": how the database views name a month.
+  static String _date(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year.toString().padLeft(4, '0')}-$month-$day';
+  }
 
   @override
   Future<List<CashFlowEntryModel>> getCashFlow(
@@ -63,5 +83,37 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
         .limit(20);
 
     return rows.map(TransactionModel.fromMap).toList();
+  }
+
+  @override
+  Future<List<MonthlyFlowEntryModel>> getMonthlyFlow(
+    String workspaceId, {
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    // The view (sql/11_monthly_flow.sql) sums per month in the database, so
+    // the app never downloads every transaction to draw a chart.
+    final rows = await _client
+        .from('monthly_flow')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .gte('month', _date(from))
+        .lt('month', _date(to));
+
+    return rows.map(MonthlyFlowEntryModel.fromMap).toList();
+  }
+
+  @override
+  Future<List<CategorySpendEntryModel>> getCategorySpend(
+    String workspaceId,
+    DateTime month,
+  ) async {
+    final rows = await _client
+        .from('monthly_category_spend')
+        .select('category_id, currency, spent_cents')
+        .eq('workspace_id', workspaceId)
+        .eq('month', _date(DateTime(month.year, month.month)));
+
+    return rows.map(CategorySpendEntryModel.fromMap).toList();
   }
 }
