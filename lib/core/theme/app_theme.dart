@@ -5,6 +5,9 @@ abstract final class AppTheme {
   static const _titleFont = 'Poppins';
   static const _bodyFont = 'Inter';
 
+  /// Every digit has the same width, so amounts line up in columns.
+  static const _tabularFigures = [FontFeature.tabularFigures()];
+
   static ThemeData get light => _build(
         const ColorScheme(
           brightness: Brightness.light,
@@ -60,13 +63,36 @@ abstract final class AppTheme {
     // Titles use Poppins, everything else (body, numbers) uses Inter.
     TextStyle? title(TextStyle? style) => style?.copyWith(fontFamily: _titleFont);
     final t = base.textTheme;
-    return base.copyWith(
-      textTheme: t.copyWith(
-        headlineLarge: title(t.headlineLarge),
-        headlineMedium: title(t.headlineMedium),
-        headlineSmall: title(t.headlineSmall),
-        titleLarge: title(t.titleLarge),
-      ),
+    final titled = t.copyWith(
+      headlineLarge: title(t.headlineLarge),
+      headlineMedium: title(t.headlineMedium),
+      headlineSmall: title(t.headlineSmall),
+      titleLarge: title(t.titleLarge),
+    );
+
+    return base.copyWith(textTheme: _withTabularFigures(titled));
+  }
+
+  static TextTheme _withTabularFigures(TextTheme t) {
+    TextStyle? tab(TextStyle? style) =>
+        style?.copyWith(fontFeatures: _tabularFigures);
+
+    return t.copyWith(
+      displayLarge: tab(t.displayLarge),
+      displayMedium: tab(t.displayMedium),
+      displaySmall: tab(t.displaySmall),
+      headlineLarge: tab(t.headlineLarge),
+      headlineMedium: tab(t.headlineMedium),
+      headlineSmall: tab(t.headlineSmall),
+      titleLarge: tab(t.titleLarge),
+      titleMedium: tab(t.titleMedium),
+      titleSmall: tab(t.titleSmall),
+      bodyLarge: tab(t.bodyLarge),
+      bodyMedium: tab(t.bodyMedium),
+      bodySmall: tab(t.bodySmall),
+      labelLarge: tab(t.labelLarge),
+      labelMedium: tab(t.labelMedium),
+      labelSmall: tab(t.labelSmall),
     );
   }
 }
