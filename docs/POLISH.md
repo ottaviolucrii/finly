@@ -41,15 +41,18 @@ found; cosmetic items are done in batches.
 - [ ] E-mail confirmation link opens a localhost error (needs a landing page or deep link)
 - [ ] Session lock, biometrics, protected switch beyond "confirm" (FR-A07, FR-A08, FR-W04)
 - [ ] Terms acceptance version
-- [ ] Leaked-password protection toggle in Supabase Auth (plan-dependent)
+- [ ] Leaked-password protection toggle in Supabase Auth (plan-dependent, needs a paid plan)
 
 ## Technical
-- [ ] Data layer: also catch unexpected errors, so a bug shows "Algo deu errado" with a retry button instead of an endless spinner
-- [ ] Schedule the database jobs (sql/06_jobs.sql): close invoices and generate recurring occurrences daily
+- [x] Data layer catches unexpected errors: a bug shows "Algo deu errado" with a retry, never an endless spinner (details in the console)
+- [x] Network errors that reach the app unwrapped say "Sem conexão"
+- [x] Database jobs scheduled with pg_cron (sql/10): invoices close at 00:05 and recurring bills generate at 00:15 (Sao Paulo time)
+- [ ] Check the jobs worked: select * from cron.job_run_details order by start_time desc limit 10
+- [x] injection.dart split into one module per feature (features/<name>/di), with a test that builds every bloc and cubit
+- [ ] Security advisor: tables are visible in the GraphQL schema to signed-in users (protected by RLS); consider revoking select where GraphQL is not used
 - [ ] All texts are hard-coded in Portuguese (move to localisation: pt-BR and en)
 - [ ] Offline: no local cache yet (FR-Y01)
 - [ ] Dates use the phone's time zone; the database uses America/Sao_Paulo for budget months
-- [ ] Split lib/core/di/injection.dart into one file per feature (it is over 280 lines)
 - [ ] Move switchWorkspace from the auth repository to the workspace repository
 - [ ] Remove the unused DeleteBudgetUseCase (budgets are stopped, not deleted)
 - [ ] Move isoDate from the budgets domain to core/utils (recurring and dashboard use it)
@@ -57,13 +60,14 @@ found; cosmetic items are done in batches.
 - [ ] Cubit tests should also feed data-layer models (not only base entities), to catch runtime type traps such as firstWhere with orElse
 - [ ] GitHub Actions: analyze, tests, database tests
 - [ ] Widget and golden tests for the main screens
-- [ ] Update ARCHITECTURE.md, DATABASE.md and ROADMAP.md (functions create_credit_card and the budget end marker, new features)
+- [ ] Update ARCHITECTURE.md, DATABASE.md and ROADMAP.md (functions create_credit_card and the budget end marker, the cron jobs, the new features)
 
 ## Done so far (for the record)
-- Database: 14 tables, 3 views, RLS everywhere, 67 local checks (sql/00 to sql/09)
+- Database: 14 tables, 3 views, RLS everywhere, 67 local checks (sql/00 to sql/10), two daily jobs
 - Auth, workspaces and the protected workspace switch (never stuck, with a timeout)
 - Settings: change password, sign out everywhere, delete account
 - Accounts (create, edit, archive, restore), categories (create, edit, archive, restore)
 - Transactions (create, edit, search, filters, pagination), transfers (same workspace and owner)
 - Credit cards, budgets, recurring bills, dashboard
-- About 620 automated tests
+- Errors never leave a screen loading; wiring split by feature
+- About 630 automated tests

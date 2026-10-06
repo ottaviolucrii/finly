@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:finly/core/error/failure.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Turns exceptions thrown by Supabase into domain [Failure]s.
@@ -13,6 +14,19 @@ abstract final class ErrorMapper {
     }
     if (error is AuthException) return _fromAuth(error);
     if (error is PostgrestException) return _fromPostgrest(error);
+
+    // Network problems that reach us unwrapped (no connection, a broken TLS
+    // handshake). Matched by name so this file does not depend on dart:io.
+    final type = error.runtimeType.toString();
+    if (type == 'SocketException' ||
+        type == 'HandshakeException' ||
+        type == 'ClientException') {
+      return const NetworkFailure('network_error');
+    }
+
+    // Anything else is a bug (a type error, a bad cast...). The user sees a
+    // generic message with a retry button; the details go to the console.
+    debugPrint('Unexpected error: $error');
     return const ServerFailure('unknown_error');
   }
 
