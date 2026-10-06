@@ -1,3 +1,4 @@
+import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
@@ -5,9 +6,9 @@ import 'package:finly/features/transactions/domain/entities/transaction_status.d
 import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
 import 'package:flutter/material.dart';
 
-/// A bottom sheet to pick the type, status, account and category. Pops with
-/// the new [TransactionFilter] when the user taps "Aplicar". The search text
-/// of [initial] is kept as it is.
+/// A bottom sheet to pick the type, status, account, category and period. Pops
+/// with the new [TransactionFilter] when the user taps "Aplicar". The search
+/// text of [initial] is kept as it is.
 class TransactionFilterSheet extends StatefulWidget {
   final TransactionFilter initial;
   final List<AccountEntity> accounts;
@@ -29,15 +30,28 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
   late TransactionStatus? _status = widget.initial.status;
   late String? _accountId = widget.initial.accountId;
   late String? _categoryId = widget.initial.categoryId;
+  late DateTime? _from = widget.initial.from;
+  late DateTime? _to = widget.initial.to;
 
   void _clear() => setState(() {
         _type = null;
         _status = null;
         _accountId = null;
         _categoryId = null;
+        _from = null;
+        _to = null;
       });
 
   void _apply() {
+    var from = _from;
+    var to = _to;
+    // "De" after "Até": swap them instead of showing an empty list.
+    if (from != null && to != null && from.isAfter(to)) {
+      final swap = from;
+      from = to;
+      to = swap;
+    }
+
     Navigator.of(context).pop(
       TransactionFilter(
         search: widget.initial.search,
@@ -45,9 +59,25 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
         status: _status,
         accountId: _accountId,
         categoryId: _categoryId,
+        from: from,
+        to: to,
       ),
     );
   }
+
+  Future<DateTime?> _pickDate(DateTime? current) {
+    return showDatePicker(
+      context: context,
+      initialDate: current ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+  }
+
+  void _setPeriod(DateTime from, DateTime to) => setState(() {
+        _from = from;
+        _to = to;
+      });
 
   Widget _section(String title, List<Widget> chips) {
     final text = Theme.of(context).textTheme;
@@ -65,9 +95,27 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
     );
   }
 
+  Widget _dateChip(
+    String label,
+    DateTime? value,
+    ValueChanged<DateTime?> onChanged,
+  ) {
+    return InputChip(
+      avatar: const Icon(Icons.event, size: 18),
+      label: Text(value == null ? label : '$label ${formatDateBr(value)}'),
+      onPressed: () async {
+        final picked = await _pickDate(value);
+        if (picked != null) onChanged(picked);
+      },
+      onDeleted: value == null ? null : () => onChanged(null),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -77,6 +125,31 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text('Filtros', style: text.headlineSmall, textAlign: TextAlign.center),
+            _section('Período', [
+              ActionChip(
+                label: const Text('Este mês'),
+                onPressed: () => _setPeriod(
+                  DateTime(today.year, today.month, 1),
+                  DateTime(today.year, today.month + 1, 0),
+                ),
+              ),
+              ActionChip(
+                label: const Text('Mês passado'),
+                onPressed: () => _setPeriod(
+                  DateTime(today.year, today.month - 1, 1),
+                  DateTime(today.year, today.month, 0),
+                ),
+              ),
+              ActionChip(
+                label: const Text('Últimos 30 dias'),
+                onPressed: () => _setPeriod(
+                  today.subtract(const Duration(days: 29)),
+                  today,
+                ),
+              ),
+              _dateChip('De', _from, (value) => setState(() => _from = value)),
+              _dateChip('Até', _to, (value) => setState(() => _to = value)),
+            ]),
             _section('Tipo', [
               ChoiceChip(
                 label: const Text('Todos'),
@@ -136,7 +209,11 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                 ),
                 for (final category in widget.categories)
                   ChoiceChip(
-                    label: Text(category.name),
+                    label: Text(
+                      category.isArchived
+                          ? '${category.name} (arquivada)'
+                          : category.name,
+                    ),
                     selected: _categoryId == category.id,
                     onSelected: (_) => setState(() => _categoryId = category.id),
                   ),

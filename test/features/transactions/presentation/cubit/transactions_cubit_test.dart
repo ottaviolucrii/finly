@@ -8,7 +8,7 @@ import 'package:finly/features/accounts/domain/entities/account_type.dart';
 import 'package:finly/features/accounts/domain/usecases/get_accounts_use_case.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_kind.dart';
-import 'package:finly/features/categories/domain/usecases/get_categories_use_case.dart';
+import 'package:finly/features/categories/domain/usecases/get_all_categories_use_case.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
@@ -27,7 +27,7 @@ class MockGetTransactions extends Mock implements GetTransactionsUseCase {}
 
 class MockGetAccounts extends Mock implements GetAccountsUseCase {}
 
-class MockGetCategories extends Mock implements GetCategoriesUseCase {}
+class MockGetCategories extends Mock implements GetAllCategoriesUseCase {}
 
 class MockConfirm extends Mock implements ConfirmTransactionUseCase {}
 
