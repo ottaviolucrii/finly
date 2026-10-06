@@ -145,7 +145,9 @@ class _TransactionsViewState extends State<_TransactionsView> {
     TransactionEntity transaction,
   ) async {
     if (transaction.isTransferLeg) {
-      _showMessage('Transferências não podem ser editadas. Exclua e crie outra.');
+      _showMessage(
+        'Transferências não podem ser editadas. Exclua e crie outra.',
+      );
       return;
     }
     if (transaction.status == TransactionStatus.failed) {
@@ -368,8 +370,9 @@ class _TransactionsViewState extends State<_TransactionsView> {
           onDelete: () => transaction.isTransferLeg
               ? cubit.deleteTransfer(transaction)
               : cubit.delete(transaction),
-          confirmDelete:
-              transaction.isTransferLeg ? _confirmTransferDelete : null,
+          confirmDelete: transaction.isTransferLeg
+              ? _confirmTransferDelete
+              : null,
         ),
       );
     }
@@ -432,23 +435,28 @@ class _TransactionTile extends StatelessWidget {
         : AppColors.structure;
     final avatarForeground =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? AppColors.white
-            : AppColors.midnight;
+        ? AppColors.white
+        : AppColors.midnight;
     final icon = category != null
         ? categoryIcon(category!.icon)
         : transactionTypeIcon(transaction.type);
 
     final subtitle = [
       category?.name ??
-          (transaction.isTransferLeg ? 'Transferência' : 'Sem categoria'),
+          (transaction.isTransferLeg
+              ? 'Transferência'
+              : (transaction.categoryId != null
+                    ? 'Categoria arquivada'
+                    : 'Sem categoria')),
       account?.name ?? 'Conta',
     ].join(' · ');
 
     return Dismissible(
       key: ValueKey(transaction.id),
       direction: DismissDirection.endToStart,
-      confirmDismiss:
-          confirmDelete == null ? null : (_) => confirmDelete!.call(),
+      confirmDismiss: confirmDelete == null
+          ? null
+          : (_) => confirmDelete!.call(),
       onDismissed: (_) => onDelete(),
       background: Container(
         alignment: Alignment.centerRight,
@@ -494,7 +502,9 @@ class _TransactionTile extends StatelessWidget {
                     Text(
                       transactionAmountText(transaction),
                       style: text.titleMedium?.copyWith(
-                        color: transaction.type.isCredit ? scheme.primary : null,
+                        color: transaction.type.isCredit
+                            ? scheme.primary
+                            : null,
                       ),
                     ),
                     if (transaction.isPending) ...[
@@ -612,7 +622,10 @@ class _ErrorView extends StatelessWidget {
           children: [
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            FilledButton(onPressed: onRetry, child: const Text('Tentar de novo')),
+            FilledButton(
+              onPressed: onRetry,
+              child: const Text('Tentar de novo'),
+            ),
           ],
         ),
       ),

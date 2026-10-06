@@ -10,6 +10,7 @@ class CategoryModel extends CategoryEntity {
     required super.icon,
     required super.colorHex,
     required super.isDefault,
+    super.isArchived,
   });
 
   /// [map] is a row of the `categories` table.
@@ -22,6 +23,7 @@ class CategoryModel extends CategoryEntity {
       icon: map['icon'] as String,
       colorHex: map['color'] as String,
       isDefault: map['is_default'] as bool,
+      isArchived: map['archived_at'] != null,
     );
   }
 }

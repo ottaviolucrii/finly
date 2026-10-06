@@ -14,6 +14,10 @@ class CategoryEntity extends Equatable {
   final String colorHex;
   final bool isDefault;
 
+  /// Archived categories stay on old transactions but are not offered for
+  /// new ones.
+  final bool isArchived;
+
   const CategoryEntity({
     required this.id,
     required this.workspaceId,
@@ -22,9 +26,10 @@ class CategoryEntity extends Equatable {
     required this.icon,
     required this.colorHex,
     required this.isDefault,
+    this.isArchived = false,
   });
 
   @override
   List<Object?> get props =>
-      [id, workspaceId, name, kind, icon, colorHex, isDefault];
+      [id, workspaceId, name, kind, icon, colorHex, isDefault, isArchived];
 }

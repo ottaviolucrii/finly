@@ -19,8 +19,7 @@ found; cosmetic items are done in batches.
 - [x] Transactions: edit, search and filters (type, status, account, category), pagination (20 per page)
 - [ ] Transactions: filter by date range, "move to another account"- [ ] Transfers: undo after delete (needs a database function)
 - [ ] Accounts: rename, list and unarchive archived accounts
-- [ ] Categories: create, rename, recolour, archive (FR-G02)
-- [x] Credit cards: create, limit bar, invoices, installments, pay invoice
+- [x] Categories: create, rename, recolour, archive and restore (FR-G02)- [x] Credit cards: create, limit bar, invoices, installments, pay invoice
 - [ ] Credit cards: edit limit and closing/due days, archive a card, partial payment
 - [x] Budgets: monthly limit per category with versions and end markers
 - [ ] Budgets: alerts at 80% and 100% (needs notifications, FR-B03)
