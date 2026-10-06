@@ -32,7 +32,9 @@ found; cosmetic items are done in batches.
 - [x] Budgets: monthly limit per category with versions and end markers
 - [ ] Budgets: alerts at 80% and 100% (needs notifications, FR-B03)
 - [x] Recurring: create, list, pause and resume, pending occurrences
-- [ ] Recurring: edit and delete an item, notification before the due date (lead days)
+- [x] Recurring: edit (description, amount, category, end date) and delete (pending occurrences removed, history kept)
+- [ ] Recurring: notification before the due date (lead days; the column exists but nothing uses it yet)
+- [ ] Recurring: the schedule (frequency, interval, start date) cannot be edited; delete and create another
 - [x] Dashboard: balance, month, charts, budgets and upcoming items
 
 ## Auth and privacy
@@ -54,7 +56,8 @@ found; cosmetic items are done in batches.
 - [ ] Check the jobs worked: select * from cron.job_run_details order by start_time desc limit 10
 - [x] injection.dart split into one module per feature (features/<name>/di), with a test that builds every bloc and cubit
 - [x] View monthly_flow (sql/11) sums income and expenses per month in the database, so charts never download every transaction
-- [ ] Add a check for monthly_flow to sql/tests/run_db_tests.py
+- [x] Functions update_recurring and delete_recurring (sql/12), tested on real data inside a rolled-back transaction
+- [ ] Add checks for monthly_flow (sql/11) and update_recurring / delete_recurring (sql/12) to sql/tests/run_db_tests.py
 - [x] GitHub Actions (.github/workflows/ci.yml): flutter analyze, flutter test and the database tests on every PR and push to develop and main
 - [ ] Protect develop and main on GitHub: require a pull request and the two CI checks before merging
 - [ ] Pin the Flutter version in CI (flutter-version) after the first green run, so a new stable release cannot break a PR by surprise
@@ -68,16 +71,16 @@ found; cosmetic items are done in batches.
 - [ ] Rename HomePlaceholderPage to HomePage
 - [ ] Cubit tests should also feed data-layer models (not only base entities), to catch runtime type traps such as firstWhere with orElse
 - [ ] Widget and golden tests for the main screens
-- [ ] Update ARCHITECTURE.md, DATABASE.md and ROADMAP.md (functions create_credit_card and the budget end marker, the cron jobs, the monthly_flow view, CI, the new features)
+- [ ] Update ARCHITECTURE.md, DATABASE.md and ROADMAP.md (functions create_credit_card, update_recurring and delete_recurring, the budget end marker, the cron jobs, the monthly_flow view, CI, the new features)
 
 ## Done so far (for the record)
-- Database: 14 tables, 4 views, RLS everywhere, 67 local checks (sql/00 to sql/11), two daily jobs
+- Database: 14 tables, 4 views, RLS everywhere, 67 local checks (sql/00 to sql/12), two daily jobs
 - Auth, workspaces and the protected workspace switch (never stuck, with a timeout)
 - Settings: change password, sign out everywhere, delete account
 - Accounts (create, edit, archive, restore), categories (create, edit, archive, restore)
 - Transactions (create, edit, search, filters, pagination), transfers (same workspace and owner)
-- Credit cards (create, edit, archive), budgets, recurring bills
+- Credit cards (create, edit, archive), budgets, recurring bills (create, edit, pause, delete)
 - Dashboard with balance, month, charts, budgets and upcoming items
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub
-- About 686 automated tests
+- About 710 automated tests

@@ -24,6 +24,21 @@ abstract class RecurringRepository {
     DateTime? endDate,
   });
 
+  /// Changes the description, amount, category and end date. The schedule
+  /// never changes. Pending occurrences from today on follow the new values;
+  /// pending ones after a new end date are removed.
+  Future<Either<Failure, void>> updateRecurring({
+    required String id,
+    String? categoryId,
+    required int amountCents,
+    required String description,
+    DateTime? endDate,
+  });
+
+  /// Deletes the item and its pending occurrences. What was already
+  /// confirmed stays in the history.
+  Future<Either<Failure, void>> deleteRecurring(String id);
+
   /// Pauses or resumes an item. Nothing is deleted.
   Future<Either<Failure, void>> setActive(String id, {required bool active});
 

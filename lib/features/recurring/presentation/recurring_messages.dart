@@ -3,6 +3,10 @@ import 'package:finly/core/error/failure.dart';
 /// Turns a failure code into text for the user (Portuguese for now;
 /// replaced by proper localisation in a later phase).
 String recurringFailureMessage(Failure failure) {
+  if (failure.message.contains('category kind')) {
+    return 'A categoria não combina com o tipo da recorrência.';
+  }
+
   switch (failure.message) {
     case 'invalid_account':
       return 'Escolha uma conta.';
