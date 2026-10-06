@@ -64,6 +64,8 @@ import 'package:finly/features/transactions/domain/usecases/create_transaction_u
 import 'package:finly/features/transactions/domain/usecases/delete_transaction_use_case.dart';
 import 'package:finly/features/transactions/domain/usecases/get_transactions_use_case.dart';
 import 'package:finly/features/transactions/domain/usecases/restore_transaction_use_case.dart';
+import 'package:finly/features/transactions/domain/usecases/update_transaction_use_case.dart';
+import 'package:finly/features/transactions/presentation/cubit/transaction_edit_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transaction_form_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_cubit.dart';
 import 'package:finly/features/transfers/data/datasources/transfer_remote_data_source.dart';
@@ -149,6 +151,7 @@ void configureDependencies() {
     // transactions: use cases
     ..registerLazySingleton(() => GetTransactionsUseCase(sl()))
     ..registerLazySingleton(() => CreateTransactionUseCase(sl()))
+    ..registerLazySingleton(() => UpdateTransactionUseCase(sl()))
     ..registerLazySingleton(() => ConfirmTransactionUseCase(sl()))
     ..registerLazySingleton(() => DeleteTransactionUseCase(sl()))
     ..registerLazySingleton(() => RestoreTransactionUseCase(sl()))
@@ -247,5 +250,6 @@ void configureDependencies() {
         deleteTransfer: sl(),
       ),
     )
-    ..registerFactory(() => TransactionFormCubit(sl()));
+    ..registerFactory(() => TransactionFormCubit(sl()))
+    ..registerFactory(() => TransactionEditCubit(sl()));
 }

@@ -11,6 +11,13 @@ String transactionFailureMessage(Failure failure) {
   if (code.contains('invalid status change')) {
     return 'Esta transação não pode mudar para esse status.';
   }
+  if (code.contains('invoice already paid')) {
+    return 'A fatura desta compra já foi paga: valor, data e status não podem '
+        'mais ser alterados.';
+  }
+  if (code.contains('transfer legs')) {
+    return 'Transferências não podem ser alteradas. Exclua e crie outra.';
+  }
 
   switch (code) {
     case 'invalid_account':

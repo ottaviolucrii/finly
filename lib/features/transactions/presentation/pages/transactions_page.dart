@@ -8,8 +8,10 @@ import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
+import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_state.dart';
+import 'package:finly/features/transactions/presentation/pages/transaction_edit_page.dart';
 import 'package:finly/features/transactions/presentation/pages/transaction_form_page.dart';
 import 'package:finly/features/transactions/presentation/transaction_messages.dart';
 import 'package:finly/features/transactions/presentation/transaction_style.dart';
@@ -60,6 +62,41 @@ class _TransactionsView extends StatelessWidget {
       ),
     );
     if (created == true) await cubit.reload();
+  }
+
+  Future<void> _openEdit(
+    BuildContext context,
+    TransactionsState state,
+    TransactionEntity transaction,
+  ) async {
+    if (transaction.isTransferLeg) {
+      _showMessage(
+        context,
+        'Transferências não podem ser editadas. Exclua e crie outra.',
+      );
+      return;
+    }
+    if (transaction.status == TransactionStatus.failed) {
+      _showMessage(context, 'Transações que falharam não podem ser editadas.');
+      return;
+    }
+
+    AccountEntity? account;
+    for (final candidate in state.accounts) {
+      if (candidate.id == transaction.accountId) account = candidate;
+    }
+
+    final cubit = context.read<TransactionsCubit>();
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => TransactionEditPage(
+          transaction: transaction,
+          account: account,
+          categories: state.categories,
+        ),
+      ),
+    );
+    if (saved == true) await cubit.reload();
   }
 
   Future<void> _openTransferForm(
@@ -209,6 +246,7 @@ class _TransactionsView extends StatelessWidget {
           transaction: transaction,
           account: accountById[transaction.accountId],
           category: categoryById[transaction.categoryId],
+          onTap: () => _openEdit(context, state, transaction),
           onConfirm: () => cubit.confirm(transaction.id),
           onDelete: () => transaction.isTransferLeg
               ? cubit.deleteTransfer(transaction)
@@ -231,6 +269,7 @@ class _TransactionTile extends StatelessWidget {
   final TransactionEntity transaction;
   final AccountEntity? account;
   final CategoryEntity? category;
+  final VoidCallback onTap;
   final VoidCallback onConfirm;
   final VoidCallback onDelete;
 
@@ -241,6 +280,7 @@ class _TransactionTile extends StatelessWidget {
     required this.transaction,
     required this.account,
     required this.category,
+    required this.onTap,
     required this.onConfirm,
     required this.onDelete,
     required this.confirmDelete,
@@ -281,68 +321,72 @@ class _TransactionTile extends StatelessWidget {
         child: Icon(Icons.delete_outline, color: scheme.onError),
       ),
       child: Card(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: avatarColor,
-                foregroundColor: avatarForeground,
-                child: Icon(icon),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: avatarColor,
+                  foregroundColor: avatarForeground,
+                  child: Icon(icon),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        transaction.description,
+                        style: text.titleMedium,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        subtitle,
+                        style: text.bodySmall,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      transaction.description,
-                      style: text.titleMedium,
-                      overflow: TextOverflow.ellipsis,
+                      transactionAmountText(transaction),
+                      style: text.titleMedium?.copyWith(
+                        color: transaction.type.isCredit ? scheme.primary : null,
+                      ),
                     ),
-                    Text(
-                      subtitle,
-                      style: text.bodySmall,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    if (transaction.isPending) ...[
+                      Text('Pendente', style: text.bodySmall),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(0, 32),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        onPressed: onConfirm,
+                        child: const Text('Confirmar'),
+                      ),
+                    ],
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    transactionAmountText(transaction),
-                    style: text.titleMedium?.copyWith(
-                      color: transaction.type.isCredit ? scheme.primary : null,
-                    ),
-                  ),
-                  if (transaction.isPending) ...[
-                    Text('Pendente', style: text.bodySmall),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(0, 32),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                      ),
-                      onPressed: onConfirm,
-                      child: const Text('Confirmar'),
-                    ),
+                PopupMenuButton<String>(
+                  tooltip: 'Mais opções',
+                  onSelected: (_) async {
+                    final ask = confirmDelete;
+                    if (ask != null && !await ask()) return;
+                    onDelete();
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'delete', child: Text('Excluir')),
                   ],
-                ],
-              ),
-              PopupMenuButton<String>(
-                tooltip: 'Mais opções',
-                onSelected: (_) async {
-                  final ask = confirmDelete;
-                  if (ask != null && !await ask()) return;
-                  onDelete();
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'delete', child: Text('Excluir')),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

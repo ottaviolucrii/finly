@@ -22,6 +22,15 @@ abstract class TransactionRemoteDataSource {
     required DateTime occurredAt,
   });
 
+  Future<TransactionModel> updateTransaction({
+    required String transactionId,
+    String? categoryId,
+    required int amountCents,
+    required String description,
+    required DateTime occurredAt,
+    required TransactionStatus status,
+  });
+
   Future<void> updateStatus(String transactionId, TransactionStatus status);
 
   Future<void> setDeleted(String transactionId, {required bool deleted});
@@ -77,6 +86,35 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
           'description': description,
           'occurred_at': occurredAt.toUtc().toIso8601String(),
         })
+        .select()
+        .single();
+
+    return TransactionModel.fromMap(row);
+  }
+
+  @override
+  Future<TransactionModel> updateTransaction({
+    required String transactionId,
+    String? categoryId,
+    required int amountCents,
+    required String description,
+    required DateTime occurredAt,
+    required TransactionStatus status,
+  }) async {
+    // The database refuses changes to the type, account and currency, to
+    // transfers, and to the amount, status or date of a purchase on an
+    // invoice that is already paid. A card purchase moved to another date
+    // goes to the right invoice by itself.
+    final row = await _client
+        .from('transactions')
+        .update({
+          'category_id': categoryId,
+          'amount_cents': amountCents,
+          'description': description,
+          'occurred_at': occurredAt.toUtc().toIso8601String(),
+          'status': status.dbValue,
+        })
+        .eq('id', transactionId)
         .select()
         .single();
 
