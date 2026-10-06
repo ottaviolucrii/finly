@@ -10,6 +10,7 @@ import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_state.dart';
 import 'package:finly/features/budgets/presentation/pages/budgets_page.dart';
 import 'package:finly/features/cards/presentation/pages/cards_page.dart';
+import 'package:finly/features/categories/presentation/pages/categories_page.dart';
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import 'package:finly/features/dashboard/presentation/widgets/dashboard_view.dart';
 import 'package:finly/features/recurring/presentation/pages/recurring_page.dart';
@@ -231,6 +232,12 @@ class _HomeBody extends StatelessWidget {
                 label: const Text('Recorrências'),
                 onPressed: () =>
                     openAndRefresh(context, RecurringPage(workspace: workspace)),
+              ),
+              FilledButton.tonalIcon(
+                icon: const Icon(Icons.category_outlined),
+                label: const Text('Categorias'),
+                onPressed: () =>
+                    openAndRefresh(context, CategoriesPage(workspace: workspace)),
               ),
             ],
           ),

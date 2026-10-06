@@ -41,7 +41,13 @@ import 'package:finly/features/cards/presentation/cubit/invoices_cubit.dart';
 import 'package:finly/features/categories/data/datasources/category_remote_data_source.dart';
 import 'package:finly/features/categories/data/repositories/category_repository_impl.dart';
 import 'package:finly/features/categories/domain/repositories/category_repository.dart';
+import 'package:finly/features/categories/domain/usecases/create_category_use_case.dart';
+import 'package:finly/features/categories/domain/usecases/get_all_categories_use_case.dart';
 import 'package:finly/features/categories/domain/usecases/get_categories_use_case.dart';
+import 'package:finly/features/categories/domain/usecases/set_category_archived_use_case.dart';
+import 'package:finly/features/categories/domain/usecases/update_category_use_case.dart';
+import 'package:finly/features/categories/presentation/cubit/categories_cubit.dart';
+import 'package:finly/features/categories/presentation/cubit/category_form_cubit.dart';
 import 'package:finly/features/dashboard/data/datasources/dashboard_remote_data_source.dart';
 import 'package:finly/features/dashboard/data/repositories/dashboard_repository_impl.dart';
 import 'package:finly/features/dashboard/domain/repositories/dashboard_repository.dart';
@@ -133,7 +139,7 @@ void configureDependencies() {
     ..registerLazySingleton(() => ArchiveAccountUseCase(sl()))
     ..registerFactory(() => AccountsCubit(sl(), sl()))
     ..registerFactory(() => AccountFormCubit(sl()))
-    // categories
+    // categories: data layer and use cases
     ..registerLazySingleton<CategoryRemoteDataSource>(
       () => CategoryRemoteDataSourceImpl(sl()),
     )
@@ -141,6 +147,17 @@ void configureDependencies() {
       () => CategoryRepositoryImpl(sl()),
     )
     ..registerLazySingleton(() => GetCategoriesUseCase(sl()))
+    ..registerLazySingleton(() => GetAllCategoriesUseCase(sl()))
+    ..registerLazySingleton(() => CreateCategoryUseCase(sl()))
+    ..registerLazySingleton(() => UpdateCategoryUseCase(sl()))
+    ..registerLazySingleton(() => SetCategoryArchivedUseCase(sl()))
+    // categories: presentation
+    ..registerFactory(
+      () => CategoriesCubit(getAll: sl(), setArchived: sl()),
+    )
+    ..registerFactory(
+      () => CategoryFormCubit(create: sl(), update: sl()),
+    )
     // transactions: data layer
     ..registerLazySingleton<TransactionRemoteDataSource>(
       () => TransactionRemoteDataSourceImpl(sl()),
