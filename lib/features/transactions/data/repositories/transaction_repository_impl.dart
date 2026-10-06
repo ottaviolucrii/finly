@@ -50,6 +50,27 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
+  Future<Either<Failure, TransactionEntity>> updateTransaction({
+    required String transactionId,
+    String? categoryId,
+    required int amountCents,
+    required String description,
+    required DateTime occurredAt,
+    required TransactionStatus status,
+  }) {
+    return _guard<TransactionEntity>(
+      () => _remote.updateTransaction(
+        transactionId: transactionId,
+        categoryId: categoryId,
+        amountCents: amountCents,
+        description: description,
+        occurredAt: occurredAt,
+        status: status,
+      ),
+    );
+  }
+
+  @override
   Future<Either<Failure, void>> updateStatus(
     String transactionId,
     TransactionStatus status,

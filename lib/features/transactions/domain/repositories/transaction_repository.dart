@@ -23,6 +23,18 @@ abstract class TransactionRepository {
     required DateTime occurredAt,
   });
 
+  /// Changes amount, category, description, date and status. A null
+  /// [categoryId] clears the category. The type, account and currency are
+  /// immutable in the database.
+  Future<Either<Failure, TransactionEntity>> updateTransaction({
+    required String transactionId,
+    String? categoryId,
+    required int amountCents,
+    required String description,
+    required DateTime occurredAt,
+    required TransactionStatus status,
+  });
+
   /// The database only allows the changes of SRS BR-09 (for example
   /// pending to posted, but not posted to failed).
   Future<Either<Failure, void>> updateStatus(
