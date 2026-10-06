@@ -7,14 +7,16 @@ import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
 import 'package:finly/features/reports/domain/entities/monthly_report.dart';
 import 'package:finly/features/reports/domain/report_rules.dart';
+import 'package:finly/features/reports/presentation/cubit/export_cubit.dart';
+import 'package:finly/features/reports/presentation/cubit/export_state.dart';
 import 'package:finly/features/reports/presentation/cubit/reports_cubit.dart';
 import 'package:finly/features/reports/presentation/cubit/reports_state.dart';
 import 'package:finly/features/reports/presentation/reports_messages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// The monthly report of one workspace. The cubit is created for [workspace],
-/// so it never shows data of another workspace.
+/// The monthly report of one workspace. The cubits are created for
+/// [workspace], so they never show data of another workspace.
 class ReportsPage extends StatelessWidget {
   final WorkspaceEntity workspace;
 
@@ -22,8 +24,11 @@ class ReportsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<ReportsCubit>()..load(workspace.id),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => sl<ReportsCubit>()..load(workspace.id)),
+        BlocProvider(create: (_) => sl<ExportCubit>()),
+      ],
       child: _ReportsView(workspace: workspace),
     );
   }
@@ -41,34 +46,77 @@ class _ReportsView extends StatefulWidget {
 class _ReportsViewState extends State<_ReportsView> {
   String? _currency;
 
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final isBusiness = widget.workspace.type == WorkspaceType.business;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Relatório'),
-        backgroundColor: isBusiness ? AppColors.deepBlue : null,
-        foregroundColor: isBusiness ? AppColors.white : null,
-      ),
-      body: BlocBuilder<ReportsCubit, ReportsState>(
-        builder: (context, state) {
-          final cubit = context.read<ReportsCubit>();
-
-          return Column(
-            children: [
-              _MonthHeader(
-                month: state.month,
-                canGoNext: state.canGoNext,
-                onPrevious: cubit.previousMonth,
-                onNext: cubit.nextMonth,
-              ),
-              if (state.status == ReportsStatus.loading && state.report != null)
-                const LinearProgressIndicator(minHeight: 2),
-              Expanded(child: _body(context, state)),
-            ],
+    return BlocListener<ExportCubit, ExportState>(
+      listenWhen: (previous, current) => previous.status != current.status,
+      listener: (context, state) {
+        if (state.status == ExportStatus.failure && state.failure != null) {
+          _showMessage(reportsFailureMessage(state.failure!));
+        } else if (state.status == ExportStatus.done && state.truncated) {
+          _showMessage(
+            'O mês tem muitas transações: foram exportadas as primeiras '
+            '${state.rowCount}.',
           );
-        },
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Relatório'),
+          backgroundColor: isBusiness ? AppColors.deepBlue : null,
+          foregroundColor: isBusiness ? AppColors.white : null,
+          actions: [
+            BlocBuilder<ExportCubit, ExportState>(
+              builder: (context, export) {
+                final busy = export.status == ExportStatus.exporting;
+
+                return IconButton(
+                  tooltip: 'Exportar o mês em CSV',
+                  icon: busy
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.ios_share),
+                  onPressed: busy
+                      ? null
+                      : () => context.read<ExportCubit>().export(
+                            workspaceId: widget.workspace.id,
+                            month: context.read<ReportsCubit>().state.month,
+                          ),
+                );
+              },
+            ),
+          ],
+        ),
+        body: BlocBuilder<ReportsCubit, ReportsState>(
+          builder: (context, state) {
+            final cubit = context.read<ReportsCubit>();
+
+            return Column(
+              children: [
+                _MonthHeader(
+                  month: state.month,
+                  canGoNext: state.canGoNext,
+                  onPrevious: cubit.previousMonth,
+                  onNext: cubit.nextMonth,
+                ),
+                if (state.status == ReportsStatus.loading && state.report != null)
+                  const LinearProgressIndicator(minHeight: 2),
+                Expanded(child: _body(context, state)),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
