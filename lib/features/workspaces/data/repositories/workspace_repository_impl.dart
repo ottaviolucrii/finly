@@ -24,7 +24,7 @@ class WorkspaceRepositoryImpl implements WorkspaceRepository {
         taxId: taxId,
       );
       return Right<Failure, WorkspaceEntity>(workspace);
-    } on Exception catch (e) {
+    } catch (e) {
       return Left<Failure, WorkspaceEntity>(ErrorMapper.toFailure(e));
     }
   }

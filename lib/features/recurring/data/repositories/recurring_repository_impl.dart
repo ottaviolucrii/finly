@@ -63,11 +63,11 @@ class RecurringRepositoryImpl implements RecurringRepository {
   }
 
   /// Runs [action]; exceptions become Left(Failure). Programming errors
-  /// (Error, not Exception) are not caught on purpose.
+  /// (Error) are mapped to an unknown_error failure and logged.
   Future<Either<Failure, T>> _guard<T>(Future<T> Function() action) async {
     try {
       return Right<Failure, T>(await action());
-    } on Exception catch (e) {
+    } catch (e) {
       return Left<Failure, T>(ErrorMapper.toFailure(e));
     }
   }
