@@ -8,6 +8,7 @@ import 'package:finly/features/dashboard/domain/entities/dashboard_data.dart';
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_state.dart';
 import 'package:finly/features/dashboard/presentation/dashboard_messages.dart';
+import 'package:finly/features/dashboard/presentation/widgets/dashboard_charts_card.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:finly/features/transactions/presentation/pages/transactions_page.dart';
 import 'package:finly/features/transactions/presentation/transaction_style.dart';
@@ -18,9 +19,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 /// anything done there (a purchase, a payment, a budget) changes the numbers.
 Future<void> openAndRefresh(BuildContext context, Widget page) async {
   final cubit = context.read<DashboardCubit>();
-  await Navigator.of(context).push<void>(
-    MaterialPageRoute<void>(builder: (_) => page),
-  );
+  await Navigator.of(
+    context,
+  ).push<void>(MaterialPageRoute<void>(builder: (_) => page));
   await cubit.reload();
 }
 
@@ -37,7 +38,8 @@ class DashboardView extends StatelessWidget {
         final data = state.data;
 
         if (data == null) {
-          if (state.status == DashboardStatus.failure && state.failure != null) {
+          if (state.status == DashboardStatus.failure &&
+              state.failure != null) {
             return _ErrorCard(
               message: dashboardFailureMessage(state.failure!),
               onRetry: () => context.read<DashboardCubit>().reload(),
@@ -55,6 +57,8 @@ class DashboardView extends StatelessWidget {
             _BalanceCard(data: data, workspace: workspace),
             const SizedBox(height: 12),
             _MonthCard(data: data),
+            const SizedBox(height: 12),
+            DashboardChartsCard(workspace: workspace),
             const SizedBox(height: 12),
             _BudgetsCard(data: data, workspace: workspace),
             const SizedBox(height: 12),
@@ -80,7 +84,8 @@ class _BalanceCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => openAndRefresh(context, AccountsPage(workspace: workspace)),
+        onTap: () =>
+            openAndRefresh(context, AccountsPage(workspace: workspace)),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -164,7 +169,12 @@ class _FlowRows extends StatelessWidget {
 
   const _FlowRows({required this.flow});
 
-  Widget _row(BuildContext context, String label, String value, {Color? color}) {
+  Widget _row(
+    BuildContext context,
+    String label,
+    String value, {
+    Color? color,
+  }) {
     final text = Theme.of(context).textTheme;
 
     return Padding(
@@ -244,8 +254,10 @@ class _BudgetsCard extends StatelessWidget {
               children: [
                 Expanded(child: Text('Orçamentos', style: text.titleMedium)),
                 TextButton(
-                  onPressed: () =>
-                      openAndRefresh(context, BudgetsPage(workspace: workspace)),
+                  onPressed: () => openAndRefresh(
+                    context,
+                    BudgetsPage(workspace: workspace),
+                  ),
                   child: Text(data.budgets.isEmpty ? 'Definir' : 'Ver todos'),
                 ),
               ],
@@ -441,7 +453,10 @@ class _ErrorCard extends StatelessWidget {
           children: [
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            FilledButton(onPressed: onRetry, child: const Text('Tentar de novo')),
+            FilledButton(
+              onPressed: onRetry,
+              child: const Text('Tentar de novo'),
+            ),
           ],
         ),
       ),

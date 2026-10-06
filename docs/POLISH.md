@@ -11,9 +11,11 @@ found; cosmetic items are done in batches.
 - [x] Tabular figures for money columns (set once in the theme)
 - [x] Recorrências: description and account name are truncated in the list tile
 - [x] Contas: "Saldo total" excludes credit cards; card debt shown on its own line
+- [x] Dashboard charts: income vs expenses for 6 months (bars) and spending by category (donut)
+- [ ] Charts: bars show only what already happened, the donut includes pending (same rule as budgets); consider unifying
+- [ ] Charts are drawn by hand (no chart package); revisit if more chart types are needed
 - [ ] Selected chips are gold (brand secondary): decide whether to use Tech Blue via a chip theme
-- [ ] Check dark and light mode, 200% font scale and TalkBack on every screen
-- [ ] Dashboard: charts (spending by category, cash flow over the months)
+- [ ] Check dark and light mode, 200% font scale and TalkBack on every screen (charts included)
 - [ ] Transactions of an archived category show "Categoria arquivada" instead of the real name
 - [ ] Home: six shortcut buttons wrap onto two lines; consider a bottom navigation bar
 
@@ -31,7 +33,7 @@ found; cosmetic items are done in batches.
 - [ ] Budgets: alerts at 80% and 100% (needs notifications, FR-B03)
 - [x] Recurring: create, list, pause and resume, pending occurrences
 - [ ] Recurring: edit and delete an item, notification before the due date (lead days)
-- [x] Dashboard: balance, month, budgets and upcoming items
+- [x] Dashboard: balance, month, charts, budgets and upcoming items
 
 ## Auth and privacy
 - [x] Settings screen (profile, security, privacy)
@@ -51,10 +53,12 @@ found; cosmetic items are done in batches.
 - [x] Database jobs scheduled with pg_cron (sql/10): invoices close at 00:05 and recurring bills generate at 00:15 (Sao Paulo time)
 - [ ] Check the jobs worked: select * from cron.job_run_details order by start_time desc limit 10
 - [x] injection.dart split into one module per feature (features/<name>/di), with a test that builds every bloc and cubit
+- [x] View monthly_flow (sql/11) sums income and expenses per month in the database, so charts never download every transaction
+- [ ] Add a check for monthly_flow to sql/tests/run_db_tests.py
 - [ ] Security advisor: tables are visible in the GraphQL schema to signed-in users (protected by RLS); consider revoking select where GraphQL is not used
 - [ ] All texts are hard-coded in Portuguese (move to localisation: pt-BR and en)
 - [ ] Offline: no local cache yet (FR-Y01)
-- [ ] Dates use the phone's time zone; the database uses America/Sao_Paulo for budget months
+- [ ] Dates use the phone's time zone; the database uses America/Sao_Paulo for budget months and charts
 - [ ] Move switchWorkspace from the auth repository to the workspace repository
 - [ ] Remove the unused DeleteBudgetUseCase (budgets are stopped, not deleted)
 - [ ] Move isoDate from the budgets domain to core/utils (recurring and dashboard use it)
@@ -62,14 +66,15 @@ found; cosmetic items are done in batches.
 - [ ] Cubit tests should also feed data-layer models (not only base entities), to catch runtime type traps such as firstWhere with orElse
 - [ ] GitHub Actions: analyze, tests, database tests
 - [ ] Widget and golden tests for the main screens
-- [ ] Update ARCHITECTURE.md, DATABASE.md and ROADMAP.md (functions create_credit_card and the budget end marker, the cron jobs, the new features)
+- [ ] Update ARCHITECTURE.md, DATABASE.md and ROADMAP.md (functions create_credit_card and the budget end marker, the cron jobs, the monthly_flow view, the new features)
 
 ## Done so far (for the record)
-- Database: 14 tables, 3 views, RLS everywhere, 67 local checks (sql/00 to sql/10), two daily jobs
+- Database: 14 tables, 4 views, RLS everywhere, 67 local checks (sql/00 to sql/11), two daily jobs
 - Auth, workspaces and the protected workspace switch (never stuck, with a timeout)
 - Settings: change password, sign out everywhere, delete account
 - Accounts (create, edit, archive, restore), categories (create, edit, archive, restore)
 - Transactions (create, edit, search, filters, pagination), transfers (same workspace and owner)
-- Credit cards (create, edit, archive), budgets, recurring bills, dashboard
+- Credit cards (create, edit, archive), budgets, recurring bills
+- Dashboard with balance, month, charts, budgets and upcoming items
 - Errors never leave a screen loading; wiring split by feature
-- About 650 automated tests
+- About 680 automated tests
