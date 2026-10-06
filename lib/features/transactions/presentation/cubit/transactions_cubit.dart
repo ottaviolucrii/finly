@@ -1,9 +1,8 @@
 import 'package:finly/core/error/failure.dart';
-import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/accounts/domain/usecases/get_accounts_use_case.dart';
-import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/domain/usecases/get_categories_use_case.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
+import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:finly/features/transactions/domain/usecases/confirm_transaction_use_case.dart';
 import 'package:finly/features/transactions/domain/usecases/delete_transaction_use_case.dart';
 import 'package:finly/features/transactions/domain/usecases/get_transactions_use_case.dart';
@@ -13,6 +12,9 @@ import 'package:finly/features/transfers/domain/usecases/delete_transfer_use_cas
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class TransactionsCubit extends Cubit<TransactionsState> {
+  /// Rows loaded at a time.
+  static const pageSize = 20;
+
   final GetTransactionsUseCase _getTransactions;
   final GetAccountsUseCase _getAccounts;
   final GetCategoriesUseCase _getCategories;
@@ -21,6 +23,10 @@ class TransactionsCubit extends Cubit<TransactionsState> {
   final RestoreTransactionUseCase _restoreTransaction;
   final DeleteTransferUseCase _deleteTransfer;
   String? _workspaceId;
+
+  /// Numbers each request, so that a slow answer to an old search never
+  /// replaces the answer to a newer one.
+  int _request = 0;
 
   TransactionsCubit({
     required GetTransactionsUseCase getTransactions,
@@ -41,59 +47,130 @@ class TransactionsCubit extends Cubit<TransactionsState> {
 
   Future<void> load(String workspaceId) async {
     _workspaceId = workspaceId;
-    // Keep the old data on screen while reloading, to avoid flicker.
+    await _refresh(lookups: true);
+  }
+
+  /// Back to the first page with the current filter. Used after anything
+  /// that may have changed the list.
+  Future<void> reload() => _refresh(lookups: true);
+
+  /// Applies a new filter and shows its first page. The accounts and the
+  /// categories are not fetched again.
+  Future<void> setFilter(TransactionFilter filter) async {
+    if (filter == state.filter) return;
+    await _refresh(lookups: false, filter: filter);
+  }
+
+  Future<void> _refresh({required bool lookups, TransactionFilter? filter}) async {
+    final workspaceId = _workspaceId;
+    if (workspaceId == null) return;
+
+    final activeFilter = filter ?? state.filter;
+    final request = ++_request;
+    var accountList = state.accounts;
+    var categoryList = state.categories;
+
+    // Keep the old rows on screen while loading, to avoid flicker.
     emit(TransactionsState(
       status: TransactionsStatus.loading,
       transactions: state.transactions,
-      accounts: state.accounts,
-      categories: state.categories,
+      accounts: accountList,
+      categories: categoryList,
+      filter: activeFilter,
+      hasMore: state.hasMore,
     ));
 
-    final transactions = await _getTransactions(workspaceId);
-    final accounts = await _getAccounts(workspaceId);
-    final categories = await _getCategories(workspaceId);
+    final transactions = await _getTransactions(
+      GetTransactionsParams(
+        workspaceId: workspaceId,
+        limit: pageSize,
+        filter: activeFilter,
+      ),
+    );
 
     Failure? failure;
-    var transactionList = const <TransactionEntity>[];
-    var accountList = const <AccountEntity>[];
-    var categoryList = const <CategoryEntity>[];
-
+    var page = const <TransactionEntity>[];
     transactions.fold((f) {
       failure ??= f;
     }, (value) {
-      transactionList = value;
-    });
-    accounts.fold((f) {
-      failure ??= f;
-    }, (value) {
-      accountList = value;
-    });
-    categories.fold((f) {
-      failure ??= f;
-    }, (value) {
-      categoryList = value;
+      page = value;
     });
 
-    final loadFailure = failure;
-    if (loadFailure != null) {
+    if (lookups) {
+      final accounts = await _getAccounts(workspaceId);
+      final categories = await _getCategories(workspaceId);
+      accounts.fold((f) {
+        failure ??= f;
+      }, (value) {
+        accountList = value;
+      });
+      categories.fold((f) {
+        failure ??= f;
+      }, (value) {
+        categoryList = value;
+      });
+    }
+
+    // A newer request took over while this one was waiting.
+    if (request != _request) return;
+
+    final problem = failure;
+    if (problem != null) {
       emit(TransactionsState(
         status: TransactionsStatus.failure,
-        failure: loadFailure,
+        filter: activeFilter,
+        failure: problem,
       ));
       return;
     }
 
     emit(TransactionsState(
       status: TransactionsStatus.loaded,
-      transactions: transactionList,
+      transactions: page,
       accounts: accountList,
       categories: categoryList,
+      filter: activeFilter,
+      hasMore: page.length == pageSize,
     ));
   }
 
-  Future<void> reload() async {
-    final id = _workspaceId;
-    if (id != null) await load(id);
+  /// Loads the next page and adds it to the list.
+  Future<void> loadMore() async {
+    final workspaceId = _workspaceId;
+    if (workspaceId == null) return;
+    if (state.status != TransactionsStatus.loaded ||
+        !state.hasMore ||
+        state.loadingMore) {
+      return;
+    }
+
+    final request = ++_request;
+    final before = state;
+    emit(before.withData(loadingMore: true));
+
+    final result = await _getTransactions(
+      GetTransactionsParams(
+        workspaceId: workspaceId,
+        limit: pageSize,
+        offset: before.transactions.length,
+        filter: before.filter,
+      ),
+    );
+    if (request != _request) return;
+
+    result.fold(
+      (failure) => emit(state.withData(loadingMore: false, actionFailure: failure)),
+      (page) {
+        // Rows added in the meantime may shift a page: never show one twice.
+        final known = {for (final t in state.transactions) t.id};
+        final fresh = page.where((t) => !known.contains(t.id)).toList();
+        emit(state.withData(
+          transactions: [...state.transactions, ...fresh],
+          hasMore: page.length == pageSize,
+          loadingMore: false,
+        ));
+      },
+    );
   }
 
   /// Marks a pending transaction as posted, then reloads.

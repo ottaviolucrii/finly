@@ -3,22 +3,35 @@ import 'package:finly/core/error/failure.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
+import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
 
 enum TransactionsStatus { initial, loading, loaded, failure }
 
 class TransactionsState extends Equatable {
   final TransactionsStatus status;
+
+  /// The pages loaded so far, newest first.
   final List<TransactionEntity> transactions;
 
-  /// Loaded together with the transactions: the list shows account names and
-  /// category icons, and the form needs both.
+  /// Loaded together with the first page: the list shows account names and
+  /// category icons, and the forms and the filter sheet need both.
   final List<AccountEntity> accounts;
   final List<CategoryEntity> categories;
+
+  /// What the list is narrowed down to.
+  final TransactionFilter filter;
+
+  /// There may be more pages after the ones loaded.
+  final bool hasMore;
+
+  /// The next page is being fetched.
+  final bool loadingMore;
 
   /// Why loading failed (shown full screen with a retry button).
   final Failure? failure;
 
-  /// Why an action such as confirming or deleting failed (shown as a message).
+  /// Why an action such as confirming, deleting or loading more failed
+  /// (shown as a message).
   final Failure? actionFailure;
 
   /// The transaction just deleted, so the page can offer "Desfazer".
@@ -29,6 +42,9 @@ class TransactionsState extends Equatable {
     this.transactions = const [],
     this.accounts = const [],
     this.categories = const [],
+    this.filter = const TransactionFilter(),
+    this.hasMore = false,
+    this.loadingMore = false,
     this.failure,
     this.actionFailure,
     this.deletedTransaction,
@@ -39,6 +55,8 @@ class TransactionsState extends Equatable {
   TransactionsState withData({
     TransactionsStatus? status,
     List<TransactionEntity>? transactions,
+    bool? hasMore,
+    bool? loadingMore,
     Failure? actionFailure,
     TransactionEntity? deletedTransaction,
   }) {
@@ -47,6 +65,9 @@ class TransactionsState extends Equatable {
       transactions: transactions ?? this.transactions,
       accounts: accounts,
       categories: categories,
+      filter: filter,
+      hasMore: hasMore ?? this.hasMore,
+      loadingMore: loadingMore ?? this.loadingMore,
       actionFailure: actionFailure,
       deletedTransaction: deletedTransaction,
     );
@@ -58,6 +79,9 @@ class TransactionsState extends Equatable {
         transactions,
         accounts,
         categories,
+        filter,
+        hasMore,
+        loadingMore,
         failure,
         actionFailure,
         deletedTransaction,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/core/utils/date_format.dart';
@@ -8,6 +10,7 @@ import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
+import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_state.dart';
@@ -15,6 +18,7 @@ import 'package:finly/features/transactions/presentation/pages/transaction_edit_
 import 'package:finly/features/transactions/presentation/pages/transaction_form_page.dart';
 import 'package:finly/features/transactions/presentation/transaction_messages.dart';
 import 'package:finly/features/transactions/presentation/transaction_style.dart';
+import 'package:finly/features/transactions/presentation/widgets/transaction_filter_sheet.dart';
 import 'package:finly/features/transfers/presentation/pages/transfer_form_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -35,27 +39,99 @@ class TransactionsPage extends StatelessWidget {
   }
 }
 
-class _TransactionsView extends StatelessWidget {
+class _TransactionsView extends StatefulWidget {
   final WorkspaceEntity workspace;
 
   const _TransactionsView({required this.workspace});
 
-  void _showMessage(BuildContext context, String message) {
+  @override
+  State<_TransactionsView> createState() => _TransactionsViewState();
+}
+
+class _TransactionsViewState extends State<_TransactionsView> {
+  final _search = TextEditingController();
+  final _scroll = ScrollController();
+  Timer? _debounce;
+
+  WorkspaceEntity get _workspace => widget.workspace;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load the next page when the user gets near the end of the list.
+    _scroll.addListener(() {
+      if (!_scroll.hasClients) return;
+      if (_scroll.position.extentAfter < 400 && mounted) {
+        context.read<TransactionsCubit>().loadMore();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _search.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _showMessage(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _openForm(BuildContext context, TransactionsState state) async {
+  /// Searches a moment after the user stops typing, not on every key.
+  void _onSearchChanged(String text) {
+    setState(() {});
+    _debounce?.cancel();
+    final cubit = context.read<TransactionsCubit>();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      cubit.setFilter(cubit.state.filter.withSearch(text));
+    });
+  }
+
+  void _clearSearch() {
+    _search.clear();
+    _debounce?.cancel();
+    setState(() {});
+    final cubit = context.read<TransactionsCubit>();
+    cubit.setFilter(cubit.state.filter.withSearch(''));
+  }
+
+  void _clearAllFilters() {
+    _search.clear();
+    _debounce?.cancel();
+    setState(() {});
+    context.read<TransactionsCubit>().setFilter(const TransactionFilter());
+  }
+
+  Future<void> _openFilters(TransactionsState state) async {
+    final cubit = context.read<TransactionsCubit>();
+    final result = await showModalBottomSheet<TransactionFilter>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => TransactionFilterSheet(
+        initial: state.filter,
+        accounts: state.accounts,
+        categories: state.categories,
+      ),
+    );
+    if (result != null) await cubit.setFilter(result);
+  }
+
+  Future<void> _openForm(TransactionsState state) async {
     if (state.accounts.isEmpty) {
-      _showMessage(context, 'Crie uma conta antes de lançar transações.');
+      _showMessage('Crie uma conta antes de lançar transações.');
       return;
     }
     final cubit = context.read<TransactionsCubit>();
     final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => TransactionFormPage(
-          workspaceId: workspace.id,
+          workspaceId: _workspace.id,
           accounts: state.accounts,
           categories: state.categories,
         ),
@@ -65,19 +141,15 @@ class _TransactionsView extends StatelessWidget {
   }
 
   Future<void> _openEdit(
-    BuildContext context,
     TransactionsState state,
     TransactionEntity transaction,
   ) async {
     if (transaction.isTransferLeg) {
-      _showMessage(
-        context,
-        'Transferências não podem ser editadas. Exclua e crie outra.',
-      );
+      _showMessage('Transferências não podem ser editadas. Exclua e crie outra.');
       return;
     }
     if (transaction.status == TransactionStatus.failed) {
-      _showMessage(context, 'Transações que falharam não podem ser editadas.');
+      _showMessage('Transações que falharam não podem ser editadas.');
       return;
     }
 
@@ -99,12 +171,9 @@ class _TransactionsView extends StatelessWidget {
     if (saved == true) await cubit.reload();
   }
 
-  Future<void> _openTransferForm(
-    BuildContext context,
-    TransactionsState state,
-  ) async {
+  Future<void> _openTransferForm(TransactionsState state) async {
     if (state.accounts.isEmpty) {
-      _showMessage(context, 'Crie uma conta antes de transferir.');
+      _showMessage('Crie uma conta antes de transferir.');
       return;
     }
 
@@ -112,14 +181,14 @@ class _TransactionsView extends StatelessWidget {
     WorkspaceEntity? other;
     final user = context.read<AuthBloc>().state.user;
     for (final candidate in user?.workspaces ?? const <WorkspaceEntity>[]) {
-      if (candidate.id != workspace.id) other = candidate;
+      if (candidate.id != _workspace.id) other = candidate;
     }
 
     final cubit = context.read<TransactionsCubit>();
     final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => TransferFormPage(
-          workspace: workspace,
+          workspace: _workspace,
           accounts: state.accounts,
           otherWorkspace: other,
         ),
@@ -128,7 +197,7 @@ class _TransactionsView extends StatelessWidget {
     if (created == true) await cubit.reload();
   }
 
-  Future<bool> _confirmTransferDelete(BuildContext context) async {
+  Future<bool> _confirmTransferDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -154,7 +223,7 @@ class _TransactionsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isBusiness = workspace.type == WorkspaceType.business;
+    final isBusiness = _workspace.type == WorkspaceType.business;
 
     return BlocConsumer<TransactionsCubit, TransactionsState>(
       listenWhen: (previous, current) =>
@@ -165,7 +234,7 @@ class _TransactionsView extends StatelessWidget {
       listener: (context, state) {
         final failure = state.actionFailure;
         if (failure != null) {
-          _showMessage(context, transactionFailureMessage(failure));
+          _showMessage(transactionFailureMessage(failure));
           return;
         }
         if (state.deletedTransaction != null) {
@@ -185,6 +254,8 @@ class _TransactionsView extends StatelessWidget {
         }
       },
       builder: (context, state) {
+        final pickers = state.filter.pickerCount;
+
         return Scaffold(
           appBar: AppBar(
             title: const Text('Transações'),
@@ -192,24 +263,66 @@ class _TransactionsView extends StatelessWidget {
             foregroundColor: isBusiness ? AppColors.white : null,
             actions: [
               IconButton(
+                tooltip: 'Filtros',
+                icon: Badge(
+                  isLabelVisible: pickers > 0,
+                  label: Text('$pickers'),
+                  child: const Icon(Icons.filter_list),
+                ),
+                onPressed: () => _openFilters(state),
+              ),
+              IconButton(
                 tooltip: 'Transferir',
                 icon: const Icon(Icons.swap_horiz),
-                onPressed: () => _openTransferForm(context, state),
+                onPressed: () => _openTransferForm(state),
               ),
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _openForm(context, state),
+            onPressed: () => _openForm(state),
             icon: const Icon(Icons.add),
             label: const Text('Nova transação'),
           ),
-          body: _body(context, state),
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: TextField(
+                  controller: _search,
+                  onChanged: _onSearchChanged,
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por descrição',
+                    isDense: true,
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _search.text.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Limpar busca',
+                            icon: const Icon(Icons.close),
+                            onPressed: _clearSearch,
+                          ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              if (state.status == TransactionsStatus.loading &&
+                  state.transactions.isNotEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
+              Expanded(child: _body(state)),
+            ],
+          ),
         );
       },
     );
   }
 
-  Widget _body(BuildContext context, TransactionsState state) {
+  Widget _body(TransactionsState state) {
     if (state.status == TransactionsStatus.failure) {
       return _ErrorView(
         message: transactionFailureMessage(state.failure!),
@@ -220,7 +333,11 @@ class _TransactionsView extends StatelessWidget {
         state.transactions.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (state.transactions.isEmpty) return const _EmptyView();
+    if (state.transactions.isEmpty) {
+      return state.filter.isActive
+          ? _NoResultsView(onClear: _clearAllFilters)
+          : const _EmptyView();
+    }
 
     final accountById = {for (final a in state.accounts) a.id: a};
     final categoryById = {for (final c in state.categories) c.id: c};
@@ -246,19 +363,38 @@ class _TransactionsView extends StatelessWidget {
           transaction: transaction,
           account: accountById[transaction.accountId],
           category: categoryById[transaction.categoryId],
-          onTap: () => _openEdit(context, state, transaction),
+          onTap: () => _openEdit(state, transaction),
           onConfirm: () => cubit.confirm(transaction.id),
           onDelete: () => transaction.isTransferLeg
               ? cubit.deleteTransfer(transaction)
               : cubit.delete(transaction),
-          confirmDelete: transaction.isTransferLeg
-              ? () => _confirmTransferDelete(context)
-              : null,
+          confirmDelete:
+              transaction.isTransferLeg ? _confirmTransferDelete : null,
+        ),
+      );
+    }
+
+    if (state.loadingMore) {
+      children.add(
+        const Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    } else if (state.hasMore) {
+      children.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: TextButton(
+            onPressed: cubit.loadMore,
+            child: const Text('Carregar mais'),
+          ),
         ),
       );
     }
 
     return ListView(
+      controller: _scroll,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
       children: children,
     );
@@ -415,6 +551,43 @@ class _EmptyView extends StatelessWidget {
               'Toque em "Nova transação" para lançar a primeira.',
               style: text.bodyMedium,
               textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NoResultsView extends StatelessWidget {
+  final VoidCallback onClear;
+
+  const _NoResultsView({required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.search_off, size: 56),
+            const SizedBox(height: 16),
+            Text('Nada encontrado', style: text.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              'Nenhuma transação combina com a busca e os filtros.',
+              style: text.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+              onPressed: onClear,
+              child: const Text('Limpar filtros'),
             ),
           ],
         ),
