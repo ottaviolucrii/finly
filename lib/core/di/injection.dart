@@ -42,6 +42,11 @@ import 'package:finly/features/categories/data/datasources/category_remote_data_
 import 'package:finly/features/categories/data/repositories/category_repository_impl.dart';
 import 'package:finly/features/categories/domain/repositories/category_repository.dart';
 import 'package:finly/features/categories/domain/usecases/get_categories_use_case.dart';
+import 'package:finly/features/dashboard/data/datasources/dashboard_remote_data_source.dart';
+import 'package:finly/features/dashboard/data/repositories/dashboard_repository_impl.dart';
+import 'package:finly/features/dashboard/domain/repositories/dashboard_repository.dart';
+import 'package:finly/features/dashboard/domain/usecases/get_dashboard_use_case.dart';
+import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import 'package:finly/features/recurring/data/datasources/recurring_remote_data_source.dart';
 import 'package:finly/features/recurring/data/repositories/recurring_repository_impl.dart';
 import 'package:finly/features/recurring/domain/repositories/recurring_repository.dart';
@@ -221,6 +226,15 @@ void configureDependencies() {
       ),
     )
     ..registerFactory(() => RecurringFormCubit(sl()))
+    // dashboard
+    ..registerLazySingleton<DashboardRemoteDataSource>(
+      () => DashboardRemoteDataSourceImpl(sl()),
+    )
+    ..registerLazySingleton<DashboardRepository>(
+      () => DashboardRepositoryImpl(sl()),
+    )
+    ..registerLazySingleton(() => GetDashboardUseCase(sl(), sl(), sl()))
+    ..registerFactory(() => DashboardCubit(sl()))
     // transactions: presentation
     ..registerFactory(
       () => TransactionsCubit(
