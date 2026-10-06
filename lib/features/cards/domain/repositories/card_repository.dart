@@ -19,6 +19,17 @@ abstract class CardRepository {
     required int dueDay,
   });
 
+  /// Changes the name, the limit and the closing and due days of a card. The
+  /// currency never changes. The days apply to the next invoices; invoices
+  /// that already exist keep their dates.
+  Future<Either<Failure, void>> updateCard({
+    required String accountId,
+    required String name,
+    required int limitCents,
+    required int closingDay,
+    required int dueDay,
+  });
+
   /// Invoices of a card, newest first.
   Future<Either<Failure, List<InvoiceEntity>>> getInvoices(String accountId);
 

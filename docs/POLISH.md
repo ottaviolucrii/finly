@@ -24,7 +24,9 @@ found; cosmetic items are done in batches.
 - [x] Accounts: rename, correct the opening balance, list and restore archived accounts
 - [x] Categories: create, rename, recolour, archive and restore (FR-G02)
 - [x] Credit cards: create, limit bar, invoices, installments, pay invoice
-- [ ] Credit cards: edit limit and closing/due days, archive a card, partial payment
+- [x] Credit cards: edit name, limit and closing/due days; archive a card that owes nothing
+- [ ] Credit cards: partial invoice payment
+- [ ] Credit cards: updating a card is two writes (name, then settings); make it one database function if it ever shows a half-saved card
 - [x] Budgets: monthly limit per category with versions and end markers
 - [ ] Budgets: alerts at 80% and 100% (needs notifications, FR-B03)
 - [x] Recurring: create, list, pause and resume, pending occurrences
@@ -68,6 +70,6 @@ found; cosmetic items are done in batches.
 - Settings: change password, sign out everywhere, delete account
 - Accounts (create, edit, archive, restore), categories (create, edit, archive, restore)
 - Transactions (create, edit, search, filters, pagination), transfers (same workspace and owner)
-- Credit cards, budgets, recurring bills, dashboard
+- Credit cards (create, edit, archive), budgets, recurring bills, dashboard
 - Errors never leave a screen loading; wiring split by feature
-- About 630 automated tests
+- About 650 automated tests

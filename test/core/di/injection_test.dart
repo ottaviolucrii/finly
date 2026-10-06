@@ -6,6 +6,8 @@ import 'package:finly/features/accounts/presentation/cubit/archived_accounts_cub
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/budgets/presentation/cubit/budget_form_cubit.dart';
 import 'package:finly/features/budgets/presentation/cubit/budgets_cubit.dart';
+import 'package:finly/features/cards/presentation/cubit/card_archive_cubit.dart';
+import 'package:finly/features/cards/presentation/cubit/card_edit_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/card_form_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/cards_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/installment_form_cubit.dart';
@@ -63,6 +65,8 @@ void main() {
       di<TransferFormCubit>(),
       di<CardsCubit>(),
       di<CardFormCubit>(),
+      di<CardEditCubit>(),
+      di<CardArchiveCubit>(),
       di<InvoicesCubit>(),
       di<InvoiceDetailCubit>(),
       di<InstallmentFormCubit>(),
@@ -75,7 +79,7 @@ void main() {
       di<DeleteAccountCubit>(),
     ];
 
-    expect(built, hasLength(25));
+    expect(built, hasLength(27));
     for (final bloc in built) {
       await bloc.close();
     }
