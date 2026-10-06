@@ -18,6 +18,8 @@ import 'package:finly/features/categories/presentation/cubit/category_form_cubit
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_charts_cubit.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_cubit.dart';
+import 'package:finly/features/recurring/presentation/cubit/recurring_delete_cubit.dart';
+import 'package:finly/features/recurring/presentation/cubit/recurring_edit_cubit.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_form_cubit.dart';
 import 'package:finly/features/settings/presentation/cubit/change_password_cubit.dart';
 import 'package:finly/features/settings/presentation/cubit/delete_account_cubit.dart';
@@ -74,6 +76,8 @@ void main() {
       di<BudgetsCubit>(),
       di<BudgetFormCubit>(),
       di<RecurringCubit>(),
+      di<RecurringDeleteCubit>(),
+      di<RecurringEditCubit>(),
       di<RecurringFormCubit>(),
       di<DashboardCubit>(),
       di<DashboardChartsCubit>(),
@@ -81,7 +85,7 @@ void main() {
       di<DeleteAccountCubit>(),
     ];
 
-    expect(built, hasLength(28));
+    expect(built, hasLength(30));
     for (final bloc in built) {
       await bloc.close();
     }

@@ -53,6 +53,30 @@ class RecurringRepositoryImpl implements RecurringRepository {
   }
 
   @override
+  Future<Either<Failure, void>> updateRecurring({
+    required String id,
+    String? categoryId,
+    required int amountCents,
+    required String description,
+    DateTime? endDate,
+  }) {
+    return _guard<void>(
+      () => _remote.updateRecurring(
+        id: id,
+        categoryId: categoryId,
+        amountCents: amountCents,
+        description: description,
+        endDate: endDate,
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteRecurring(String id) {
+    return _guard<void>(() => _remote.deleteRecurring(id));
+  }
+
+  @override
   Future<Either<Failure, void>> setActive(String id, {required bool active}) {
     return _guard<void>(() => _remote.setActive(id, active: active));
   }

@@ -6,15 +6,18 @@ import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/recurring/domain/entities/recurring_entity.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_cubit.dart';
+import 'package:finly/features/recurring/presentation/cubit/recurring_delete_cubit.dart';
+import 'package:finly/features/recurring/presentation/cubit/recurring_delete_state.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_state.dart';
+import 'package:finly/features/recurring/presentation/pages/recurring_edit_page.dart';
 import 'package:finly/features/recurring/presentation/pages/recurring_form_page.dart';
 import 'package:finly/features/recurring/presentation/recurring_messages.dart';
 import 'package:finly/features/recurring/presentation/recurring_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// Recurring bills and income of one workspace. The cubit is created for
-/// [workspace], so it never shows items of another workspace.
+/// Recurring bills and income of one workspace. The cubits are created for
+/// [workspace], so they never show items of another workspace.
 class RecurringPage extends StatelessWidget {
   final WorkspaceEntity workspace;
 
@@ -22,8 +25,11 @@ class RecurringPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<RecurringCubit>()..load(workspace.id),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => sl<RecurringCubit>()..load(workspace.id)),
+        BlocProvider(create: (_) => sl<RecurringDeleteCubit>()),
+      ],
       child: _RecurringView(workspace: workspace),
     );
   }
@@ -59,32 +65,93 @@ class _RecurringView extends StatelessWidget {
     if (created == true) await cubit.reload();
   }
 
+  Future<void> _openEdit(
+    BuildContext context,
+    RecurringState state,
+    RecurringEntity item,
+  ) async {
+    AccountEntity? account;
+    for (final candidate in state.accounts) {
+      if (candidate.id == item.accountId) account = candidate;
+    }
+
+    final cubit = context.read<RecurringCubit>();
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => RecurringEditPage(
+          item: item,
+          account: account,
+          categories: state.categories,
+        ),
+      ),
+    );
+    if (saved == true) await cubit.reload();
+  }
+
+  Future<void> _confirmDelete(BuildContext context, RecurringEntity item) async {
+    final deleteCubit = context.read<RecurringDeleteCubit>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir recorrência?'),
+        content: Text(
+          '"${item.description}" deixa de gerar lançamentos. Os lançamentos '
+          'pendentes dela são excluídos; o que já foi confirmado continua no '
+          'histórico. Para só parar por um tempo, use "Pausar".',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await deleteCubit.delete(item.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isBusiness = workspace.type == WorkspaceType.business;
 
-    return BlocConsumer<RecurringCubit, RecurringState>(
-      listenWhen: (previous, current) =>
-          current.actionFailure != null &&
-          previous.actionFailure != current.actionFailure,
+    return BlocListener<RecurringDeleteCubit, RecurringDeleteState>(
+      listenWhen: (previous, current) => previous.status != current.status,
       listener: (context, state) {
-        _showMessage(context, recurringFailureMessage(state.actionFailure!));
+        if (state.status == RecurringDeleteStatus.deleted) {
+          _showMessage(context, 'Recorrência excluída.');
+          context.read<RecurringCubit>().reload();
+        } else if (state.status == RecurringDeleteStatus.failure &&
+            state.failure != null) {
+          _showMessage(context, recurringFailureMessage(state.failure!));
+        }
       },
-      builder: (context, state) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Recorrências'),
-            backgroundColor: isBusiness ? AppColors.deepBlue : null,
-            foregroundColor: isBusiness ? AppColors.white : null,
-          ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _openForm(context, state),
-            icon: const Icon(Icons.add),
-            label: const Text('Nova recorrência'),
-          ),
-          body: _body(context, state),
-        );
-      },
+      child: BlocConsumer<RecurringCubit, RecurringState>(
+        listenWhen: (previous, current) =>
+            current.actionFailure != null &&
+            previous.actionFailure != current.actionFailure,
+        listener: (context, state) {
+          _showMessage(context, recurringFailureMessage(state.actionFailure!));
+        },
+        builder: (context, state) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Recorrências'),
+              backgroundColor: isBusiness ? AppColors.deepBlue : null,
+              foregroundColor: isBusiness ? AppColors.white : null,
+            ),
+            floatingActionButton: FloatingActionButton.extended(
+              onPressed: () => _openForm(context, state),
+              icon: const Icon(Icons.add),
+              label: const Text('Nova recorrência'),
+            ),
+            body: _body(context, state),
+          );
+        },
+      ),
     );
   }
 
@@ -125,7 +192,10 @@ class _RecurringView extends StatelessWidget {
           _RecurringTile(
             item: item,
             account: accountById[item.accountId],
+            onTap: () => _openEdit(context, state, item),
+            onEdit: () => _openEdit(context, state, item),
             onToggle: () => cubit.toggleActive(item),
+            onDelete: () => _confirmDelete(context, item),
           ),
       ],
     );
@@ -135,12 +205,18 @@ class _RecurringView extends StatelessWidget {
 class _RecurringTile extends StatelessWidget {
   final RecurringEntity item;
   final AccountEntity? account;
+  final VoidCallback onTap;
+  final VoidCallback onEdit;
   final VoidCallback onToggle;
+  final VoidCallback onDelete;
 
   const _RecurringTile({
     required this.item,
     required this.account,
+    required this.onTap,
+    required this.onEdit,
     required this.onToggle,
+    required this.onDelete,
   });
 
   @override
@@ -159,59 +235,74 @@ class _RecurringTile extends StatelessWidget {
     return Opacity(
       opacity: item.isActive ? 1 : 0.6,
       child: Card(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.repeat, color: scheme.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      item.description,
-                      style: text.titleMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    tooltip: 'Mais opções',
-                    onSelected: (_) => onToggle(),
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: 'toggle',
-                        child: Text(item.isActive ? 'Pausar' : 'Retomar'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 36, right: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      '$sign ${item.amount.format()}',
-                      style: text.titleLarge?.copyWith(
-                        color: item.type.isCredit ? scheme.primary : null,
+                    Icon(Icons.repeat, color: scheme.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        item.description,
+                        style: text.titleMedium,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${frequencyLabel(item.frequency, item.intervalCount)} · '
-                      '${account?.name ?? 'Conta'}',
-                      style: text.bodySmall,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    PopupMenuButton<String>(
+                      tooltip: 'Mais opções',
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'edit':
+                            onEdit();
+                          case 'toggle':
+                            onToggle();
+                          case 'delete':
+                            onDelete();
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        const PopupMenuItem(value: 'edit', child: Text('Editar')),
+                        PopupMenuItem(
+                          value: 'toggle',
+                          child: Text(item.isActive ? 'Pausar' : 'Retomar'),
+                        ),
+                        const PopupMenuItem(value: 'delete', child: Text('Excluir')),
+                      ],
                     ),
-                    Text(status, style: text.bodySmall),
                   ],
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.only(left: 36, right: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$sign ${item.amount.format()}',
+                        style: text.titleLarge?.copyWith(
+                          color: item.type.isCredit ? scheme.primary : null,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${frequencyLabel(item.frequency, item.intervalCount)} · '
+                        '${account?.name ?? 'Conta'}',
+                        style: text.bodySmall,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(status, style: text.bodySmall),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

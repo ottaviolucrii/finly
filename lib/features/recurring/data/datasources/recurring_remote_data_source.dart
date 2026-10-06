@@ -22,6 +22,16 @@ abstract class RecurringRemoteDataSource {
     DateTime? endDate,
   });
 
+  Future<void> updateRecurring({
+    required String id,
+    String? categoryId,
+    required int amountCents,
+    required String description,
+    DateTime? endDate,
+  });
+
+  Future<void> deleteRecurring(String id);
+
   Future<void> setActive(String id, {required bool active});
 
   Future<int> generateDue();
@@ -78,6 +88,35 @@ class RecurringRemoteDataSourceImpl implements RecurringRemoteDataSource {
         .single();
 
     return RecurringModel.fromMap(row);
+  }
+
+  @override
+  Future<void> updateRecurring({
+    required String id,
+    String? categoryId,
+    required int amountCents,
+    required String description,
+    DateTime? endDate,
+  }) async {
+    // Database function (sql/12_recurring_edit_delete.sql): changes the item
+    // and, in the same operation, its pending occurrences.
+    await _client.rpc(
+      'update_recurring',
+      params: {
+        'p_recurring_id': id,
+        'p_description': description,
+        'p_amount_cents': amountCents,
+        'p_category_id': categoryId,
+        'p_end_date': endDate == null ? null : isoDate(endDate),
+      },
+    );
+  }
+
+  @override
+  Future<void> deleteRecurring(String id) async {
+    // Database function: removes the pending occurrences and detaches the
+    // history, because the table's foreign key would not let the item go.
+    await _client.rpc('delete_recurring', params: {'p_recurring_id': id});
   }
 
   @override
