@@ -14,12 +14,15 @@ found; cosmetic items are done in batches.
 - [ ] Selected chips are gold (brand secondary): decide whether to use Tech Blue via a chip theme
 - [ ] Check dark and light mode, 200% font scale and TalkBack on every screen
 - [ ] Dashboard: charts (spending by category, cash flow over the months)
+- [ ] Transactions of an archived category show "Categoria arquivada" instead of the real name
 
 ## Missing in finished features
 - [x] Transactions: edit, search and filters (type, status, account, category), pagination (20 per page)
-- [ ] Transactions: filter by date range, "move to another account"- [ ] Transfers: undo after delete (needs a database function)
-- [ ] Accounts: rename, list and unarchive archived accounts
-- [x] Categories: create, rename, recolour, archive and restore (FR-G02)- [x] Credit cards: create, limit bar, invoices, installments, pay invoice
+- [ ] Transactions: filter by date range, "move to another account" (delete and recreate in one step)
+- [ ] Transfers: undo after delete (needs a database function)
+- [x] Accounts: rename, correct the opening balance, list and restore archived accounts
+- [x] Categories: create, rename, recolour, archive and restore (FR-G02)
+- [x] Credit cards: create, limit bar, invoices, installments, pay invoice
 - [ ] Credit cards: edit limit and closing/due days, archive a card, partial payment
 - [x] Budgets: monthly limit per category with versions and end markers
 - [ ] Budgets: alerts at 80% and 100% (needs notifications, FR-B03)
@@ -28,10 +31,12 @@ found; cosmetic items are done in batches.
 - [x] Dashboard: balance, month, budgets and upcoming items
 
 ## Auth and privacy
+- [ ] Settings screen (next step)
 - [ ] Password reset, change e-mail and password, delete account
+- [ ] Sign out of all devices from the settings screen
 - [ ] E-mail confirmation link opens a localhost error (needs a landing page or deep link)
 - [ ] Session lock, biometrics, protected switch beyond "confirm" (FR-A07, FR-A08, FR-W04)
-- [ ] Terms acceptance version, settings screen
+- [ ] Terms acceptance version
 - [ ] Leaked-password protection toggle in Supabase Auth (plan-dependent)
 
 ## Technical
@@ -40,17 +45,20 @@ found; cosmetic items are done in batches.
 - [ ] All texts are hard-coded in Portuguese (move to localisation: pt-BR and en)
 - [ ] Offline: no local cache yet (FR-Y01)
 - [ ] Dates use the phone's time zone; the database uses America/Sao_Paulo for budget months
+- [ ] Split lib/core/di/injection.dart into one file per feature (it is over 250 lines)
 - [ ] Move switchWorkspace from the auth repository to the workspace repository
 - [ ] Remove the unused DeleteBudgetUseCase (budgets are stopped, not deleted)
 - [ ] Move isoDate from the budgets domain to core/utils (recurring and dashboard use it)
 - [ ] Rename HomePlaceholderPage to HomePage
+- [ ] Cubit tests should also feed data-layer models (not only base entities), to catch runtime type traps such as firstWhere with orElse
 - [ ] GitHub Actions: analyze, tests, database tests
 - [ ] Widget and golden tests for the main screens
-- [ ] Update ARCHITECTURE.md, DATABASE.md and ROADMAP.md (new functions create_credit_card and the budget end marker, new features)
+- [ ] Update ARCHITECTURE.md, DATABASE.md and ROADMAP.md (functions create_credit_card and the budget end marker, new features)
 
 ## Done so far (for the record)
 - Database: 14 tables, 3 views, RLS everywhere, 67 local checks (sql/00 to sql/09)
 - Auth, workspaces and the protected workspace switch (never stuck, with a timeout)
-- Accounts, categories (read), transactions, transfers (same workspace and owner)
+- Accounts (create, edit, archive, restore), categories (create, edit, archive, restore)
+- Transactions (create, edit, search, filters, pagination), transfers (same workspace and owner)
 - Credit cards, budgets, recurring bills, dashboard
-- About 510 automated tests
+- About 600 automated tests
