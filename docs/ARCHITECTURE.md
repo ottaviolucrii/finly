@@ -65,7 +65,7 @@ docs/
 
 *(planned)* features, not started: `reports`, `notifications`, `forecast`, `yield_simulator`, `tax_reserve`, `receipt_ocr`, `import_export`, `currency`, `audit` viewer.
 
-Known untidiness (tracked in `POLISH.md`): `switchWorkspace` still lives in the auth repository; the home page class is still called `HomePlaceholderPage`.
+Known untidiness (tracked in `POLISH.md`): `switchWorkspace` still lives in the auth repository.
 
 ## 4. State management, navigation and workspace context
 

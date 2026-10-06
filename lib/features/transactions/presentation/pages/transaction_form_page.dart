@@ -74,7 +74,7 @@ class _TransactionFormViewState extends State<_TransactionFormView> {
     final kind = _type == TransactionType.income
         ? CategoryKind.income
         : CategoryKind.expense;
-    return widget.categories.where((c) => c.kind == kind).toList();
+    return widget.categories.where((c) => c.kind == kind && !c.isArchived).toList();
   }
 
   /// Today keeps the current time; another day is recorded at noon.

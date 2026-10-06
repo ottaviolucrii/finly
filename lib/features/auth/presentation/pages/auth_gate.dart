@@ -1,6 +1,6 @@
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_state.dart';
-import 'package:finly/features/auth/presentation/pages/home_placeholder_page.dart';
+import 'package:finly/features/auth/presentation/pages/home_page.dart';
 import 'package:finly/features/auth/presentation/pages/sign_in_page.dart';
 import 'package:finly/features/auth/presentation/pages/splash_page.dart';
 import 'package:finly/features/auth/presentation/pages/verify_email_page.dart';
@@ -24,7 +24,7 @@ class AuthGate extends StatelessWidget {
           // Signed in but no workspace yet: onboarding.
           return user.workspaces.isEmpty
               ? const OnboardingPage()
-              : const HomePlaceholderPage();
+              : const HomePage();
         }
 
         if (state.status == AuthStatus.emailVerificationPending) {

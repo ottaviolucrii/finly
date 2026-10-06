@@ -26,10 +26,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// The home after sign-in: the dashboard of the active workspace, shortcuts
-/// to every area, and the workspace list. (The class keeps its old name so
-/// the auth gate does not change.)
-class HomePlaceholderPage extends StatelessWidget {
-  const HomePlaceholderPage({super.key});
+/// to every area, and the workspace list.
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {

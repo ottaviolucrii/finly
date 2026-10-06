@@ -56,7 +56,8 @@ Phases 0, 2 and 3 are done (except the items marked open), Phase 1 is mostly don
 - [x] Daily jobs with `pg_cron`: close invoices, generate recurring occurrences
 - [ ] Partial invoice payment
 - [ ] Receipt attach (private bucket)
-- [ ] Transactions: filter by date range, "move to another account"
+- [x] Transactions: filter by date range
+- [ ] Transactions: "move to another account"
 
 ## Phase 4 - Overview and alerts (FR-D, FR-N, FR-B03, FR-U02, FR-Y01)
 

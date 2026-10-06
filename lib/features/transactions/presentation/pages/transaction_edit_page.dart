@@ -74,7 +74,7 @@ class _TransactionEditViewState extends State<_TransactionEditView> {
     final kind = widget.transaction.type == TransactionType.income
         ? CategoryKind.income
         : CategoryKind.expense;
-    return widget.categories.where((c) => c.kind == kind).toList();
+    return widget.categories.where((c) => c.kind == kind && !c.isArchived).toList();
   }
 
   /// A day that did not change keeps the original time. Another day is

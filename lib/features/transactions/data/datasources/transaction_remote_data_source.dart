@@ -73,6 +73,19 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     final categoryId = filter.categoryId;
     if (categoryId != null) query = query.eq('category_id', categoryId);
 
+    // The period is in the phone's time zone: from the start of the first day
+    // to the start of the day after the last one.
+    final from = filter.from;
+    if (from != null) {
+      final start = DateTime(from.year, from.month, from.day);
+      query = query.gte('occurred_at', start.toUtc().toIso8601String());
+    }
+    final to = filter.to;
+    if (to != null) {
+      final end = DateTime(to.year, to.month, to.day + 1);
+      query = query.lt('occurred_at', end.toUtc().toIso8601String());
+    }
+
     // The id breaks ties, so a row never repeats or goes missing between
     // two pages.
     final rows = await query

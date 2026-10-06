@@ -1,6 +1,6 @@
 import 'package:finly/core/error/failure.dart';
 import 'package:finly/features/accounts/domain/usecases/get_accounts_use_case.dart';
-import 'package:finly/features/categories/domain/usecases/get_categories_use_case.dart';
+import 'package:finly/features/categories/domain/usecases/get_all_categories_use_case.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:finly/features/transactions/domain/usecases/confirm_transaction_use_case.dart';
@@ -17,7 +17,7 @@ class TransactionsCubit extends Cubit<TransactionsState> {
 
   final GetTransactionsUseCase _getTransactions;
   final GetAccountsUseCase _getAccounts;
-  final GetCategoriesUseCase _getCategories;
+  final GetAllCategoriesUseCase _getCategories;
   final ConfirmTransactionUseCase _confirmTransaction;
   final DeleteTransactionUseCase _deleteTransaction;
   final RestoreTransactionUseCase _restoreTransaction;
@@ -31,7 +31,7 @@ class TransactionsCubit extends Cubit<TransactionsState> {
   TransactionsCubit({
     required GetTransactionsUseCase getTransactions,
     required GetAccountsUseCase getAccounts,
-    required GetCategoriesUseCase getCategories,
+    required GetAllCategoriesUseCase getCategories,
     required ConfirmTransactionUseCase confirmTransaction,
     required DeleteTransactionUseCase deleteTransaction,
     required RestoreTransactionUseCase restoreTransaction,

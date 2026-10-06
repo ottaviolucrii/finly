@@ -16,21 +16,34 @@ class TransactionFilter extends Equatable {
   final String? accountId;
   final String? categoryId;
 
+  /// First day of the period, included (only the date counts).
+  final DateTime? from;
+
+  /// Last day of the period, included (only the date counts).
+  final DateTime? to;
+
   const TransactionFilter({
     this.search = '',
     this.type,
     this.status,
     this.accountId,
     this.categoryId,
+    this.from,
+    this.to,
   });
 
-  /// How many pickers are set (the search box is not counted: it is always
-  /// visible). Used for the badge on the filter button.
+  /// True when a start or an end day is set.
+  bool get hasPeriod => from != null || to != null;
+
+  /// How many pickers are set, the period counting as one (the search box is
+  /// not counted: it is always visible). Used for the badge on the filter
+  /// button.
   int get pickerCount =>
       (type != null ? 1 : 0) +
       (status != null ? 1 : 0) +
       (accountId != null ? 1 : 0) +
-      (categoryId != null ? 1 : 0);
+      (categoryId != null ? 1 : 0) +
+      (hasPeriod ? 1 : 0);
 
   /// True when anything narrows the list, search included.
   bool get isActive => pickerCount > 0 || search.trim().isNotEmpty;
@@ -42,8 +55,11 @@ class TransactionFilter extends Equatable {
         status: status,
         accountId: accountId,
         categoryId: categoryId,
+        from: from,
+        to: to,
       );
 
   @override
-  List<Object?> get props => [search, type, status, accountId, categoryId];
+  List<Object?> get props =>
+      [search, type, status, accountId, categoryId, from, to];
 }
