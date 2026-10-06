@@ -4,16 +4,18 @@ Finly database tests on a throw-away local Postgres (no Docker needed).
     pip install pgserver "psycopg[binary]"
     python sql/tests/run_db_tests.py
 
-Applies 00..04 (+ the Supabase mock) and checks the business rules:
-tax-id validation, RLS isolation, derived balances, transfers, credit card
-invoices/installments, recurring generation, audit log and account deletion.
+Applies 00..09, 11 and 12 (+ the Supabase mock; 10 needs pg_cron, which only
+Supabase has) and checks the business rules: tax-id validation, RLS isolation,
+derived balances, monthly flow, transfers, credit card invoices/installments,
+recurring generation, edit and delete, audit log and account deletion.
 """
 import pathlib, sys, tempfile, uuid
 import pgserver, psycopg
 
 SQL = pathlib.Path(__file__).resolve().parent.parent
 FILES = ["tests/00_mock_supabase.sql", "00_types.sql", "01_helpers.sql",
-         "02_tables.sql", "03_logic.sql", "04_security.sql"]
+         "02_tables.sql", "03_logic.sql", "04_security.sql", "07_hardening.sql", "08_credit_card.sql", "09_budget_end_marker.sql",
+         "11_monthly_flow.sql", "12_recurring_edit_delete.sql"]
 
 passed = failed = 0
 def check(name, cond, extra=""):
@@ -44,7 +46,7 @@ def main():
     conn = psycopg.connect(srv.get_uri(), autocommit=True)
     for f in FILES:
         try:
-            conn.execute((SQL / f).read_text())
+            conn.execute((SQL / f).read_text(encoding="utf-8"))
         except psycopg.Error as e:
             print(f"APPLY FAILED in {f}: {e}"); sys.exit(1)
     print("schema applied\n")
@@ -110,12 +112,21 @@ def main():
     conn.execute("update public.transactions set deleted_at=now() where id=%s", (t2,))
     check("soft-deleted transaction leaves balance", one(conn, "select posted_balance_cents from public.account_balances where account_id=%s", (chk,)) == 400000)
 
+    # ---- monthly flow view ------------------------------------------------
+    print("monthly flow")
+    this_month = "date_trunc('month', now() at time zone 'America/Sao_Paulo')::date"
+    flow = lambda: conn.execute(f"select income_cents, expense_cents from public.monthly_flow where workspace_id=%s and currency='BRL' and month={this_month}", (ws_p,)).fetchone()
+    check("monthly_flow counts only posted income and expenses (not pending, failed or deleted)", flow() == (300000, 0), flow())
+    one(conn, ins, (ws_p, chk, cat_food, 'expense', 'posted', 4500, 'Lanche'))
+    check("a new posted expense shows up in monthly_flow", flow() == (300000, 4500), flow())
+
     # ---- RLS isolation ---------------------------------------------------
     print("isolation")
     as_user(conn, B)
     check("user B sees no workspaces", one(conn, "select count(*) from public.workspaces") == 0)
     check("user B sees no transactions", one(conn, "select count(*) from public.transactions") == 0)
     check("user B sees no balances", one(conn, "select count(*) from public.account_balances") == 0)
+    check("user B sees no monthly_flow", one(conn, "select count(*) from public.monthly_flow") == 0)
     check("user B cannot insert into A's workspace", raises(conn, ins, (ws_p, chk, cat_food, 'expense', 'posted', 100, 'hack')))
     check("user B cannot switch to A's workspace", raises(conn, "select public.switch_workspace(%s)", (ws_p,), contains="forbidden"))
     check("user B cannot transfer from A's account", raises(conn, "select public.create_transfer(%s,%s,100,'x')", (chk, sav), contains="forbidden"))
@@ -137,6 +148,7 @@ def main():
     conn.execute("select public.delete_transfer(%s)", (tr,))
     check("delete_transfer soft-deletes both legs", one(conn, "select count(*) from public.transactions where transfer_id=%s and deleted_at is not null", (tr,)) == 2)
     check("balance restored after delete_transfer", one(conn, "select posted_balance_cents from public.account_balances where account_id=%s", (sav,)) == 0)
+    check("transfer legs do not count in monthly_flow", flow() == (300000, 4500), flow())
 
     # ---- credit card ------------------------------------------------------
     print("credit card")
@@ -179,10 +191,47 @@ def main():
     check("recurring generates pending instances", n1 >= 2 and all(s == 'pending' for (s,) in conn.execute("select status from public.transactions where recurring_id=%s", (rid,)).fetchall()), n1)
     check("recurring generation is idempotent", n2 == 0, n2)
 
+    # ---- recurring: edit and delete ---------------------------------------
+    print("recurring edit and delete")
+    conn.execute("select public.update_recurring(%s,'  Aluguel novo ',13000,%s,null)", (rid, cat_food))
+    row = conn.execute("select description, amount_cents from public.recurring_transactions where id=%s", (rid,)).fetchone()
+    check("update_recurring changes the template and trims the description", row == ("Aluguel novo", 13000), row)
+    pend = conn.execute("select distinct description, amount_cents from public.transactions where recurring_id=%s and status='pending' and deleted_at is null", (rid,)).fetchall()
+    check("pending occurrences from today on follow the new values", pend == [("Aluguel novo", 13000)], pend)
+    conn.execute("select public.update_recurring(%s,'Aluguel novo',13000,%s,current_date + 5)", (rid, cat_food))
+    live = one(conn, "select count(*) from public.transactions where recurring_id=%s and deleted_at is null", (rid,))
+    check("an end date removes the pending occurrences after it", live == 1, live)
+    check("a category of the other kind is refused", raises(conn, "select public.update_recurring(%s,'x',1000,%s,null)", (rid, cat_sal), contains="category kind"))
+    check("a zero amount is refused", raises(conn, "select public.update_recurring(%s,'x',0,%s,null)", (rid, cat_food)))
+    check("an end date before the start date is refused", raises(conn, "select public.update_recurring(%s,'x',1000,%s,current_date - 400)", (rid, cat_food)))
+    as_user(conn, B)
+    check("another user cannot edit or delete A's recurring item",
+          raises(conn, "select public.update_recurring(%s,'x',1000,null,null)", (rid,), contains="forbidden")
+          and raises(conn, "select public.delete_recurring(%s)", (rid,), contains="forbidden"))
+    as_user(conn, None)
+    check("anonymous cannot call the recurring functions", raises(conn, "select public.delete_recurring(%s)", (rid,)))
+    as_user(conn, A)
+    rid2 = one(conn, "insert into public.recurring_transactions(workspace_id,account_id,currency,category_id,type,amount_cents,description,frequency,start_date) "
+                     "values (%s,%s,'BRL',%s,'expense',15000,'Faxina','weekly', current_date) returning id", (ws_p, chk, cat_food))
+    conn.execute("select public.generate_my_recurring(current_date + 20)")
+    ids2 = [r[0] for r in conn.execute("select id from public.transactions where recurring_id=%s order by scheduled_for", (rid2,)).fetchall()]
+    conn.execute("update public.transactions set status='posted' where id=%s", (ids2[0],))
+    conn.execute("select public.delete_recurring(%s)", (rid2,))
+    check("delete_recurring removes the item", one(conn, "select count(*) from public.recurring_transactions where id=%s", (rid2,)) == 0)
+    rows2 = conn.execute("select deleted_at is not null, recurring_id is null, scheduled_for is null, status::text from public.transactions where id = any(%s) order by occurred_at", (ids2,)).fetchall()
+    check("a confirmed occurrence stays in the history, detached from the item",
+          len(ids2) >= 3 and rows2[0] == (False, True, True, "posted"), rows2)
+    check("pending occurrences are removed and detached",
+          all(r == (True, True, True, "pending") for r in rows2[1:]), rows2)
+
     # ---- budgets & views --------------------------------------------------
     print("budgets")
     check("budget only for expense categories", raises(conn, "insert into public.budgets(workspace_id,category_id,effective_from,limit_cents) values (%s,%s,date_trunc('month',now())::date,100000)", (ws_p, cat_sal)))
     conn.execute("insert into public.budgets(workspace_id,category_id,effective_from,limit_cents) values (%s,%s,date_trunc('month',now())::date,100000)", (ws_p, cat_food))
+    next_month = "date_trunc('month', now() + interval '1 month')::date"
+    conn.execute(f"insert into public.budgets(workspace_id,category_id,effective_from,limit_cents) values (%s,%s,{next_month},0)", (ws_p, cat_food))
+    check("a budget with limit 0 is allowed (end marker)", one(conn, "select count(*) from public.budgets where limit_cents = 0") == 1)
+    check("a negative budget limit is still rejected", raises(conn, f"insert into public.budgets(workspace_id,category_id,effective_from,limit_cents) values (%s,%s,{next_month} + interval '1 month',-1)", (ws_p, cat_food)))
     check("monthly_category_spend view works", one(conn, "select count(*) from public.monthly_category_spend where workspace_id=%s", (ws_p,)) >= 1)
 
     # ---- audit ------------------------------------------------------------
@@ -195,11 +244,28 @@ def main():
     conn.execute("reset role")
     check("append-only guard blocks even superuser UPDATE", raises(conn, "update public.audit_logs set action='DELETE'", contains="append-only"))
 
+    # ---- credit card creation ---------------------------------------------
+    print("credit card creation")
+    as_user(conn, A)
+    card2 = one(conn, "select public.create_credit_card(%s,'Cartao 2','BRL',300000,5,12)", (ws_p,))
+    row = conn.execute("select a.type::text, a.opening_balance_cents, d.limit_cents, d.closing_day, d.due_day from public.accounts a join public.credit_card_details d on d.account_id=a.id where a.id=%s", (card2,)).fetchone()
+    check("create_credit_card creates the account and its settings together", row == ("credit_card", 0, 300000, 5, 12), row)
+    check("an invalid closing day leaves no orphan card account",
+          raises(conn, "select public.create_credit_card(%s,'Cartao 3','BRL',1000,40,12)", (ws_p,))
+          and one(conn, "select count(*) from public.accounts where name='Cartao 3'") == 0)
+    as_user(conn, B)
+    check("another user cannot create a card in A's workspace",
+          raises(conn, "select public.create_credit_card(%s,'Hack','BRL',1000,5,12)", (ws_p,), contains="forbidden"))
+    as_user(conn, None)
+    check("anonymous cannot call create_credit_card", raises(conn, "select public.create_credit_card(%s,'Hack','BRL',1000,5,12)", (ws_p,)))
+    as_user(conn, A)
+
     # ---- tax category / config ----------------------------------------------
     print("misc")
     check("business 'Impostos' category flagged is_tax", one(conn, "select count(*) from public.categories where workspace_id=%s and is_tax", (ws_b,)) == 1)
     conn.execute("reset role"); conn.execute("set role anon")
     check("anon can read app_config (force update) but not data", one(conn, "select count(*) from public.app_config") == 1 and raises(conn, "select count(*) from public.profiles"))
+    check("anon cannot read monthly_flow", raises(conn, "select count(*) from public.monthly_flow"))
     as_user(conn, A)
 
     # ---- account deletion -------------------------------------------------

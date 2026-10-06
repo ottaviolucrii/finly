@@ -1,64 +1,71 @@
 # Finly - Roadmap
 
-The whole product is built; phases only fix the order (each depends on the one before). Requirement IDs refer to `Finly_SRS_v4`. Tick boxes in git as you go; this file is the only place that tracks status.
+The whole product is planned; phases only fix the order (each depends on the one before). Requirement IDs refer to `Finly_SRS_v4`. This file tracks what is done; `POLISH.md` tracks rough edges and small gaps of finished features.
 
-**Definition of done for any task:** code + tests green, `flutter analyze` clean, SRS acceptance line satisfied, docs/SQL updated if behaviour changed, merged by pull request into `develop`.
+**Definition of done for any task:** code + tests green, `flutter analyze` clean, tried on a phone, SRS acceptance line satisfied, docs/SQL updated if behavior changed, merged by pull request into `develop` with CI green.
 
 ## Where the project is today
 
-Branch `feature/auth-domain`. Done: `Failure`, `Validators` (email, CPF, CNPJ), entities (`User`, `Workspace`), `AuthRepository` interface, partial models. Not compiling until the entity/model fix below is applied. Supabase dev project still has the old draft schema.
+Phases 0, 2 and 3 are done (except the items marked open), Phase 1 is mostly done, Phase 4 has the dashboard and charts. About 740 Dart tests and 83 database checks pass, CI runs on every pull request. Next in line: reports, notifications, the session lock, then Phase 5.
 
 ## Phase 0 - Foundation
 
-- [ ] Fix compile errors: `TaxIdType`, `ownerId`/`taxIdType` in `WorkspaceEntity`, nullable `activeWorkspaceId`, `byName` parsing in models
-- [ ] Delete `hs_err_pid*.log`; extend `.gitignore` (`hs_err_pid*.log`, `.env*`); remove `.github/java-upgrade` and `.github/modernize`
-- [ ] Commit current work on `feature/auth-domain` (data models, `sql/`, docs)
-- [ ] Copy `sql/` and `docs/` from this package into the repo; replace `database.md` with `docs/DATABASE.md`
-- [ ] Supabase dev project: run `99_reset_dev.sql`, then `00`-`05`; confirm 14 tables with RLS on
-- [ ] Run `python sql/tests/run_db_tests.py` locally (61 checks pass)
-- [ ] Replace counter `widget_test.dart` and boilerplate `main.dart`
-- [ ] Add packages: `supabase_flutter`, `flutter_bloc`, `get_it`, `go_router`, `flutter_secure_storage`, `intl`, `mocktail`, `bloc_test`
-- [ ] `core/config` (`--dart-define` for Supabase URL and anon key), `core/di`, `core/router` skeleton
-- [ ] `core/theme`: `AppColors`, text styles, light and dark `ThemeData`; Poppins + Inter assets (see `UI_GUIDE.md`)
-- [ ] `core/money/Money` + tests; `core/error` failure set + Postgres error mapper + tests
-- [ ] Validators: alphanumeric CNPJ, email TLD `{2,}`, unit tests (use `00000000E08G12` and `11222333000181`)
-- [ ] GitHub Actions: analyze, test, DB tests
+- [x] Compile errors fixed; models and entities consistent
+- [x] Supabase project with `sql/00` to `sql/12` applied; 14 tables with RLS on
+- [x] Database tests (`run_db_tests.py`): 83 checks
+- [x] Packages: `supabase_flutter`, `flutter_bloc`, `get_it`, `mocktail`, `bloc_test` (others are added when a feature needs them)
+- [x] `core/config` (`--dart-define-from-file=env.json`), `core/di` (one module per feature)
+- [x] `core/theme`: `AppColors`, Poppins + Inter bundled, tabular figures
+- [x] `core/money/Money` + tests; `core/error` failure set + error mapper + tests
+- [x] Validators: e-mail, CPF, CNPJ (alphanumeric included)
+- [x] GitHub Actions: analyze, test, database tests; pull request template
+- [ ] Repo hygiene to verify: `hs_err_pid*.log` removed and ignored, `.env*` ignored, no leftover `.github/java-upgrade`, `.github/modernize`
+- [ ] Protect `develop` and `main` on GitHub (require a pull request and the two CI checks)
 
 ## Phase 1 - Identity and workspaces (FR-A, FR-W, FR-S01-S04)
 
-- [ ] Auth use cases: SignUp, SignIn, SignOut (this device / all), ResetPassword, ChangePassword/Email, DeleteAccount, with tests
-- [ ] `AuthRemoteDataSource` + `AuthRepositoryImpl`; map errors to failures
-- [ ] Screens: sign in, sign up (terms), verify e-mail, reset password
-- [ ] Workspace use cases: CreateWorkspace (RPC), SwitchWorkspace, ReauthenticateUseCase
-- [ ] `WorkspaceSessionCubit` + keyed providers; state flush test
-- [ ] Onboarding flow (resumable) and second-workspace flow
-- [ ] Protected switch: confirm / biometric / password levels, attempt lockout
-- [ ] Session lock (timeout, background), biometric unlock, hide content in task switcher
-- [ ] Settings: security, appearance (theme), language, privacy and terms, delete account
+- [x] Sign up (terms), sign in, sign out (this device / all), session restore, e-mail verification
+- [x] Change password (re-authentication), delete account (typed confirmation), forgot password (one-time code)
+- [x] `AuthRemoteDataSource` + `AuthRepositoryImpl`; every error mapped to a failure
+- [x] Workspace use cases (create, switch); active workspace flows through `AuthBloc` and keyed providers (no `WorkspaceSessionCubit` was needed)
+- [x] Onboarding flow (resumable) and second-workspace flow
+- [x] Settings: password, sign out everywhere, delete account
+- [ ] Change e-mail (needs a confirmation page or a code flow like the password reset)
+- [ ] Sign-up confirmation by code (also removes the localhost link problem)
+- [ ] `ReauthenticateUseCase` and protected switch beyond "confirm" (biometric / password), attempt lockout
+- [ ] Session lock (timeout, background), biometric unlock, hide content in the task switcher
+- [ ] Settings: appearance (theme), language, privacy and terms screen, notification preferences
 - [ ] Force-update check against `app_config`
 
 ## Phase 2 - Core ledger (FR-C, FR-G01-02, FR-T01-04, FR-X01-02, FR-U01)
 
-- [ ] Accounts: CRUD, archive, balances from `account_balances`
-- [ ] Categories: list, CRUD, archive
-- [ ] Transactions: create, edit, status changes, soft delete + undo + Trash
-- [ ] Transfers: internal, owner withdrawal/contribution via RPC; delete via RPC
+- [x] Accounts: create, edit (name, opening balance), archive, restore, derived balances
+- [x] Categories: create, edit, archive, restore
+- [x] Transactions: create, edit, confirm pending, soft delete + 10-second undo, search, filters, pages of 20
+- [x] Transfers: internal and owner withdrawal/contribution via RPC; delete via RPC
+- [ ] Trash screen (restore transactions deleted earlier than the undo window)
+- [ ] Transfers: undo after delete
 - [ ] Local read cache (Drift) per workspace, offline banner (starts FR-Y01)
 
 ## Phase 3 - Cards, budgets, recurring (FR-K, FR-B01-02, FR-R, FR-T05-06)
 
-- [ ] Card settings, invoice list/detail, limit usage
-- [ ] Installments via RPC; pay invoice via RPC
-- [ ] Budgets with versions, progress UI
-- [ ] Recurring templates; `generate_my_recurring` on start
-- [ ] Search + filter chips, pagination; receipt attach (private bucket)
+- [x] Credit cards: create, limit usage, invoices, invoice detail, edit, archive
+- [x] Installments via RPC; pay invoice via RPC
+- [x] Budgets with versions and end markers, progress UI
+- [x] Recurring: create, pause/resume, edit, delete; `generate_my_recurring` on open and by a daily job
+- [x] Daily jobs with `pg_cron`: close invoices, generate recurring occurrences
+- [ ] Partial invoice payment
+- [ ] Receipt attach (private bucket)
+- [ ] Transactions: filter by date range, "move to another account"
 
 ## Phase 4 - Overview and alerts (FR-D, FR-N, FR-B03, FR-U02, FR-Y01)
 
-- [ ] Dashboard (cache first, refresh in background)
-- [ ] Reports and charts
-- [ ] Local notifications (due dates, bills, pending digest); FCM token registration; Edge Function + `pg_cron` jobs (`06_jobs.sql`)
-- [ ] Notification centre; budget alerts
+- [x] Dashboard: balance, month, budgets, upcoming
+- [x] Charts: income vs expenses (6 months), spending by category
+- [ ] Dashboard cache first, refresh in background (needs the local cache)
+- [ ] Reports
+- [ ] Local notifications (due dates, bills, pending digest); FCM token registration; Edge Function jobs
+- [ ] Notification centre; budget alerts at 80% and 100%
 - [ ] Audit log viewer
 
 ## Phase 5 - Intelligence (FR-I, FR-G03)
@@ -78,9 +85,11 @@ Branch `feature/auth-domain`. Done: `Failure`, `Validators` (email, CPF, CNPJ), 
 
 ## Phase 7 - Hardening and release
 
-- [ ] Accessibility audit (TalkBack/VoiceOver, 200 % font, contrast)
-- [ ] Security review (RLS re-test, secrets scan, token storage), LGPD review (policy text, erasure, portability)
+- [ ] Accessibility audit (TalkBack/VoiceOver, 200 % font, contrast, charts)
+- [ ] Security review (RLS re-test, secrets scan, token storage in secure storage), LGPD review (policy text, erasure, portability)
+- [ ] Custom SMTP with an owned domain; leaked-password protection (Pro plan)
 - [ ] Performance pass (cold start, 100 000-row dataset)
+- [ ] Localisation (pt-BR and en)
 - [ ] Store assets, privacy labels, release build, crash reporting
 
 ## Workflow
@@ -89,7 +98,7 @@ Branch `feature/auth-domain`. Done: `Failure`, `Validators` (email, CPF, CNPJ), 
 git checkout develop && git pull
 git checkout -b feature/<name>
 # work, commit with Conventional Commits
-git push -u origin feature/<name>   # open PR into develop
+git push -u origin feature/<name>   # open a PR into develop; CI must be green
 ```
 
-One feature branch per checklist group, small PRs, tests with the code.
+One feature branch per checklist group, small PRs, tests with the code, `POLISH.md` and the docs updated in the same PR.
