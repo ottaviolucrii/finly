@@ -3,6 +3,7 @@ import 'package:finly/features/auth/presentation/auth_messages.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_state.dart';
+import 'package:finly/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:finly/features/auth/presentation/pages/sign_up_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -30,8 +31,8 @@ class _SignInPageState extends State<SignInPage> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     context.read<AuthBloc>().add(
-          SignInSubmitted(email: _email.text, password: _password.text),
-        );
+      SignInSubmitted(email: _email.text, password: _password.text),
+    );
   }
 
   @override
@@ -91,8 +92,8 @@ class _SignInPageState extends State<SignInPage> {
                           ),
                           validator: (value) =>
                               Validators.isValidEmail(value ?? '')
-                                  ? null
-                                  : 'Informe um e-mail válido.',
+                              ? null
+                              : 'Informe um e-mail válido.',
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -105,8 +106,9 @@ class _SignInPageState extends State<SignInPage> {
                             labelText: 'Senha',
                             border: const OutlineInputBorder(),
                             suffixIcon: IconButton(
-                              tooltip:
-                                  _obscure ? 'Mostrar senha' : 'Ocultar senha',
+                              tooltip: _obscure
+                                  ? 'Mostrar senha'
+                                  : 'Ocultar senha',
                               icon: Icon(
                                 _obscure
                                     ? Icons.visibility_outlined
@@ -116,11 +118,25 @@ class _SignInPageState extends State<SignInPage> {
                                   setState(() => _obscure = !_obscure),
                             ),
                           ),
-                          validator: (value) => (value ?? '').isEmpty
-                              ? 'Informe a senha.'
-                              : null,
+                          validator: (value) =>
+                              (value ?? '').isEmpty ? 'Informe a senha.' : null,
                         ),
-                        const SizedBox(height: 24),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: loading
+                                ? null
+                                : () => Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => ForgotPasswordPage(
+                                        initialEmail: _email.text,
+                                      ),
+                                    ),
+                                  ),
+                            child: const Text('Esqueci minha senha'),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         FilledButton(
                           onPressed: loading ? null : _submit,
                           child: loading
@@ -138,10 +154,10 @@ class _SignInPageState extends State<SignInPage> {
                           onPressed: loading
                               ? null
                               : () => Navigator.of(context).push(
-                                    MaterialPageRoute<void>(
-                                      builder: (_) => const SignUpPage(),
-                                    ),
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const SignUpPage(),
                                   ),
+                                ),
                           child: const Text('Criar conta'),
                         ),
                       ],

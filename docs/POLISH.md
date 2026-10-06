@@ -43,8 +43,11 @@ found; cosmetic items are done in batches.
 - [x] Sign out of all devices
 - [x] Delete account (password and typed confirmation; erases every workspace)
 - [ ] Delete account was only covered by tests and the local database check: try it end to end with a throwaway account
-- [ ] Change e-mail (needs the confirmation-link page) and forgot-password reset (needs a deep link)
-- [ ] E-mail confirmation link opens a localhost error (needs a landing page or deep link)
+- [x] Forgot password: a one-time code by e-mail (no deep link), then a new password; signs the other devices out
+- [ ] Supabase "Reset Password" e-mail template must show {{ .Token }} (done by hand in the dashboard; not versioned)
+- [ ] Set up custom SMTP in Supabase: the built-in sender allows only a few e-mails per hour for the whole project
+- [ ] Change e-mail (needs the confirmation-link page or a code flow like the password reset)
+- [ ] Sign-up confirmation could use a code too, which also fixes the localhost error on the link
 - [ ] Session lock, biometrics, protected switch beyond "confirm" (FR-A07, FR-A08, FR-W04)
 - [ ] Terms acceptance version
 - [ ] Leaked-password protection toggle in Supabase Auth (plan-dependent, needs a paid plan)
@@ -71,16 +74,16 @@ found; cosmetic items are done in batches.
 - [ ] Rename HomePlaceholderPage to HomePage
 - [ ] Cubit tests should also feed data-layer models (not only base entities), to catch runtime type traps such as firstWhere with orElse
 - [ ] Widget and golden tests for the main screens
-- [ ] Update ARCHITECTURE.md, DATABASE.md and ROADMAP.md (functions create_credit_card, update_recurring and delete_recurring, the budget end marker, the cron jobs, the monthly_flow view, CI, the new features)
+- [ ] Update ARCHITECTURE.md, DATABASE.md and ROADMAP.md (functions create_credit_card, update_recurring and delete_recurring, the budget end marker, the cron jobs, the monthly_flow view, CI, the password recovery flow, the new features)
 
 ## Done so far (for the record)
 - Database: 14 tables, 4 views, RLS everywhere, 67 local checks (sql/00 to sql/12), two daily jobs
 - Auth, workspaces and the protected workspace switch (never stuck, with a timeout)
-- Settings: change password, sign out everywhere, delete account
+- Settings: change password, sign out everywhere, delete account; forgot password by e-mail code
 - Accounts (create, edit, archive, restore), categories (create, edit, archive, restore)
 - Transactions (create, edit, search, filters, pagination), transfers (same workspace and owner)
 - Credit cards (create, edit, archive), budgets, recurring bills (create, edit, pause, delete)
 - Dashboard with balance, month, charts, budgets and upcoming items
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub
-- About 710 automated tests
+- About 737 automated tests

@@ -50,6 +50,15 @@ abstract final class ErrorMapper {
     if (code == 'weak_password') {
       return const ValidationFailure('weak_password');
     }
+    // A wrong, used or expired one-time code (password recovery).
+    if (code == 'otp_expired' ||
+        message.contains('token has expired or is invalid')) {
+      return const AuthFailure('invalid_code');
+    }
+    if (code == 'same_password' ||
+        message.contains('different from the old password')) {
+      return const ValidationFailure('same_password');
+    }
     if (code == 'over_request_rate_limit' ||
         code == 'over_email_send_rate_limit' ||
         e.statusCode == '429') {

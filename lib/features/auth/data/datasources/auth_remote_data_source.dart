@@ -25,6 +25,14 @@ abstract class AuthRemoteDataSource {
   });
 
   Future<void> deleteAccount({required String password});
+
+  Future<void> requestPasswordReset({required String email});
+
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  });
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -129,6 +137,46 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       await _client.auth.signOut(scope: SignOutScope.local);
     } catch (_) {
       // Ignored on purpose: the account is already gone.
+    }
+  }
+
+  @override
+  Future<void> requestPasswordReset({required String email}) async {
+    // Supabase answers the same way whether or not the e-mail has an account.
+    // The "Reset Password" e-mail template must show {{ .Token }}.
+    await _client.auth.resetPasswordForEmail(email);
+  }
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    // Checking the code signs the person in for a moment.
+    await _client.auth.verifyOTP(
+      email: email,
+      token: code,
+      type: OtpType.recovery,
+    );
+
+    try {
+      await _client.auth.updateUser(UserAttributes(password: newPassword));
+      // A password reset should end the sessions of every other device.
+      try {
+        await _client.auth.signOut(scope: SignOutScope.others);
+      } catch (_) {
+        // Ignored on purpose: the password is already changed.
+      }
+    } finally {
+      // The session from the code exists only for this change. It is always
+      // cleared, even when the change failed, so nobody stays signed in
+      // without having typed a password.
+      try {
+        await _client.auth.signOut(scope: SignOutScope.local);
+      } catch (_) {
+        // Ignored on purpose.
+      }
     }
   }
 

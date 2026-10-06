@@ -12,6 +12,10 @@ String authFailureMessage(Failure failure) {
       return 'Informe seu nome completo.';
     case 'weak_password':
       return 'A senha precisa ter 8 caracteres, com letras e números.';
+    case 'same_password':
+      return 'A nova senha deve ser diferente da anterior.';
+    case 'invalid_code':
+      return 'Código inválido ou expirado. Peça um novo código.';
     case 'terms_not_accepted':
       return 'Aceite os termos para continuar.';
     case 'invalid_credentials':
