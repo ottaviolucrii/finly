@@ -1,22 +1,25 @@
 import 'package:finly/core/di/injection.dart';
+import 'package:finly/core/money/money.dart';
 import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
+import 'package:finly/features/accounts/domain/entities/account_type.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
-import 'package:finly/features/transactions/presentation/transaction_messages.dart';
 import 'package:finly/features/transactions/presentation/transaction_style.dart';
 import 'package:finly/features/trash/domain/entities/trashed_transaction.dart';
+import 'package:finly/features/trash/domain/entities/trashed_transfer.dart';
 import 'package:finly/features/trash/domain/trash_rules.dart';
 import 'package:finly/features/trash/presentation/cubit/trash_cubit.dart';
 import 'package:finly/features/trash/presentation/cubit/trash_state.dart';
+import 'package:finly/features/trash/presentation/trash_messages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// The deleted transactions of one workspace, with a button to restore each.
-/// The cubit is created for [workspace], so it never shows data of another
-/// workspace.
+/// The deleted transactions and transfers of one workspace, with a button to
+/// restore each. The cubit is created for [workspace], so it never shows data
+/// of another workspace.
 class TrashPage extends StatelessWidget {
   final WorkspaceEntity workspace;
   final List<AccountEntity> accounts;
@@ -67,11 +70,15 @@ class _TrashView extends StatelessWidget {
       listenWhen: (previous, current) =>
           (current.actionFailure != null &&
               previous.actionFailure != current.actionFailure) ||
-          (current.restored != null && previous.restored != current.restored),
+          (current.restored != null && previous.restored != current.restored) ||
+          (current.restoredTransfer != null &&
+              previous.restoredTransfer != current.restoredTransfer),
       listener: (context, state) {
         final failure = state.actionFailure;
         if (failure != null) {
-          _showMessage(context, transactionFailureMessage(failure));
+          _showMessage(context, trashFailureMessage(failure));
+        } else if (state.restoredTransfer != null) {
+          _showMessage(context, 'Transferência restaurada.');
         } else if (state.restored != null) {
           _showMessage(context, 'Transação restaurada.');
         }
@@ -98,7 +105,7 @@ class _TrashView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                transactionFailureMessage(state.failure!),
+                trashFailureMessage(state.failure!),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -111,7 +118,9 @@ class _TrashView extends StatelessWidget {
         ),
       );
     }
-    if (state.status != TrashStatus.loaded && state.items.isEmpty) {
+    if (state.status != TrashStatus.loaded &&
+        state.items.isEmpty &&
+        state.transfers.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -119,6 +128,33 @@ class _TrashView extends StatelessWidget {
     final accountById = {for (final a in accounts) a.id: a};
     final categoryById = {for (final c in categories) c.id: c};
     final now = DateTime.now();
+    final cubit = context.read<TrashCubit>();
+
+    // Transactions and transfers together, the most recently deleted first.
+    final rows = <(DateTime, Widget)>[
+      for (final item in state.items)
+        (
+          item.deletedAt,
+          _TrashTile(
+            item: item,
+            categoryName:
+                categoryById[item.transaction.categoryId]?.name ?? 'Sem categoria',
+            accountName: accountById[item.transaction.accountId]?.name ?? 'Conta',
+            daysLeft: trashDaysLeft(item.deletedAt, now),
+            onRestore: () => cubit.restore(item),
+          ),
+        ),
+      for (final item in state.transfers)
+        (
+          item.deletedAt,
+          _TransferTile(
+            item: item,
+            accountById: accountById,
+            daysLeft: trashDaysLeft(item.deletedAt, now),
+            onRestore: () => cubit.restoreTransfer(item),
+          ),
+        ),
+    ]..sort((a, b) => b.$1.compareTo(a.$1));
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -133,9 +169,10 @@ class _TrashView extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Transações excluídas ficam aqui por $trashRetentionDays dias '
-                    'e depois são removidas de vez. Transferências excluídas '
-                    'não voltam.',
+                    'Itens excluídos ficam aqui por $trashRetentionDays dias e '
+                    'depois são removidos de vez. Ao restaurar uma '
+                    'transferência, as duas pontas voltam. O pagamento de uma '
+                    'fatura não pode ser restaurado: pague a fatura de novo.',
                     style: text.bodyMedium,
                   ),
                 ),
@@ -143,7 +180,7 @@ class _TrashView extends StatelessWidget {
             ),
           ),
         ),
-        if (state.items.isEmpty)
+        if (rows.isEmpty)
           Padding(
             padding: const EdgeInsets.all(32),
             child: Column(
@@ -155,15 +192,7 @@ class _TrashView extends StatelessWidget {
             ),
           )
         else
-          for (final item in state.items)
-            _TrashTile(
-              item: item,
-              categoryName:
-                  categoryById[item.transaction.categoryId]?.name ?? 'Sem categoria',
-              accountName: accountById[item.transaction.accountId]?.name ?? 'Conta',
-              daysLeft: trashDaysLeft(item.deletedAt, now),
-              onRestore: () => context.read<TrashCubit>().restore(item),
-            ),
+          for (final row in rows) row.$2,
       ],
     );
   }
@@ -228,6 +257,99 @@ class _TrashTile extends StatelessWidget {
                 onPressed: onRestore,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TransferTile extends StatelessWidget {
+  final TrashedTransfer item;
+  final Map<String, AccountEntity> accountById;
+  final int daysLeft;
+  final VoidCallback onRestore;
+
+  const _TransferTile({
+    required this.item,
+    required this.accountById,
+    required this.daysLeft,
+    required this.onRestore,
+  });
+
+  String _accountName(String accountId) =>
+      accountById[accountId]?.name ?? 'Conta';
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final out = item.outLeg;
+    final into = item.inLeg;
+
+    // A transfer between the two workspaces has only one leg in this one.
+    final String route;
+    final String amount;
+    if (out != null && into != null) {
+      route = '${_accountName(out.accountId)} → ${_accountName(into.accountId)}';
+      final from = Money(out.amountCents, out.currency).format();
+      final to = Money(into.amountCents, into.currency).format();
+      amount = out.currency == into.currency ? from : '$from → $to';
+    } else {
+      final leg = (out ?? into)!;
+      route = out != null
+          ? 'Saída da conta ${_accountName(leg.accountId)} (para o outro workspace)'
+          : 'Entrada na conta ${_accountName(leg.accountId)} (do outro workspace)';
+      amount = Money(leg.amountCents, leg.currency).format();
+    }
+
+    // An invoice payment touches a credit card: it cannot be restored.
+    final isCardPayment = item.legs.any(
+      (leg) => accountById[leg.accountId]?.type == AccountType.creditCard,
+    );
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.swap_horiz, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.description,
+                    style: text.titleMedium,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            Text(amount, style: text.titleMedium),
+            Text(route, style: text.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+            Text(
+              'Excluída em ${formatDateBr(item.deletedAt)} · ${trashDaysLeftLabel(daysLeft)}',
+              style: text.bodySmall,
+            ),
+            if (isCardPayment)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Pagamento de fatura: não pode ser restaurado. Pague a fatura de novo.',
+                  style: text.bodySmall,
+                ),
+              )
+            else
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  icon: const Icon(Icons.restore),
+                  label: const Text('Restaurar'),
+                  onPressed: onRestore,
+                ),
+              ),
           ],
         ),
       ),

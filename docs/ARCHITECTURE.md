@@ -178,7 +178,7 @@ To do (Phase 7 hardening):
 
 | Level | Tooling | What |
 |---|---|---|
-| Database | `python sql/tests/run_db_tests.py` (embedded Postgres) | 85 checks: RLS, constraints, triggers, RPCs, views |
+| Database | `python sql/tests/run_db_tests.py` (embedded Postgres) | 90 checks: RLS, constraints, triggers, RPCs, views |
 | Domain | `flutter_test`, `mocktail` | validators, `Money`, rules, use cases with mocked repositories |
 | Data | `flutter_test` | models, repository implementations with mocked data sources (including "an unexpected error becomes a failure"), error mapper |
 | Presentation | `bloc_test`, widget tests | cubit state sequences; the chart widgets |

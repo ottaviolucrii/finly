@@ -22,10 +22,10 @@ found; cosmetic items are done in batches.
 ## Missing in finished features
 - [x] Transactions: edit, search and filters (type, status, account, category, period), pagination (20 per page)
 - [x] Transactions: trash screen (Lixeira): deleted ones stay 30 days and can be restored; a daily job removes them for good after that
-- [ ] Transactions: "move to another account" (delete and recreate in one step)
-- [ ] Trash: deleted transfers are not listed and cannot be restored (restoring one leg alone is not allowed); a "restore transfer" function would be needed
+- [x] Transfers: a deleted transfer can be restored from the trash (both legs together, even across the two workspaces)
+- [ ] Trash: a deleted card invoice payment is listed but cannot be restored (the invoice has to be paid again)
 - [ ] Trash: no "delete now" button (the app cannot hard-delete; the daily job does it after 30 days)
-- [ ] Transfers: undo after delete (needs a database function)
+- [ ] Transactions: "move to another account" (delete and recreate in one step)
 - [x] Accounts: rename, correct the opening balance, list and restore archived accounts
 - [x] Categories: create, rename, recolour, archive and restore (FR-G02)
 - [x] Credit cards: create, limit bar, invoices, installments, pay invoice
@@ -74,8 +74,8 @@ found; cosmetic items are done in batches.
 - [ ] Check that finly-purge-deleted ran: select * from cron.job_run_details order by start_time desc limit 10
 - [x] injection.dart split into one module per feature (features/<name>/di), with a test that builds every bloc and cubit
 - [x] View monthly_flow (sql/11) sums income and expenses per month in the database, so charts and reports never download every transaction
-- [x] Functions update_recurring and delete_recurring (sql/12), tested on real data inside a rolled-back transaction
-- [x] Database tests cover monthly_flow, update_recurring / delete_recurring and purge_deleted (85 checks)
+- [x] Functions update_recurring and delete_recurring (sql/12), restore_transfer (sql/14), each tested on real data inside a rolled-back transaction
+- [x] Database tests cover monthly_flow, update_recurring / delete_recurring, purge_deleted and restore_transfer (90 checks)
 - [x] GitHub Actions (.github/workflows/ci.yml): flutter analyze, flutter test and the database tests on every PR and push to develop and main
 - [x] ARCHITECTURE.md, DATABASE.md, ROADMAP.md and README.md match the code; docs/SUPABASE_SETUP.md added
 - [x] HomePlaceholderPage renamed to HomePage
@@ -95,13 +95,13 @@ found; cosmetic items are done in batches.
 - [ ] UI_GUIDE.md: record the colours the code really uses for chips and charts once the chip colour is decided
 
 ## Done so far (for the record)
-- Database: 14 tables, 4 views, RLS everywhere, 85 local checks (sql/00 to sql/13), three daily jobs
+- Database: 14 tables, 4 views, RLS everywhere, 90 local checks (sql/00 to sql/14), three daily jobs
 - Auth, workspaces and the protected workspace switch (never stuck, with a timeout)
 - Settings: change password, sign out everywhere, delete account; forgot password by e-mail code
 - Accounts (create, edit, archive, restore), categories (create, edit, archive, restore)
-- Transactions (create, edit, search, filters including period, pagination, trash), transfers (same workspace and owner)
+- Transactions (create, edit, search, filters including period, pagination, trash), transfers (same workspace and owner, restorable from the trash)
 - Credit cards (create, edit, archive), budgets, recurring bills (create, edit, pause, delete)
 - Dashboard with balance, month, charts, budgets and upcoming items; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 820 automated tests
+- About 840 automated tests

@@ -223,7 +223,7 @@ class _TransactionsViewState extends State<_TransactionsView> {
         title: const Text('Excluir transferência?'),
         content: const Text(
           'As duas pontas da transferência serão excluídas e os saldos '
-          'voltam ao que eram. Não é possível desfazer por aqui.',
+          'voltam ao que eram. Você pode restaurá-la na Lixeira por 30 dias.',
         ),
         actions: [
           TextButton(

@@ -6,13 +6,13 @@ The whole product is planned; phases only fix the order (each depends on the one
 
 ## Where the project is today
 
-Phases 0, 2 and 3 are done (except the items marked open), Phase 1 is mostly done, Phase 4 has the dashboard and charts. About 740 Dart tests and 85 database checks pass, CI runs on every pull request. Next in line: reports, notifications, the session lock, then Phase 5.
+Phases 0, 2 and 3 are done (except the items marked open), Phase 1 is mostly done, Phase 4 has the dashboard and charts. About 740 Dart tests and 90 database checks pass, CI runs on every pull request. Next in line: reports, notifications, the session lock, then Phase 5.
 
 ## Phase 0 - Foundation
 
 - [x] Compile errors fixed; models and entities consistent
 - [x] Supabase project with `sql/00` to `sql/12` applied; 14 tables with RLS on
-- [x] Database tests (`run_db_tests.py`): 85 checks
+- [x] Database tests (`run_db_tests.py`): 90 checks
 - [x] Packages: `supabase_flutter`, `flutter_bloc`, `get_it`, `mocktail`, `bloc_test` (others are added when a feature needs them)
 - [x] `core/config` (`--dart-define-from-file=env.json`), `core/di` (one module per feature)
 - [x] `core/theme`: `AppColors`, Poppins + Inter bundled, tabular figures
@@ -44,7 +44,7 @@ Phases 0, 2 and 3 are done (except the items marked open), Phase 1 is mostly don
 - [x] Transactions: create, edit, confirm pending, soft delete + 10-second undo, search, filters, pages of 20
 - [x] Transfers: internal and owner withdrawal/contribution via RPC; delete via RPC
 - [x] Trash screen: deleted transactions stay 30 days and can be restored; a daily job removes them for good after that
-- [ ] Transfers: undo after delete
+- [x] Transfers: a deleted transfer can be restored from the trash (both legs; a card payment cannot)
 - [ ] Local read cache (Drift) per workspace, offline banner (starts FR-Y01)
 
 ## Phase 3 - Cards, budgets, recurring (FR-K, FR-B01-02, FR-R, FR-T05-06)

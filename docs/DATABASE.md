@@ -21,14 +21,15 @@ The SQL under `sql/` is the **source of truth**. This file explains it and must 
 | 12 | `11_monthly_flow.sql` | View `monthly_flow` for the dashboard chart |
 | 13 | `12_recurring_edit_delete.sql` | `update_recurring`, `delete_recurring` |
 | 14 | `13_schedule_purge.sql` | Schedules the daily purge of the trash (**Supabase only**) |
+| 15 | `14_restore_transfer.sql` | `restore_transfer`: brings a deleted transfer back |
 
-The Supabase project `Finly` (region sa-east-1) has `00` to `05`, `07` to `13` applied. Run a file in the Supabase **SQL Editor** (or as a migration), once, in order. Keep every change in git: never edit tables by hand in the dashboard without copying the change back into `sql/`.
+The Supabase project `Finly` (region sa-east-1) has `00` to `05`, `07` to `14` applied. Run a file in the Supabase **SQL Editor** (or as a migration), once, in order. Keep every change in git: never edit tables by hand in the dashboard without copying the change back into `sql/`.
 
 Verify locally without Docker or Supabase (CI runs the same on every pull request):
 
 ```bash
 pip install pgserver "psycopg[binary]"
-python sql/tests/run_db_tests.py        # 85 checks (applies 00-04, 07-09, 11, 12)
+python sql/tests/run_db_tests.py        # 90 checks (applies 00-04, 07-09, 11, 12, 14)
 ```
 
 `sql/tests/00_mock_supabase.sql` only fakes `auth.users` and `auth.uid()` for that test. Never run it in Supabase. File `10` needs `pg_cron`, which only Supabase has, so the test does not apply it.
@@ -229,6 +230,7 @@ erDiagram
 | `switch_workspace(workspace_id)` | Ownership check, stores active workspace |
 | `create_transfer(from, to, amount, description, occurred_at, kind, to_amount, status)` | Two legs; enforces kind rules and currency rules |
 | `delete_transfer(transfer_id)` | Soft-deletes both legs; reopens an invoice this transfer had paid |
+| `restore_transfer(transfer_id)` | Brings a deleted transfer back (both legs); refused for a card invoice payment |
 | `create_credit_card(workspace, name, currency, limit, closing_day, due_day)` | Creates the card account and its settings in one operation; opening balance 0 |
 | `create_installments(account, category, total, n, description, purchase_at)` | N charges on consecutive invoices; remainder to the first |
 | `pay_invoice(invoice, from_account, paid_at)` | Creates the payment transfer and marks the invoice paid |
