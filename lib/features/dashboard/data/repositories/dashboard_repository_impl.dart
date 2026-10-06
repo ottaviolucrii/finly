@@ -55,6 +55,25 @@ class DashboardRepositoryImpl implements DashboardRepository {
     );
   }
 
+  @override
+  Future<Either<Failure, List<TransactionEntity>>> getTopExpenses(
+    String workspaceId, {
+    required DateTime from,
+    required DateTime to,
+    required String currency,
+    required int limit,
+  }) {
+    return _guard<List<TransactionEntity>>(
+      () => _remote.getTopExpenses(
+        workspaceId,
+        from: from,
+        to: to,
+        currency: currency,
+        limit: limit,
+      ),
+    );
+  }
+
   /// Runs [action]; exceptions become Left(Failure). Programming errors
   /// (Error) are mapped to an unknown_error failure and logged.
   Future<Either<Failure, T>> _guard<T>(Future<T> Function() action) async {

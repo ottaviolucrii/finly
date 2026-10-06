@@ -13,11 +13,11 @@ found; cosmetic items are done in batches.
 - [x] Contas: "Saldo total" excludes credit cards; card debt shown on its own line
 - [x] Dashboard charts: income vs expenses for 6 months (bars) and spending by category (donut)
 - [x] Transactions of an archived category show the real category name (archived ones are hidden only from the new-transaction forms; the filter lists them as "(arquivada)")
-- [ ] Charts: bars show only what already happened, the donut includes pending (same rule as budgets); consider unifying
+- [ ] Charts and report: the income/expense totals are posted only, the category spending includes pending (same rule as budgets); consider unifying
 - [ ] Charts are drawn by hand (no chart package); revisit if more chart types are needed
 - [ ] Selected chips are gold (brand secondary): decide whether to use Tech Blue via a chip theme
-- [ ] Check dark and light mode, 200% font scale and TalkBack on every screen (charts included)
-- [ ] Home: six shortcut buttons wrap onto two lines; consider a bottom navigation bar
+- [ ] Check dark and light mode, 200% font scale and TalkBack on every screen (charts and report included)
+- [ ] Home: seven shortcut buttons wrap onto three lines; consider a bottom navigation bar
 
 ## Missing in finished features
 - [x] Transactions: edit, search and filters (type, status, account, category, period), pagination (20 per page)
@@ -37,6 +37,9 @@ found; cosmetic items are done in batches.
 - [ ] Recurring: the schedule (frequency, interval, start date) cannot be edited; delete and create another
 - [ ] Recurring: clearing an end date does not bring back the occurrences that the end date removed (a gap stays; generated_count already moved past them)
 - [x] Dashboard: balance, month, charts, budgets and upcoming items
+- [x] Reports: monthly report with the month before beside it (summary, spending by category, biggest expenses), month arrows, currency chips
+- [ ] Reports: export (CSV / PDF) and a custom period
+- [ ] Reports: the biggest expenses list is not tappable (no jump to the transaction)
 
 ## Auth and privacy
 - [x] Settings screen (profile, security, privacy)
@@ -61,13 +64,13 @@ found; cosmetic items are done in batches.
 - [x] Database jobs scheduled with pg_cron (sql/10): invoices close at 00:05 and recurring bills generate at 00:15 (Sao Paulo time)
 - [ ] Check the jobs worked: select * from cron.job_run_details order by start_time desc limit 10
 - [x] injection.dart split into one module per feature (features/<name>/di), with a test that builds every bloc and cubit
-- [x] View monthly_flow (sql/11) sums income and expenses per month in the database, so charts never download every transaction
+- [x] View monthly_flow (sql/11) sums income and expenses per month in the database, so charts and reports never download every transaction
 - [x] Functions update_recurring and delete_recurring (sql/12), tested on real data inside a rolled-back transaction
 - [x] Database tests cover monthly_flow and update_recurring / delete_recurring (83 checks)
 - [x] GitHub Actions (.github/workflows/ci.yml): flutter analyze, flutter test and the database tests on every PR and push to develop and main
 - [x] ARCHITECTURE.md, DATABASE.md, ROADMAP.md and README.md match the code; docs/SUPABASE_SETUP.md added
 - [x] HomePlaceholderPage renamed to HomePage
-- [ ] The database tests cannot run on Windows without a manual fix (the embedded Postgres has no time zone database): use CI, or copy the tzdata files into .venv-db as described in the PR notes
+- [ ] The database tests cannot run on Windows without a manual fix (the embedded Postgres has no time zone database): use CI, or copy the tzdata files into .venv-db
 - [ ] Protect develop and main on GitHub: require a pull request and the two CI checks before merging
 - [ ] Pin the Flutter version in CI (flutter-version) after the first green run, so a new stable release cannot break a PR by surprise
 - [ ] Security advisor: tables are visible in the GraphQL schema to signed-in users (protected by RLS); consider revoking select where GraphQL is not used
@@ -88,7 +91,7 @@ found; cosmetic items are done in batches.
 - Accounts (create, edit, archive, restore), categories (create, edit, archive, restore)
 - Transactions (create, edit, search, filters including period, pagination), transfers (same workspace and owner)
 - Credit cards (create, edit, archive), budgets, recurring bills (create, edit, pause, delete)
-- Dashboard with balance, month, charts, budgets and upcoming items
+- Dashboard with balance, month, charts, budgets and upcoming items; monthly report
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 745 automated tests
+- About 770 automated tests

@@ -5,6 +5,7 @@ import 'package:finly/features/cards/di/cards_di.dart';
 import 'package:finly/features/categories/di/categories_di.dart';
 import 'package:finly/features/dashboard/di/dashboard_di.dart';
 import 'package:finly/features/recurring/di/recurring_di.dart';
+import 'package:finly/features/reports/di/reports_di.dart';
 import 'package:finly/features/settings/di/settings_di.dart';
 import 'package:finly/features/transactions/di/transactions_di.dart';
 import 'package:finly/features/transfers/di/transfers_di.dart';
@@ -24,6 +25,7 @@ void configureDependencies() {
 /// [configureDependencies] so that a test can run it with a fake Supabase
 /// client. Each feature keeps its own wiring in `features/<name>/di/`.
 void registerFeatureModules(GetIt sl) {
+  registerReportsModule(sl);
   registerAuthModule(sl);
   registerWorkspacesModule(sl);
   registerAccountsModule(sl);

@@ -27,6 +27,14 @@ abstract class DashboardRemoteDataSource {
     String workspaceId,
     DateTime month,
   );
+
+  Future<List<TransactionModel>> getTopExpenses(
+    String workspaceId, {
+    required DateTime from,
+    required DateTime to,
+    required String currency,
+    required int limit,
+  });
 }
 
 class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
@@ -115,5 +123,31 @@ class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
         .eq('month', _date(DateTime(month.year, month.month)));
 
     return rows.map(CategorySpendEntryModel.fromMap).toList();
+  }
+
+  @override
+  Future<List<TransactionModel>> getTopExpenses(
+    String workspaceId, {
+    required DateTime from,
+    required DateTime to,
+    required String currency,
+    required int limit,
+  }) async {
+    // Expenses only, so transfers are left out by the type filter.
+    final rows = await _client
+        .from('transactions')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .eq('type', 'expense')
+        .eq('currency', currency)
+        .neq('status', 'failed')
+        .filter('deleted_at', 'is', 'null')
+        .gte('occurred_at', from.toUtc().toIso8601String())
+        .lt('occurred_at', to.toUtc().toIso8601String())
+        .order('amount_cents', ascending: false)
+        .order('id')
+        .limit(limit);
+
+    return rows.map(TransactionModel.fromMap).toList();
   }
 }
