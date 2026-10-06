@@ -6,6 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 abstract class AccountRemoteDataSource {
   Future<List<AccountModel>> getAccounts(String workspaceId);
 
+  Future<List<AccountModel>> getArchivedAccounts(String workspaceId);
+
   Future<AccountModel> createAccount({
     required String workspaceId,
     required String name,
@@ -14,7 +16,15 @@ abstract class AccountRemoteDataSource {
     required int openingBalanceCents,
   });
 
+  Future<AccountModel> updateAccount({
+    required String accountId,
+    required String name,
+    int? openingBalanceCents,
+  });
+
   Future<void> archiveAccount(String accountId);
+
+  Future<void> restoreAccount(String accountId);
 }
 
 class AccountRemoteDataSourceImpl implements AccountRemoteDataSource {
@@ -33,7 +43,26 @@ class AccountRemoteDataSourceImpl implements AccountRemoteDataSource {
         .filter('archived_at', 'is', 'null')
         .order('created_at');
 
-    // Balances are derived by the database view, never stored.
+    return _withBalances(workspaceId, accounts);
+  }
+
+  @override
+  Future<List<AccountModel>> getArchivedAccounts(String workspaceId) async {
+    final accounts = await _client
+        .from('accounts')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .not('archived_at', 'is', null)
+        .order('archived_at', ascending: false);
+
+    return _withBalances(workspaceId, accounts);
+  }
+
+  /// Balances are derived by the database view, never stored.
+  Future<List<AccountModel>> _withBalances(
+    String workspaceId,
+    List<Map<String, dynamic>> accounts,
+  ) async {
     final balances = await _client
         .from('account_balances')
         .select()
@@ -77,10 +106,43 @@ class AccountRemoteDataSourceImpl implements AccountRemoteDataSource {
   }
 
   @override
+  Future<AccountModel> updateAccount({
+    required String accountId,
+    required String name,
+    int? openingBalanceCents,
+  }) async {
+    // Two active accounts cannot share a name (a unique index in the
+    // database), and the type and the currency are not touched.
+    final values = <String, dynamic>{'name': name};
+    if (openingBalanceCents != null) {
+      values['opening_balance_cents'] = openingBalanceCents;
+    }
+
+    final row = await _client
+        .from('accounts')
+        .update(values)
+        .eq('id', accountId)
+        .select()
+        .single();
+
+    return AccountModel.fromMaps(account: row);
+  }
+
+  @override
   Future<void> archiveAccount(String accountId) async {
     await _client
         .from('accounts')
         .update({'archived_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', accountId);
+  }
+
+  @override
+  Future<void> restoreAccount(String accountId) async {
+    // The unique name index only covers active accounts, so this fails when
+    // another active account took the name in the meantime.
+    await _client
+        .from('accounts')
+        .update({'archived_at': null})
         .eq('id', accountId);
   }
 }
