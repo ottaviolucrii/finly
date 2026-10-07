@@ -5,6 +5,7 @@ import 'package:finly/features/cards/di/cards_di.dart';
 import 'package:finly/features/categories/di/categories_di.dart';
 import 'package:finly/features/dashboard/di/dashboard_di.dart';
 import 'package:finly/features/recurring/di/recurring_di.dart';
+import 'package:finly/features/alerts/di/alerts_di.dart';
 import 'package:finly/features/trash/di/trash_di.dart';
 import 'package:finly/features/reports/di/reports_di.dart';
 import 'package:finly/features/settings/di/settings_di.dart';
@@ -27,6 +28,7 @@ void configureDependencies() {
 /// client. Each feature keeps its own wiring in `features/<name>/di/`.
 void registerFeatureModules(GetIt sl) {
   registerReportsModule(sl);
+  registerAlertsModule(sl);
   registerAuthModule(sl);
   registerWorkspacesModule(sl);
   registerAccountsModule(sl);

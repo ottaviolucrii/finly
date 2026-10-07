@@ -16,7 +16,7 @@ found; cosmetic items are done in batches.
 - [ ] Charts and report: the income/expense totals are posted only, the category spending includes pending (same rule as budgets); consider unifying
 - [ ] Charts are drawn by hand (no chart package); revisit if more chart types are needed
 - [ ] Selected chips are gold (brand secondary): decide whether to use Tech Blue via a chip theme
-- [ ] Check dark and light mode, 200% font scale and TalkBack on every screen (charts, report and trash included)
+- [ ] Check dark and light mode, 200% font scale and TalkBack on every screen (charts, report, trash and the alerts card included)
 - [ ] Home: seven shortcut buttons wrap onto three lines; consider a bottom navigation bar
 
 ## Missing in finished features
@@ -32,14 +32,19 @@ found; cosmetic items are done in batches.
 - [x] Credit cards: edit name, limit and closing/due days; archive a card that owes nothing
 - [ ] Credit cards: partial invoice payment
 - [ ] Credit cards: updating a card is two writes (name, then settings); make it one database function if it ever shows a half-saved card
+- [ ] Credit cards: no alert yet for an invoice due soon or a card near its limit
 - [x] Budgets: monthly limit per category with versions and end markers
-- [ ] Budgets: alerts at 80% and 100% (needs notifications, FR-B03)
+- [x] Budgets: in-app alert on the dashboard at 80% and over 100% (FR-B03, without push)
+- [ ] Budgets: push/local notification at 80% and 100% (needs the notification setup)
 - [x] Recurring: create, list, pause and resume, pending occurrences
 - [x] Recurring: edit (description, amount, category, end date) and delete (pending occurrences removed, history kept)
 - [ ] Recurring: notification before the due date (lead days; the column exists but nothing uses it yet)
 - [ ] Recurring: the schedule (frequency, interval, start date) cannot be edited; delete and create another
 - [ ] Recurring: clearing an end date does not bring back the occurrences that the end date removed (a gap stays; generated_count already moved past them)
-- [x] Dashboard: balance, month, charts, budgets and upcoming items
+- [x] Dashboard: balance, month, charts, budgets, upcoming items and an "Atenção" card
+- [x] Alerts card: budgets at 80% and over the limit, pending bills overdue, due today or in the next 3 days (most urgent first, 5 at a time)
+- [ ] Alerts: pending incomes that are late ("a receber") are not reported; the 3-day window and the 80% threshold are fixed (not in the settings)
+- [ ] Alerts: a notification centre screen with every alert and a way to dismiss one
 - [x] Reports: monthly report with the month before beside it (summary, spending by category, biggest expenses), month arrows, currency chips
 - [x] Reports: export the month as CSV through the share sheet (; separator, decimal comma, ISO dates, Windows-1252 text, formula-safe cells)
 - [ ] Export: characters outside Windows-1252 (emoji, other alphabets) become "?" in the CSV; an .xlsx export would remove the encoding and locale problems for good
@@ -89,7 +94,7 @@ found; cosmetic items are done in batches.
 - [ ] Dates use the phone's time zone; the database uses America/Sao_Paulo for budget months and charts
 - [ ] Move switchWorkspace from the auth repository to the workspace repository
 - [ ] Remove the unused DeleteBudgetUseCase (budgets are stopped, not deleted); its test lives in save_and_delete_budget_use_cases_test.dart
-- [ ] Move isoDate from the budgets domain to core/utils (recurring and dashboard use it)
+- [ ] Move isoDate from the budgets domain to core/utils (budgets and recurring use it; the dashboard has its own copy)
 - [ ] Cubit tests should also feed data-layer models (not only base entities), to catch runtime type traps such as firstWhere with orElse
 - [ ] Widget and golden tests for the main screens
 - [ ] UI_GUIDE.md: record the colours the code really uses for chips and charts once the chip colour is decided
@@ -101,7 +106,7 @@ found; cosmetic items are done in batches.
 - Accounts (create, edit, archive, restore), categories (create, edit, archive, restore)
 - Transactions (create, edit, search, filters including period, pagination, trash), transfers (same workspace and owner, restorable from the trash)
 - Credit cards (create, edit, archive), budgets, recurring bills (create, edit, pause, delete)
-- Dashboard with balance, month, charts, budgets and upcoming items; monthly report with CSV export
+- Dashboard with balance, month, charts, budgets, upcoming items and alerts; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 840 automated tests
+- About 885 automated tests

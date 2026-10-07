@@ -7,6 +7,7 @@ import 'package:finly/features/budgets/presentation/pages/budgets_page.dart';
 import 'package:finly/features/dashboard/domain/entities/dashboard_data.dart';
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_state.dart';
+import 'package:finly/features/alerts/presentation/widgets/dashboard_alerts_card.dart';
 import 'package:finly/features/dashboard/presentation/dashboard_messages.dart';
 import 'package:finly/features/dashboard/presentation/widgets/dashboard_charts_card.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
@@ -54,6 +55,15 @@ class DashboardView extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            DashboardAlertsCard(
+              workspace: workspace,
+              onOpenBudgets: () =>
+                  openAndRefresh(context, BudgetsPage(workspace: workspace)),
+              onOpenTransactions: () => openAndRefresh(
+                context,
+                TransactionsPage(workspace: workspace),
+              ),
+            ),
             _BalanceCard(data: data, workspace: workspace),
             const SizedBox(height: 12),
             _MonthCard(data: data),
