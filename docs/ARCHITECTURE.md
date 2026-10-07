@@ -167,6 +167,7 @@ The "Atenção" card (`alerts`) is computed in the app from the budget overview 
 | Credit cards | `rpc('create_credit_card', ...)`, `rpc('create_installments', ...)`, `rpc('pay_invoice', ...)`; limit and days by table update |
 | Transfers | `rpc('create_transfer', ...)`, `rpc('delete_transfer', ...)`, `rpc('restore_transfer', ...)` |
 | Recurring | `rpc('generate_my_recurring')` on every open, `rpc('update_recurring', ...)`, `rpc('delete_recurring', ...)`; create and pause by table |
+| Move a transaction | `rpc('move_transaction', ...)` |
 | Trash | `from('transactions')` with `deleted_at` set (RLS lets the owner read deleted rows); restore a transaction by table update, a transfer by `restore_transfer` |
 | Settings | `from('user_settings')` read and update (`lock_timeout_seconds`, `biometric_enabled`, `switch_protection`, `notification_prefs`) |
 | Reminders | `from('transactions')` (pending expenses, with the `lead_days` of the recurring item embedded), `from('accounts')`, `from('credit_card_invoices')`, `from('invoice_totals')` |
@@ -213,14 +214,14 @@ To do (Phase 7 hardening):
 
 | Level | Tooling | What |
 |---|---|---|
-| Database | `python sql/tests/run_db_tests.py` (embedded Postgres) | 90 checks: RLS, constraints, triggers, RPCs, views, the trash purge, restore of transfers |
+| Database | `python sql/tests/run_db_tests.py` (embedded Postgres) | 109 checks: RLS, constraints, triggers, RPCs, views, the trash purge, restore of transfers |
 | Domain | `flutter_test`, `mocktail` | validators, `Money`, rules, use cases with mocked repositories |
 | Data | `flutter_test` | models, repository implementations with mocked data sources (including "an unexpected error becomes a failure"), error mapper |
 | Presentation | `bloc_test`, widget tests | cubit state sequences; the chart, lock screen, switch sheet, alerts and settings widgets |
 | Wiring | `test/core/di/injection_test.dart` | builds every bloc and cubit from the DI modules with a fake Supabase client |
 | Device | manual checklist per feature | every screen on a phone before a PR |
 
-About 1,290 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
+About 1,350 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
 
 ## 11. Conventions
 

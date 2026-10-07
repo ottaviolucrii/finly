@@ -27,7 +27,9 @@ found; cosmetic items are done in batches.
 - [x] Transfers: a deleted transfer can be restored from the trash (both legs together, even across the two workspaces)
 - [ ] Trash: a deleted card invoice payment is listed but cannot be restored (the invoice has to be paid again)
 - [ ] Trash: no "delete now" button (the app cannot hard-delete; the daily job does it after 30 days)
-- [ ] Transactions: "move to another account" (delete and recreate in one step)
+- [x] Transactions: move an income or an expense to another account (move_transaction; an expense can go to a card and come back; installments, transfers, paid invoices and other currencies stay put)
+- [ ] Move: unsaved edits on the edit screen are discarded when the transaction is moved (save first)
+- [ ] Move: only from the edit screen, one transaction at a time
 - [x] Accounts: rename, correct the opening balance, list and restore archived accounts
 - [x] Categories: create, rename, recolour, archive and restore (FR-G02)
 - [x] Credit cards: create, limit bar, invoices, installments, pay invoice
@@ -104,7 +106,7 @@ found; cosmetic items are done in batches.
 - [x] injection.dart split into one module per feature (features/<name>/di), with a test that builds every bloc and cubit
 - [x] View monthly_flow (sql/11) sums income and expenses per month in the database, so charts and reports never download every transaction
 - [x] Functions update_recurring and delete_recurring (sql/12), restore_transfer (sql/14), each tested on real data inside a rolled-back transaction
-- [x] Database tests cover monthly_flow, update_recurring / delete_recurring, purge_deleted and restore_transfer (90 checks)
+- [x] Database tests cover monthly_flow, update_recurring / delete_recurring, purge_deleted and restore_transfer (109 checks)
 - [x] GitHub Actions (.github/workflows/ci.yml): flutter analyze, flutter test and the database tests on every PR and push to develop and main
 - [x] CI uses the same Flutter version as the PC (3.41.6); move both together when upgrading
 - [x] ARCHITECTURE.md, DATABASE.md, ROADMAP.md and README.md match the code; docs/SUPABASE_SETUP.md added
@@ -135,4 +137,4 @@ found; cosmetic items are done in batches.
 - Dashboard with balance, month, charts, budgets, upcoming items and alerts; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 1290 automated tests
+- About 1350 automated tests

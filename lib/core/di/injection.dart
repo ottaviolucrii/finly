@@ -14,6 +14,7 @@ import 'package:finly/features/trash/di/trash_di.dart';
 import 'package:finly/features/reports/di/reports_di.dart';
 import 'package:finly/features/settings/di/settings_di.dart';
 import 'package:finly/features/transactions/di/transactions_di.dart';
+import 'package:finly/features/transactions/di/transaction_move_di.dart';
 import 'package:finly/features/transfers/di/transfers_di.dart';
 import 'package:finly/features/workspaces/di/workspaces_di.dart';
 import 'package:get_it/get_it.dart';
@@ -40,6 +41,7 @@ void registerFeatureModules(GetIt sl) {
   registerCategoriesModule(sl);
   registerLockModule(sl);
   registerTransactionsModule(sl);
+  registerTransactionMoveModule(sl);
   registerTrashModule(sl);
   registerTransfersModule(sl);
   registerCardsModule(sl);

@@ -33,6 +33,7 @@ import 'package:finly/features/settings/presentation/cubit/change_password_cubit
 import 'package:finly/features/settings/presentation/cubit/delete_account_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transaction_edit_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transaction_form_cubit.dart';
+import 'package:finly/features/transactions/presentation/cubit/transaction_move_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_cubit.dart';
 import 'package:finly/features/transfers/presentation/cubit/transfer_form_cubit.dart';
 import 'package:finly/features/trash/presentation/cubit/trash_cubit.dart';
@@ -75,6 +76,7 @@ void main() {
       di<CategoryFormCubit>(),
       di<TransactionsCubit>(),
       di<TransactionFormCubit>(),
+      di<TransactionMoveCubit>(),
       di<TransactionEditCubit>(),
       di<TrashCubit>(),
       di<TransferFormCubit>(),
@@ -103,7 +105,7 @@ void main() {
       di<DeleteAccountCubit>(),
     ];
 
-    expect(built, hasLength(39));
+    expect(built, hasLength(40));
     for (final bloc in built) {
       await bloc.close();
     }
