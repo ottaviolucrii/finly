@@ -6,6 +6,7 @@ import 'package:finly/features/categories/di/categories_di.dart';
 import 'package:finly/features/dashboard/di/dashboard_di.dart';
 import 'package:finly/features/lock/di/lock_di.dart';
 import 'package:finly/features/recurring/di/recurring_di.dart';
+import 'package:finly/features/reminders/di/reminders_di.dart';
 import 'package:finly/features/alerts/di/alerts_di.dart';
 import 'package:finly/features/trash/di/trash_di.dart';
 import 'package:finly/features/reports/di/reports_di.dart';
@@ -41,6 +42,7 @@ void registerFeatureModules(GetIt sl) {
   registerCardsModule(sl);
   registerBudgetsModule(sl);
   registerRecurringModule(sl);
+  registerRemindersModule(sl);
   registerDashboardModule(sl);
   registerSettingsModule(sl);
 }

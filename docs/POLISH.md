@@ -35,16 +35,24 @@ found; cosmetic items are done in batches.
 - [ ] Credit cards: no alert yet for an invoice due soon or a card near its limit
 - [x] Budgets: monthly limit per category with versions and end markers
 - [x] Budgets: in-app alert on the dashboard at 80% and over 100% (FR-B03, without push)
-- [ ] Budgets: push/local notification at 80% and 100% (needs the notification setup)
+- [ ] Budgets: push notification at 80% and 100% (it needs a server to push; the in-app alert covers it for now)
 - [x] Recurring: create, list, pause and resume, pending occurrences
 - [x] Recurring: edit (description, amount, category, end date) and delete (pending occurrences removed, history kept)
-- [ ] Recurring: notification before the due date (lead days; the column exists but nothing uses it yet)
+- [x] Recurring: reminder before the due date, using lead_days (3 by default)
 - [ ] Recurring: the schedule (frequency, interval, start date) cannot be edited; delete and create another
 - [ ] Recurring: clearing an end date does not bring back the occurrences that the end date removed (a gap stays; generated_count already moved past them)
 - [x] Dashboard: balance, month, charts, budgets, upcoming items and an "Atenção" card
 - [x] Alerts card: budgets at 80% and over the limit, pending bills overdue, due today or in the next 3 days (most urgent first, 5 at a time)
 - [ ] Alerts: pending incomes that are late ("a receber") are not reported; the 3-day window and the 80% threshold are fixed (not in the settings)
 - [ ] Alerts: a notification centre screen with every alert and a way to dismiss one
+- [x] Local notifications (flutter_local_notifications): reminders at 9h for pending bills (the day before, or lead_days, and the due day) and for card invoices (3 days before and the due day), for the active workspace
+- [ ] Reminders are rebuilt when the app is used (sign-in, workspace change, leaving or returning to the app): if it is not opened for 30 days, the schedule runs out
+- [ ] Reminders are inexact (a few minutes late is normal) and fixed at 9h; the hour is not configurable yet
+- [ ] Reminders only cover the active workspace; the bills of the other workspace are not announced
+- [ ] The notification icon is the launcher icon; use a monochrome status-bar icon
+- [ ] The reminders time zone is fixed to America/Sao_Paulo
+- [ ] On Xiaomi/HyperOS the system can stop scheduled notifications: Autostart on and battery "No restrictions" for Finly
+- [ ] Notifications are not set up for iOS yet (permission and AppDelegate)
 - [x] Reports: monthly report with the month before beside it (summary, spending by category, biggest expenses), month arrows, currency chips
 - [x] Reports: export the month as CSV through the share sheet (; separator, decimal comma, ISO dates, Windows-1252 text, formula-safe cells)
 - [ ] Export: characters outside Windows-1252 (emoji, other alphabets) become "?" in the CSV; an .xlsx export would remove the encoding and locale problems for good
@@ -121,4 +129,4 @@ found; cosmetic items are done in batches.
 - Dashboard with balance, month, charts, budgets, upcoming items and alerts; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 1040 automated tests
+- About 1110 automated tests
