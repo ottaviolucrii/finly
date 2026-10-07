@@ -4,7 +4,7 @@ Finly database tests on a throw-away local Postgres (no Docker needed).
     pip install pgserver "psycopg[binary]"
     python sql/tests/run_db_tests.py
 
-Applies 00..09, 11, 12 and 14 (+ the Supabase mock; 10 and 13 need pg_cron, which
+Applies 00..09, 11, 12, 14 and 15 (+ the Supabase mock; 10 and 13 need pg_cron, which
 only Supabase has) and checks the business rules: tax-id validation, RLS isolation,
 derived balances, monthly flow, transfers, credit card invoices/installments,
 recurring generation, edit and delete, audit log and account deletion.
@@ -15,7 +15,7 @@ import pgserver, psycopg
 SQL = pathlib.Path(__file__).resolve().parent.parent
 FILES = ["tests/00_mock_supabase.sql", "00_types.sql", "01_helpers.sql",
          "02_tables.sql", "03_logic.sql", "04_security.sql", "07_hardening.sql", "08_credit_card.sql", "09_budget_end_marker.sql",
-         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql"]
+         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql"]
 
 passed = failed = 0
 def check(name, cond, extra=""):
@@ -161,6 +161,33 @@ def main():
     as_user(conn, A)
     conn.execute("select public.delete_transfer(%s)", (tr,))
 
+    # ---- move transaction -------------------------------------------------
+    print("move transaction")
+    bal = lambda acc: one(conn, "select posted_balance_cents from public.account_balances where account_id=%s", (acc,))
+    mv = one(conn, ins, (ws_p, chk, cat_food, 'expense', 'posted', 12345, 'Mover'))
+    chk_before, sav_before = bal(chk), bal(sav)
+    conn.execute("select public.move_transaction(%s,%s)", (mv, sav))
+    check("move_transaction puts the transaction on the other account",
+          str(one(conn, "select account_id from public.transactions where id=%s", (mv,))) == str(sav))
+    check("the balances follow it (the expense leaves savings, checking gets it back)",
+          bal(chk) == chk_before + 12345 and bal(sav) == sav_before - 12345, (bal(chk), chk_before, bal(sav), sav_before))
+    check("moving to the same account is refused", raises(conn, "select public.move_transaction(%s,%s)", (mv, sav), contains="already"))
+    check("a direct change of account is still refused", raises(conn, "update public.transactions set account_id=%s where id=%s", (chk, mv), contains="immutable"))
+    usd = one(conn, "insert into public.accounts(workspace_id,name,type,currency) values (%s,'Dolar','checking','USD') returning id", (ws_p,))
+    old_acc = one(conn, "insert into public.accounts(workspace_id,name,type,archived_at) values (%s,'Antiga','checking',now()) returning id", (ws_p,))
+    check("another currency is refused", raises(conn, "select public.move_transaction(%s,%s)", (mv, usd), contains="currency"))
+    check("an archived account is refused", raises(conn, "select public.move_transaction(%s,%s)", (mv, old_acc), contains="archived"))
+    check("an account of the other workspace is refused", raises(conn, "select public.move_transaction(%s,%s)", (mv, biz), contains="workspace"))
+    out_leg = one(conn, "select id from public.transactions where transfer_id=%s and type='transfer_out'", (ow,))
+    check("a transfer leg cannot be moved", raises(conn, "select public.move_transaction(%s,%s)", (out_leg, sav), contains="transfer"))
+    check("a deleted transaction cannot be moved", raises(conn, "select public.move_transaction(%s,%s)", (t1, sav), contains="deleted"))
+    as_user(conn, B)
+    check("another user cannot move A's transaction", raises(conn, "select public.move_transaction(%s,%s)", (mv, chk), contains="forbidden"))
+    as_user(conn, None)
+    check("anonymous cannot call move_transaction", raises(conn, "select public.move_transaction(%s,%s)", (mv, chk)))
+    as_user(conn, A)
+    conn.execute("update public.transactions set deleted_at = now() where id=%s", (mv,))
+
     # ---- credit card ------------------------------------------------------
     print("credit card")
     card = one(conn, "insert into public.accounts(workspace_id,name,type) values (%s,'Cartao','credit_card') returning id", (ws_p,))
@@ -189,6 +216,29 @@ def main():
     check("pay_invoice marks paid", inv == ("paid", True), inv)
     mar_tx = one(conn, "select id from public.transactions where invoice_id=%s and installment_number is null limit 1", (i1,))
     check("paid invoice locks its transactions", raises(conn, "update public.transactions set amount_cents=1 where id=%s", (mar_tx,), contains="paid"))
+    check("a card purchase of a paid invoice cannot be moved", raises(conn, "select public.move_transaction(%s,%s)", (mar_tx, chk), contains="paid"))
+    inst = one(conn, "select id from public.transactions where installment_group_id=%s and installment_number=1", (grp,))
+    check("an installment cannot be moved", raises(conn, "select public.move_transaction(%s,%s)", (inst, chk), contains="installment"))
+    card_x = one(conn, "insert into public.accounts(workspace_id,name,type) values (%s,'Cartao Extra','credit_card') returning id", (ws_p,))
+    conn.execute("insert into public.credit_card_details(account_id,limit_cents,closing_day,due_day) values (%s,500000,10,17)", (card_x,))
+    open_tx = one(conn, "select id from public.transactions where invoice_id=%s and installment_number is null limit 1", (i2,))
+    check("a card purchase can only go to a bank account, not to another card", raises(conn, "select public.move_transaction(%s,%s)", (open_tx, card_x), contains="bank account"))
+    card_bal = lambda: one(conn, "select posted_balance_cents from public.account_balances where account_id=%s", (card,))
+    mv2 = one(conn, ins, (ws_p, chk, cat_food, 'expense', 'posted', 100, 'Para o cartao'))
+    cb_before = card_bal()
+    conn.execute("select public.move_transaction(%s,%s)", (mv2, card))
+    row = conn.execute("select t.account_id, i.account_id, i.status from public.transactions t join public.credit_card_invoices i on i.id = t.invoice_id where t.id=%s", (mv2,)).fetchone()
+    check("an expense moved to a card lands on an invoice of that card", row is not None and str(row[0]) == str(card) and str(row[1]) == str(card) and row[2] != "paid", row)
+    check("the card debt grows by the amount", card_bal() == cb_before - 100, (card_bal(), cb_before))
+    mi = one(conn, ins, (ws_p, chk, cat_sal, 'income', 'posted', 100, 'Entrada'))
+    check("an income cannot be moved to a card", raises(conn, "select public.move_transaction(%s,%s)", (mi, card), contains="expense"))
+    old_exp = one(conn, "insert into public.transactions(workspace_id,account_id,currency,category_id,type,status,amount_cents,description,occurred_at) values (%s,%s,'BRL',%s,'expense','posted',150,'Antiga',%s) returning id", (ws_p, chk, cat_food, d_before))
+    check("an expense dated in a paid invoice cannot go to the card", raises(conn, "select public.move_transaction(%s,%s)", (old_exp, card), contains="paid"))
+    conn.execute("select public.move_transaction(%s,%s)", (mv2, chk))
+    back = conn.execute("select account_id, invoice_id from public.transactions where id=%s", (mv2,)).fetchone()
+    check("a card purchase comes back to a bank account (no invoice, debt restored)", str(back[0]) == str(chk) and back[1] is None and card_bal() == cb_before, (back, card_bal(), cb_before))
+    for tx in (mv2, mi, old_exp):
+        conn.execute("update public.transactions set deleted_at = now() where id=%s", (tx,))
     check("paying twice rejected", raises(conn, "select public.pay_invoice(%s,%s)", (i1, chk), contains="already paid"))
     conn.execute("select public.delete_transfer(%s)", (pay,))
     check("deleting payment reopens invoice", one(conn, "select status from public.credit_card_invoices where id=%s", (i1,)) in ("open", "closed"))
