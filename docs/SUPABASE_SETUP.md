@@ -1,6 +1,6 @@
 # Finly - Supabase setup (configured by hand)
 
-Everything in `sql/` is applied from files. The settings below live in the Supabase **dashboard**, so no file in git captures them. If you ever recreate the project, redo this list after applying `sql/00` to `sql/12`.
+Everything in `sql/` is applied from files. The settings below live in the Supabase **dashboard**, so no file in git captures them. If you ever recreate the project, redo this list after applying `sql/00` to `sql/14`.
 
 Project: `Finly`, region sa-east-1.
 
@@ -46,9 +46,13 @@ Leave the **Confirm signup** template as it is: sign-up still uses the link.
 
 ## 4. Database > Extensions
 
-- `pg_cron`: enabled by `sql/10_schedule_jobs.sql`. Jobs `finly-close-invoices` (03:05 UTC) and `finly-generate-recurring` (03:15 UTC).
+- `pg_cron`: enabled by `sql/10_schedule_jobs.sql`. Jobs `finly-close-invoices` (03:05 UTC) and `finly-generate-recurring` (03:15 UTC); `sql/13_schedule_purge.sql` adds `finly-purge-deleted` (03:25 UTC), which removes soft-deleted rows after 30 days.
 - Check that they ran: `select * from cron.job_run_details order by start_time desc limit 10;`
 
-## 5. Things that must never be in the app
+## 5. Notifications need nothing here
+
+The reminders are local notifications scheduled by the app on the phone, so there is no Firebase project, no Edge Function and no key to configure. (Push notifications for budget alerts would need a server and are *(planned)*.) On the phone: allow notifications; on Xiaomi/HyperOS also turn **Autostart** on and set the battery to **No restrictions** for Finly, or the system may swallow the reminders.
+
+## 6. Things that must never be in the app
 
 The `service_role` key. Only the project URL and the anon key go in `env.json`, which is git-ignored.
