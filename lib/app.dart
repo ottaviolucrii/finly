@@ -6,6 +6,7 @@ class FinlyApp extends StatelessWidget {
     super.key,
     this.home = const _PlaceholderHome(),
     this.builder,
+    this.themeMode = ThemeMode.system,
   });
 
   /// First screen. main.dart passes the auth gate; tests use the placeholder.
@@ -15,6 +16,9 @@ class FinlyApp extends StatelessWidget {
   /// here; tests leave it out.
   final TransitionBuilder? builder;
 
+  /// Light, dark, or follow the phone (the choice of the user).
+  final ThemeMode themeMode;
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -22,7 +26,7 @@ class FinlyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       builder: builder,
       home: home,
     );

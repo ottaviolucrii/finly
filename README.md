@@ -38,6 +38,7 @@ Clean Architecture, feature-first. `presentation` (Cubit/BLoC) -> `domain` (enti
 * **Monthly report** with the month before beside it, and a CSV export that opens correctly in Excel and Google Sheets
 * **Reminders:** local notifications at 9h for pending bills and card invoices that are about to be due, even with the app closed
 * **Balance forecast:** the balance for the next 30, 60 or 90 days from pending bills, recurring items and card invoices, with a chart and a warning when it can go negative
+* **Appearance:** light, dark or follow the phone, saved with your account
 * **Account security:** session lock with biometrics or PIN and a password fallback, brute-force limit, change password, forgot password by e-mail code, sign out of all devices, delete account
 * **Brazilian specifics:** CPF and CNPJ (including alphanumeric CNPJ) validated by check digits
 
