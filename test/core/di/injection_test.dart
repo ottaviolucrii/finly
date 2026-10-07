@@ -28,6 +28,7 @@ import 'package:finly/features/recurring/presentation/cubit/recurring_edit_cubit
 import 'package:finly/features/recurring/presentation/cubit/recurring_form_cubit.dart';
 import 'package:finly/features/reminders/presentation/cubit/reminders_cubit.dart';
 import 'package:finly/features/reports/presentation/cubit/export_cubit.dart';
+import 'package:finly/features/reports/presentation/cubit/pdf_export_cubit.dart';
 import 'package:finly/features/reports/presentation/cubit/reports_cubit.dart';
 import 'package:finly/features/settings/presentation/cubit/change_password_cubit.dart';
 import 'package:finly/features/settings/presentation/cubit/delete_account_cubit.dart';
@@ -100,12 +101,13 @@ void main() {
       di<ForecastCubit>(),
       di<ReportsCubit>(),
       di<ExportCubit>(),
+      di<PdfExportCubit>(),
       di<RemindersCubit>(),
       di<ChangePasswordCubit>(),
       di<DeleteAccountCubit>(),
     ];
 
-    expect(built, hasLength(40));
+    expect(built, hasLength(41));
     for (final bloc in built) {
       await bloc.close();
     }

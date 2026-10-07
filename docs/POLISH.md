@@ -65,6 +65,9 @@ found; cosmetic items are done in batches.
 - [ ] Export: only from the report screen (the transactions list and the filters cannot export), capped at 10,000 transactions per month
 - [ ] Export my data (LGPD portability): one file with everything of the user
 - [ ] Reports: the biggest expenses list is not tappable (no jump to the transaction)
+- [x] PDF of the monthly report (summary, spending by category, biggest expenses), shared from the report screen
+- [ ] PDF: no logo and no charts yet, and only one month at a time
+- [ ] PDF: the standard font covers Portuguese but not every character (a description with an emoji or non-Latin letters can show wrong)
 - [x] Balance forecast for 30, 60 and 90 days: the confirmed balance of the accounts (no credit cards), plus pending bills and incomes, recurring items not generated yet and unpaid card invoices on their due day
 - [ ] Forecast: no yield on investments, no tax reserve and no scenarios ("what if I pay this later")
 - [ ] Forecast: recurring items on a credit card are not projected, and a card invoice counts at today's total, not at what will still be bought
@@ -137,4 +140,4 @@ found; cosmetic items are done in batches.
 - Dashboard with balance, month, charts, budgets, upcoming items and alerts; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 1350 automated tests
+- About 1390 automated tests

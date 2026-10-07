@@ -12,6 +12,7 @@ import 'package:finly/features/reports/presentation/cubit/export_state.dart';
 import 'package:finly/features/reports/presentation/cubit/reports_cubit.dart';
 import 'package:finly/features/reports/presentation/cubit/reports_state.dart';
 import 'package:finly/features/reports/presentation/reports_messages.dart';
+import 'package:finly/features/reports/presentation/widgets/pdf_export_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -74,6 +75,7 @@ class _ReportsViewState extends State<_ReportsView> {
           backgroundColor: isBusiness ? AppColors.deepBlue : null,
           foregroundColor: isBusiness ? AppColors.white : null,
           actions: [
+            PdfExportButton(workspace: widget.workspace),
             BlocBuilder<ExportCubit, ExportState>(
               builder: (context, export) {
                 final busy = export.status == ExportStatus.exporting;
