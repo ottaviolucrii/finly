@@ -104,7 +104,7 @@ found; cosmetic items are done in batches.
 - [x] ARCHITECTURE.md, DATABASE.md, ROADMAP.md and README.md match the code; docs/SUPABASE_SETUP.md added
 - [x] HomePlaceholderPage renamed to HomePage
 - [x] share_plus (share sheet) and local_auth (biometrics) added, each behind an interface in core/ so tests never touch the platform
-- [ ] go_router and intl are in pubspec.yaml but never imported: remove them
+- [x] go_router and intl removed from pubspec.yaml (nothing imported them)
 - [ ] The database tests cannot run on Windows without a manual fix (the embedded Postgres has no time zone database): use CI, or copy the tzdata files into .venv-db
 - [ ] Protect develop and main on GitHub: require a pull request and the two CI checks before merging
 - [ ] Security advisor: tables are visible in the GraphQL schema to signed-in users (protected by RLS); consider revoking select where GraphQL is not used
@@ -112,8 +112,8 @@ found; cosmetic items are done in batches.
 - [ ] Offline: no local cache yet (FR-Y01)
 - [ ] Dates use the phone's time zone; the database uses America/Sao_Paulo for budget months and charts
 - [ ] Move switchWorkspace from the auth repository to the workspace repository
-- [ ] Remove the unused DeleteBudgetUseCase (budgets are stopped, not deleted); its test lives in save_and_delete_budget_use_cases_test.dart
-- [ ] Move isoDate from the budgets domain to core/utils (budgets and recurring use it; the dashboard has its own copy)
+- [x] The unused DeleteBudgetUseCase is gone (budgets are stopped, not deleted); the repository method deleteBudget is still there, unused
+- [x] isoDate lives in core/utils (the dashboard and reminders data sources still have their own private copies)
 - [ ] Cubit tests should also feed data-layer models (not only base entities), to catch runtime type traps such as firstWhere with orElse
 - [ ] Widget and golden tests for the main screens
 - [ ] UI_GUIDE.md: record the colours the code really uses for chips and charts once the chip colour is decided

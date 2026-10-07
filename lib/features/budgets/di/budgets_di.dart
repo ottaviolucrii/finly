@@ -1,7 +1,6 @@
 import 'package:finly/features/budgets/data/datasources/budget_remote_data_source.dart';
 import 'package:finly/features/budgets/data/repositories/budget_repository_impl.dart';
 import 'package:finly/features/budgets/domain/repositories/budget_repository.dart';
-import 'package:finly/features/budgets/domain/usecases/delete_budget_use_case.dart';
 import 'package:finly/features/budgets/domain/usecases/get_budget_overview_use_case.dart';
 import 'package:finly/features/budgets/domain/usecases/save_budget_use_case.dart';
 import 'package:finly/features/budgets/domain/usecases/stop_budget_use_case.dart';
@@ -19,7 +18,6 @@ void registerBudgetsModule(GetIt sl) {
     ..registerLazySingleton<BudgetRepository>(() => BudgetRepositoryImpl(sl()))
     ..registerLazySingleton(() => GetBudgetOverviewUseCase(sl(), sl()))
     ..registerLazySingleton(() => SaveBudgetUseCase(sl()))
-    ..registerLazySingleton(() => DeleteBudgetUseCase(sl()))
     ..registerLazySingleton(() => StopBudgetUseCase(sl()))
     // presentation
     ..registerFactory(

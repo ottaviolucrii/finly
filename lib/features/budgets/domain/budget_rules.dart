@@ -7,14 +7,6 @@ DateTime monthStart(DateTime date) => DateTime(date.year, date.month);
 DateTime addMonths(DateTime month, int delta) =>
     DateTime(month.year, month.month + delta);
 
-/// "2026-03-05", the format the database uses for dates.
-String isoDate(DateTime date) {
-  final year = date.year.toString().padLeft(4, '0');
-  final month = date.month.toString().padLeft(2, '0');
-  final day = date.day.toString().padLeft(2, '0');
-  return '$year-$month-$day';
-}
-
 /// The budget in force for [categoryId] in [month]: the latest version that
 /// starts on or before that month. Null when there is none, or when that
 /// latest version is an end marker (limit 0 = "no budget from here on").
