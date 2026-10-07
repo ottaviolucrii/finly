@@ -33,6 +33,7 @@ import 'package:finly/features/transfers/presentation/cubit/transfer_form_cubit.
 import 'package:finly/features/workspaces/presentation/cubit/onboarding_cubit.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_cubit.dart';
 import 'package:finly/features/reports/presentation/cubit/export_cubit.dart';
+import 'package:finly/features/alerts/presentation/cubit/alerts_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -62,6 +63,7 @@ void main() {
       di<SwitchWorkspaceCubit>(),
       di<OnboardingCubit>(),
       di<AccountsCubit>(),
+      di<AlertsCubit>(),
       di<ArchivedAccountsCubit>(),
       di<AccountFormCubit>(),
       di<AccountEditCubit>(),
@@ -93,7 +95,7 @@ void main() {
       di<DeleteAccountCubit>(),
     ];
 
-    expect(built, hasLength(34));
+    expect(built, hasLength(35));
     for (final bloc in built) {
       await bloc.close();
     }

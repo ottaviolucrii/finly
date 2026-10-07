@@ -67,7 +67,8 @@ Phases 0, 2 and 3 are done (except the items marked open), Phase 1 is mostly don
 - [x] Reports: monthly report (summary vs the month before, spending by category, biggest expenses)
 - [ ] Report export (CSV / PDF)
 - [ ] Local notifications (due dates, bills, pending digest); FCM token registration; Edge Function jobs
-- [ ] Notification centre; budget alerts at 80% and 100%
+- [x] In-app alerts on the dashboard: budgets at 80% and 100%, bills overdue or due in 3 days
+- [ ] Notification centre screen
 - [ ] Audit log viewer
 
 ## Phase 5 - Intelligence (FR-I, FR-G03)
