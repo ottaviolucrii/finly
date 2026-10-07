@@ -54,7 +54,7 @@ lib/
     recurring/                 create, edit, pause, delete, pending occurrences
     dashboard/                 balance, month, charts, budgets, upcoming, "Atenção" card
     alerts/                    budgets near the limit, bills overdue or due soon (shown on the dashboard)
-    reports/                   monthly report, CSV export of the month
+    reports/                   monthly report, CSV export and PDF of the month
     reminders/                 local notifications for pending bills and card invoices
     forecast/                  balance forecast for 30, 60 and 90 days (pure rules, one chart painter)
     lock/                      session lock, biometrics or PIN, password fallback, brute-force limit
@@ -71,7 +71,7 @@ docs/
 .github/workflows/ci.yml       analyze, test, database tests
 ```
 
-*(planned)* features, not started: `yield_simulator`, `tax_reserve`, `receipt_ocr`, `import_export` (import, PDF, export of all data), `currency`, `audit` viewer, a notification centre and push notifications.
+*(planned)* features, not started: `yield_simulator`, `tax_reserve`, `receipt_ocr`, `import_export` (import, export of all data, custom periods), `currency`, `audit` viewer, a notification centre and push notifications.
 
 Known untidiness (tracked in `POLISH.md`): `switchWorkspace` still lives in the auth repository. The repository method `deleteBudget` is unused (budgets are stopped with an end marker).
 
@@ -221,7 +221,7 @@ To do (Phase 7 hardening):
 | Wiring | `test/core/di/injection_test.dart` | builds every bloc and cubit from the DI modules with a fake Supabase client |
 | Device | manual checklist per feature | every screen on a phone before a PR |
 
-About 1,350 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
+About 1,390 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
 
 ## 11. Conventions
 
@@ -235,9 +235,9 @@ About 1,350 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutte
 
 ## 12. Packages
 
-In use: `supabase_flutter`, `flutter_bloc`, `equatable`, `dartz`, `get_it`, `share_plus` (the share sheet for exports), `local_auth` (biometrics), `flutter_local_notifications` (pinned to 19.x, whose API is known) with `timezone`, `flutter_lints`, `mocktail`, `bloc_test`. Fonts Poppins and Inter are bundled as assets. Charts are drawn with `CustomPainter` (ADR-16), not a chart package. Plugins that touch the platform sit behind small interfaces (`DeviceAuthenticator`, `FileSharer`, `ReminderScheduler`) so tests never reach the platform.
+In use: `supabase_flutter`, `flutter_bloc`, `equatable`, `dartz`, `get_it`, `share_plus` (the share sheet for exports), `pdf` (the PDF report), `local_auth` (biometrics), `flutter_local_notifications` (pinned to 19.x, whose API is known) with `timezone`, `flutter_lints`, `mocktail`, `bloc_test`. Fonts Poppins and Inter are bundled as assets. Charts are drawn with `CustomPainter` (ADR-16), not a chart package. Plugins that touch the platform sit behind small interfaces (`DeviceAuthenticator`, `FileSharer`, `ReminderScheduler`) so tests never reach the platform.
 
-*(planned)*: `go_router` (if navigation grows: deep links), `drift` + `sqlite3_flutter_libs`, `flutter_secure_storage`, `intl` (with localisation), `decimal`, `image_picker`, `google_mlkit_text_recognition`, `firebase_messaging`, `pdf`, `printing`, `package_info_plus`. `go_router` and `intl` were removed from `pubspec.yaml` until they are needed. Versions are pinned when added.
+*(planned)*: `go_router` (if navigation grows: deep links), `drift` + `sqlite3_flutter_libs`, `flutter_secure_storage`, `intl` (with localisation), `decimal`, `image_picker`, `google_mlkit_text_recognition`, `firebase_messaging`, `printing`, `package_info_plus`. `go_router` and `intl` were removed from `pubspec.yaml` until they are needed. Versions are pinned when added.
 
 ## 13. Decision log
 
@@ -265,3 +265,4 @@ In use: `supabase_flutter`, `flutter_bloc`, `equatable`, `dartz`, `get_it`, `sha
 | ADR-20 | Reminders are local notifications scheduled by the app, rebuilt from the data on every use, for the active workspace only | No server or Firebase needed; the other workspace's data never appears in a notification; the limit is that the app must be used now and then |
 | ADR-21 | CSV export as Windows-1252 text with `;`, decimal comma and ISO dates, shared through the share sheet | The Android Sheets app and Excel in Brazil misread UTF-8 files and swap day and month in `dd/MM/yyyy` |
 | ADR-22 | The trash keeps deleted rows for 30 days, then a daily job removes them; deleted transfers are restored by a function, never leg by leg; a card invoice payment is not restorable | Mistakes are recoverable; a restored payment would lower the card debt while the invoice stays open |
+| ADR-23 | The PDF report is drawn with the `pdf` package behind an interface (`ReportPdfBuilder`), with the standard Helvetica font and only Latin-1 characters; each section is a top-level widget of a `MultiPage` | No font files to ship or load; the use case stays free of the package and is tested with a fake; a long table can go on to the next page |
