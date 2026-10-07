@@ -2,10 +2,18 @@ import 'package:finly/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class FinlyApp extends StatelessWidget {
-  const FinlyApp({super.key, this.home = const _PlaceholderHome()});
+  const FinlyApp({
+    super.key,
+    this.home = const _PlaceholderHome(),
+    this.builder,
+  });
 
   /// First screen. main.dart passes the auth gate; tests use the placeholder.
   final Widget home;
+
+  /// Wraps everything the navigator shows. main.dart puts the session lock
+  /// here; tests leave it out.
+  final TransitionBuilder? builder;
 
   @override
   Widget build(BuildContext context) {
@@ -15,6 +23,7 @@ class FinlyApp extends StatelessWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
+      builder: builder,
       home: home,
     );
   }

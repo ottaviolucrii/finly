@@ -33,7 +33,7 @@ Phases 0, 2 and 3 are done (except the items marked open), Phase 1 is mostly don
 - [ ] Change e-mail (needs a confirmation page or a code flow like the password reset)
 - [ ] Sign-up confirmation by code (also removes the localhost link problem)
 - [ ] `ReauthenticateUseCase` and protected switch beyond "confirm" (biometric / password), attempt lockout
-- [ ] Session lock (timeout, background), biometric unlock, hide content in the task switcher
+- [x] Session lock (timeout, background, cold start), biometric or PIN unlock (local_auth) with the password as a fallback, 5 wrong passwords block for 5 minutes, content hidden in the task switcher by a cover (best effort)
 - [ ] Settings: appearance (theme), language, privacy and terms screen, notification preferences
 - [ ] Force-update check against `app_config`
 

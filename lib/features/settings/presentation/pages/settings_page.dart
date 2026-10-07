@@ -1,12 +1,17 @@
 import 'package:finly/features/auth/domain/entities/user_entity.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
+import 'package:finly/features/lock/domain/entities/lock_settings.dart';
+import 'package:finly/features/lock/presentation/cubit/app_lock_cubit.dart';
+import 'package:finly/features/lock/presentation/cubit/app_lock_state.dart';
+import 'package:finly/features/lock/presentation/lock_texts.dart';
 import 'package:finly/features/settings/presentation/pages/change_password_page.dart';
 import 'package:finly/features/settings/presentation/pages/delete_account_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// Account settings: who is signed in, security, and deleting the account.
+/// Account settings: who is signed in, the app lock, security, and deleting
+/// the account.
 class SettingsPage extends StatelessWidget {
   final UserEntity user;
 
@@ -42,6 +47,33 @@ class SettingsPage extends StatelessWidget {
     bloc.add(const SignOutRequested(allDevices: true));
   }
 
+  Future<void> _pickTimeout(BuildContext context, int current) async {
+    final cubit = context.read<AppLockCubit>();
+    final picked = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Bloquear o app'),
+        children: [
+          for (final seconds in lockTimeoutOptions)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop(seconds),
+              child: Row(
+                children: [
+                  Icon(
+                    seconds == current ? Icons.check : null,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(lockTimeoutLabel(seconds)),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    if (picked != null && picked != current) await cubit.setTimeout(picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
@@ -59,6 +91,62 @@ class SettingsPage extends StatelessWidget {
                 title: Text(user.fullName),
                 subtitle: Text(user.email),
               ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text('Bloqueio do app', style: text.titleMedium),
+            ),
+            BlocConsumer<AppLockCubit, AppLockState>(
+              listenWhen: (previous, current) =>
+                  previous.error != current.error &&
+                  lockSettingsError(current.error) != null,
+              listener: (context, state) {
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
+                    SnackBar(content: Text(lockSettingsError(state.error)!)),
+                  );
+              },
+              builder: (context, lock) {
+                final cubit = context.read<AppLockCubit>();
+
+                return Card(
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.timer_outlined),
+                        title: const Text('Bloquear o app'),
+                        subtitle: Text(lockTimeoutLabel(lock.settings.timeoutSeconds)),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _pickTimeout(context, lock.settings.timeoutSeconds),
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile(
+                        secondary: const Icon(Icons.fingerprint),
+                        title: const Text('Desbloquear com biometria'),
+                        subtitle: Text(
+                          lock.deviceSupported
+                              ? 'Digital ou reconhecimento facial. O PIN do '
+                                  'aparelho também funciona.'
+                              : 'Este aparelho não tem biometria nem bloqueio '
+                                  'de tela configurado.',
+                        ),
+                        value: lock.settings.biometricEnabled,
+                        onChanged: (lock.deviceSupported || lock.settings.biometricEnabled)
+                            ? cubit.setBiometric
+                            : null,
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.lock_outline),
+                        title: const Text('Bloquear agora'),
+                        onTap: cubit.lockNow,
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 16),
             Padding(

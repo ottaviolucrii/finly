@@ -3,6 +3,7 @@ import 'package:finly/features/accounts/presentation/cubit/account_edit_cubit.da
 import 'package:finly/features/accounts/presentation/cubit/account_form_cubit.dart';
 import 'package:finly/features/accounts/presentation/cubit/accounts_cubit.dart';
 import 'package:finly/features/accounts/presentation/cubit/archived_accounts_cubit.dart';
+import 'package:finly/features/alerts/presentation/cubit/alerts_cubit.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/cubit/password_recovery_cubit.dart';
 import 'package:finly/features/budgets/presentation/cubit/budget_form_cubit.dart';
@@ -16,24 +17,24 @@ import 'package:finly/features/cards/presentation/cubit/invoice_detail_cubit.dar
 import 'package:finly/features/cards/presentation/cubit/invoices_cubit.dart';
 import 'package:finly/features/categories/presentation/cubit/categories_cubit.dart';
 import 'package:finly/features/categories/presentation/cubit/category_form_cubit.dart';
-import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_charts_cubit.dart';
+import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart';
+import 'package:finly/features/lock/presentation/cubit/app_lock_cubit.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_cubit.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_delete_cubit.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_edit_cubit.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_form_cubit.dart';
+import 'package:finly/features/reports/presentation/cubit/export_cubit.dart';
 import 'package:finly/features/reports/presentation/cubit/reports_cubit.dart';
-import 'package:finly/features/trash/presentation/cubit/trash_cubit.dart';
 import 'package:finly/features/settings/presentation/cubit/change_password_cubit.dart';
 import 'package:finly/features/settings/presentation/cubit/delete_account_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transaction_edit_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transaction_form_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_cubit.dart';
 import 'package:finly/features/transfers/presentation/cubit/transfer_form_cubit.dart';
+import 'package:finly/features/trash/presentation/cubit/trash_cubit.dart';
 import 'package:finly/features/workspaces/presentation/cubit/onboarding_cubit.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_cubit.dart';
-import 'package:finly/features/reports/presentation/cubit/export_cubit.dart';
-import 'package:finly/features/alerts/presentation/cubit/alerts_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -60,10 +61,10 @@ void main() {
     final built = <BlocBase<Object?>>[
       di<AuthBloc>(),
       di<PasswordRecoveryCubit>(),
+      di<AppLockCubit>(),
       di<SwitchWorkspaceCubit>(),
       di<OnboardingCubit>(),
       di<AccountsCubit>(),
-      di<AlertsCubit>(),
       di<ArchivedAccountsCubit>(),
       di<AccountFormCubit>(),
       di<AccountEditCubit>(),
@@ -72,30 +73,31 @@ void main() {
       di<TransactionsCubit>(),
       di<TransactionFormCubit>(),
       di<TransactionEditCubit>(),
+      di<TrashCubit>(),
       di<TransferFormCubit>(),
       di<CardsCubit>(),
       di<CardFormCubit>(),
       di<CardEditCubit>(),
       di<CardArchiveCubit>(),
       di<InvoicesCubit>(),
-      di<TrashCubit>(),
       di<InvoiceDetailCubit>(),
       di<InstallmentFormCubit>(),
       di<BudgetsCubit>(),
       di<BudgetFormCubit>(),
+      di<AlertsCubit>(),
       di<RecurringCubit>(),
-      di<RecurringDeleteCubit>(),
-      di<RecurringEditCubit>(),
-      di<ReportsCubit>(),
-      di<ExportCubit>(),
       di<RecurringFormCubit>(),
+      di<RecurringEditCubit>(),
+      di<RecurringDeleteCubit>(),
       di<DashboardCubit>(),
       di<DashboardChartsCubit>(),
+      di<ReportsCubit>(),
+      di<ExportCubit>(),
       di<ChangePasswordCubit>(),
       di<DeleteAccountCubit>(),
     ];
 
-    expect(built, hasLength(35));
+    expect(built, hasLength(36));
     for (final bloc in built) {
       await bloc.close();
     }

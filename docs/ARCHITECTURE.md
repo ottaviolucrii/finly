@@ -169,7 +169,7 @@ Done:
 
 To do (Phase 7 hardening):
 - The session is stored by `supabase_flutter`'s default storage. Move tokens to `flutter_secure_storage`.
-- Lock on inactivity/background (FR-A07); hide content in the app switcher.
+- Session lock (FR-A07/A08/A09) is done: see ADR-19. Still open: block screenshots (FLAG_SECURE) and lock the workspace switch with a password or biometrics (FR-W04).
 - No PII in analytics or crash reports; mask CPF/CNPJ in the UI by default.
 - Leaked-password protection (needs the Pro plan) and custom SMTP for real users.
 - Receipts bucket is private; path is `<user_id>/<file>` (storage file `05`).
