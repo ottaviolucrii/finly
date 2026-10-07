@@ -1,3 +1,4 @@
+import 'package:finly/features/lock/domain/entities/lock_settings.dart';
 import 'package:finly/features/lock/presentation/cubit/app_lock_state.dart';
 
 /// "Imediatamente", "1 minuto", "2 minutos"... (Portuguese for now; replaced by
@@ -6,6 +7,30 @@ String lockTimeoutLabel(int seconds) {
   if (seconds <= 0) return 'Imediatamente';
   if (seconds == 60) return '1 minuto';
   return '${seconds ~/ 60} minutos';
+}
+
+/// The name of a workspace switch protection level.
+String switchProtectionLabel(SwitchProtection level) {
+  switch (level) {
+    case SwitchProtection.confirm:
+      return 'Confirmar';
+    case SwitchProtection.biometric:
+      return 'Biometria ou PIN do aparelho';
+    case SwitchProtection.password:
+      return 'Senha da conta';
+  }
+}
+
+/// One line saying what a protection level asks for.
+String switchProtectionDescription(SwitchProtection level) {
+  switch (level) {
+    case SwitchProtection.confirm:
+      return 'Uma folha mostra os dois workspaces e pede a confirmação.';
+    case SwitchProtection.biometric:
+      return 'Digital, rosto ou PIN. A senha da conta é a alternativa.';
+    case SwitchProtection.password:
+      return 'Digite a senha da conta a cada troca.';
+  }
 }
 
 /// "4:32". A part of a second counts as a whole one.
@@ -17,8 +42,8 @@ String formatCountdown(Duration remaining) {
   return '$minutes:$seconds';
 }
 
-/// The message under the password field of the lock screen, or null when there
-/// is nothing to say.
+/// The message under a password field (the lock screen or the workspace
+/// switch), or null when there is nothing to say.
 String? lockUnlockError(AppLockState state, DateTime now) {
   final until = state.blockedUntil;
   if (until != null && now.isBefore(until)) {
@@ -57,7 +82,7 @@ String? lockSettingsError(LockError error) {
     case LockError.biometricUnavailable:
       return 'Este aparelho não tem biometria nem bloqueio de tela configurado.';
     case LockError.biometricNotConfirmed:
-      return 'Não foi possível confirmar. A biometria continua desativada.';
+      return 'Não foi possível confirmar. A configuração não foi alterada.';
     case LockError.saveFailed:
       return 'Não foi possível salvar. Tente de novo.';
     case LockError.none:

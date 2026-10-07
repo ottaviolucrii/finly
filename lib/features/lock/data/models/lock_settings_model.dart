@@ -1,13 +1,18 @@
 import 'package:finly/features/lock/domain/entities/lock_settings.dart';
 
 class LockSettingsModel extends LockSettings {
-  const LockSettingsModel({super.timeoutSeconds, super.biometricEnabled});
+  const LockSettingsModel({
+    super.timeoutSeconds,
+    super.biometricEnabled,
+    super.switchProtection,
+  });
 
-  /// [map] is a row of `user_settings` with the two lock columns.
+  /// [map] is a row of `user_settings` with the lock columns.
   factory LockSettingsModel.fromMap(Map<String, dynamic> map) {
     return LockSettingsModel(
       timeoutSeconds: (map['lock_timeout_seconds'] as num).toInt(),
       biometricEnabled: map['biometric_enabled'] as bool,
+      switchProtection: SwitchProtection.fromDb(map['switch_protection'] as String?),
     );
   }
 }

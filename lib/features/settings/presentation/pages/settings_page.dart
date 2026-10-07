@@ -47,6 +47,41 @@ class SettingsPage extends StatelessWidget {
     bloc.add(const SignOutRequested(allDevices: true));
   }
 
+  Future<void> _pickProtection(BuildContext context, SwitchProtection current) async {
+    final cubit = context.read<AppLockCubit>();
+    final picked = await showDialog<SwitchProtection>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Ao trocar de workspace'),
+        children: [
+          for (final level in SwitchProtection.values)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop(level),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(level == current ? Icons.check : null, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(switchProtectionLabel(level)),
+                        Text(
+                          switchProtectionDescription(level),
+                          style: Theme.of(dialogContext).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    if (picked != null) await cubit.setSwitchProtection(picked);
+  }
   Future<void> _pickTimeout(BuildContext context, int current) async {
     final cubit = context.read<AppLockCubit>();
     final picked = await showDialog<int>(
@@ -142,6 +177,19 @@ class SettingsPage extends StatelessWidget {
                         leading: const Icon(Icons.lock_outline),
                         title: const Text('Bloquear agora'),
                         onTap: cubit.lockNow,
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.swap_horiz),
+                        title: const Text('Prote\u00e7\u00e3o ao trocar de workspace'),
+                        subtitle: Text(
+                          switchProtectionLabel(lock.settings.switchProtection),
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _pickProtection(
+                          context,
+                          lock.settings.switchProtection,
+                        ),
                       ),
                     ],
                   ),

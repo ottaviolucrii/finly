@@ -27,7 +27,7 @@ class LockRemoteDataSourceImpl implements LockRemoteDataSource {
     // Row Level Security: a user reads and changes only their own row.
     final row = await _client
         .from('user_settings')
-        .select('lock_timeout_seconds, biometric_enabled')
+        .select('lock_timeout_seconds, biometric_enabled, switch_protection')
         .eq('user_id', _userId())
         .single();
 
@@ -36,12 +36,14 @@ class LockRemoteDataSourceImpl implements LockRemoteDataSource {
 
   @override
   Future<void> saveSettings(LockSettings settings) async {
-    // The database accepts 0 to 900 seconds for the time.
+    // The database accepts 0 to 900 seconds for the time, and the three
+    // values of the switch_protection enum.
     await _client
         .from('user_settings')
         .update({
           'lock_timeout_seconds': settings.timeoutSeconds,
           'biometric_enabled': settings.biometricEnabled,
+          'switch_protection': settings.switchProtection.dbValue,
         })
         .eq('user_id', _userId());
   }
