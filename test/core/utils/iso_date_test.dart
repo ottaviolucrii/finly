@@ -25,4 +25,27 @@ void main() {
       expect(isoDate(DateTime(2028, 2, 29)), '2028-02-29');
     });
   });
+
+  group('parseIsoDate', () {
+    test('reads year-month-day as that day', () {
+      expect(parseIsoDate('2026-10-17'), DateTime(2026, 10, 17));
+      expect(parseIsoDate('2026-01-05'), DateTime(2026, 1, 5));
+    });
+
+    test('reads the date at the start of a timestamp', () {
+      expect(parseIsoDate('2026-10-17T15:30:00+00:00'), DateTime(2026, 10, 17));
+    });
+
+    test('is the opposite of isoDate', () {
+      final day = DateTime(2028, 2, 29);
+
+      expect(parseIsoDate(isoDate(day)), day);
+    });
+
+    test('refuses text that is not a date', () {
+      expect(() => parseIsoDate('17/10/2026'), throwsFormatException);
+      expect(() => parseIsoDate(''), throwsFormatException);
+      expect(() => parseIsoDate('amanhã'), throwsFormatException);
+    });
+  });
 }

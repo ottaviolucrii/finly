@@ -56,6 +56,7 @@ lib/
     alerts/                    budgets near the limit, bills overdue or due soon (shown on the dashboard)
     reports/                   monthly report, CSV export of the month
     reminders/                 local notifications for pending bills and card invoices
+    forecast/                  balance forecast for 30, 60 and 90 days (pure rules, one chart painter)
     lock/                      session lock, biometrics or PIN, password fallback, brute-force limit
     settings/                  change password, sign out everywhere, delete account, app lock, notifications
       <each feature>/
@@ -70,7 +71,7 @@ docs/
 .github/workflows/ci.yml       analyze, test, database tests
 ```
 
-*(planned)* features, not started: `forecast`, `yield_simulator`, `tax_reserve`, `receipt_ocr`, `import_export` (import, PDF, export of all data), `currency`, `audit` viewer, a notification centre and push notifications.
+*(planned)* features, not started: `yield_simulator`, `tax_reserve`, `receipt_ocr`, `import_export` (import, PDF, export of all data), `currency`, `audit` viewer, a notification centre and push notifications.
 
 Known untidiness (tracked in `POLISH.md`): `switchWorkspace` still lives in the auth repository. The repository method `deleteBudget` is unused (budgets are stopped with an end marker).
 
@@ -219,7 +220,7 @@ To do (Phase 7 hardening):
 | Wiring | `test/core/di/injection_test.dart` | builds every bloc and cubit from the DI modules with a fake Supabase client |
 | Device | manual checklist per feature | every screen on a phone before a PR |
 
-About 1,150 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
+About 1,250 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
 
 ## 11. Conventions
 
