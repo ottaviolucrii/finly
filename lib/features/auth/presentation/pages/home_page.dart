@@ -13,6 +13,7 @@ import 'package:finly/features/cards/presentation/pages/cards_page.dart';
 import 'package:finly/features/categories/presentation/pages/categories_page.dart';
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import 'package:finly/features/dashboard/presentation/widgets/dashboard_view.dart';
+import 'package:finly/features/lock/presentation/cubit/app_lock_cubit.dart';
 import 'package:finly/features/recurring/presentation/pages/recurring_page.dart';
 import 'package:finly/features/reports/presentation/pages/reports_page.dart';
 import 'package:finly/features/settings/presentation/pages/settings_page.dart';
@@ -48,22 +49,28 @@ class _HomeView extends StatelessWidget {
     WorkspaceEntity from,
     WorkspaceEntity to,
   ) {
-    // The sheet lives in its own route, so hand it the cubit explicitly.
+    // The sheet lives in its own route, so hand it what it needs explicitly.
     final cubit = context.read<SwitchWorkspaceCubit>();
+    final lock = context.read<AppLockCubit>();
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (sheetContext) => WorkspaceSwitchSheet(
         from: from,
         to: to,
+        level: lock.state.settings.switchProtection,
+        deviceSupported: lock.state.deviceSupported,
         onConfirm: () {
           Navigator.of(sheetContext).pop();
           cubit.switchTo(to.id);
         },
+        onConfirmWithDevice: () =>
+            lock.confirmWithDevice('Confirme para trocar de workspace'),
+        onCheckPassword: lock.checkPassword,
       ),
     );
   }
-
   void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()

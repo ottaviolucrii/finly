@@ -7,11 +7,13 @@ import 'package:finly/features/lock/domain/usecases/get_lock_settings_use_case.d
 import 'package:finly/features/lock/domain/usecases/save_lock_settings_use_case.dart';
 import 'package:finly/features/lock/domain/usecases/verify_password_use_case.dart';
 import 'package:finly/features/lock/presentation/cubit/app_lock_state.dart';
+import 'package:finly/features/lock/presentation/cubit/password_check_result.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// The session lock (SRS FR-A07 to FR-A09). One instance for the whole app: the
-/// gate above the navigator tells it when the app goes to the background, when
-/// the user touches the screen, and when someone signs in or out.
+/// The session lock (SRS FR-A07 to FR-A09) and the checks behind the protected
+/// workspace switch (FR-W04). One instance for the whole app: the gate above the
+/// navigator tells it when the app goes to the background, when the user touches
+/// the screen, and when someone signs in or out.
 class AppLockCubit extends Cubit<AppLockState> {
   final GetLockSettingsUseCase _getSettings;
   final SaveLockSettingsUseCase _saveSettings;
@@ -19,6 +21,8 @@ class AppLockCubit extends Cubit<AppLockState> {
   final DeviceAuthenticator _device;
   final DateTime Function() _clock;
 
+  /// Shared by every password prompt: five wrong passwords block them all for
+  /// five minutes.
   AttemptLimiter _limiter = const AttemptLimiter();
   DateTime? _backgroundedAt;
   late DateTime _lastActivity;
@@ -75,7 +79,8 @@ class AppLockCubit extends Cubit<AppLockState> {
     if (!state.signedIn) return;
 
     result.fold(
-      // Without the settings, the defaults apply: 2 minutes, no biometrics.
+      // Without the settings, the defaults apply: 2 minutes, no biometrics,
+      // confirm to switch workspace.
       (_) => emit(state.copyWith(deviceSupported: supported, settingsReady: true)),
       (settings) => emit(state.copyWith(
         settings: settings,
@@ -143,54 +148,86 @@ class AppLockCubit extends Cubit<AppLockState> {
   Future<void> unlockWithPassword(String password) async {
     if (state.working || !state.locked) return;
 
+    emit(state.copyWith(working: true, error: LockError.none));
+    final check = await checkPassword(password);
+
+    if (check.ok) {
+      _lastActivity = _clock();
+      emit(state.copyWith(
+        locked: false,
+        working: false,
+        error: LockError.none,
+        attemptsLeft: AttemptLimiter.maxFailures,
+        clearBlockedUntil: true,
+      ));
+    } else {
+      emit(state.copyWith(
+        working: false,
+        error: check.error,
+        attemptsLeft: check.attemptsLeft,
+        blockedUntil: check.blockedUntil,
+        clearBlockedUntil: check.blockedUntil == null,
+      ));
+    }
+  }
+
+  // ---- checks for protected actions -------------------------------------
+
+  /// Checks the account password for a protected action: unlocking the app or
+  /// switching workspace. A wrong password counts in the limiter shared by all
+  /// of them; the fifth blocks every password prompt for five minutes (SRS
+  /// FR-A09, FR-W04). While blocked, the password is not even sent.
+  Future<PasswordCheckResult> checkPassword(String password) async {
     final now = _clock();
     if (_limiter.isBlocked(now)) {
-      emit(state.copyWith(
+      return PasswordCheckResult(
         error: LockError.blocked,
         attemptsLeft: 0,
         blockedUntil: _limiter.blockedUntil,
-      ));
-      return;
+      );
     }
 
-    emit(state.copyWith(working: true, error: LockError.none));
     final result = await _verifyPassword(password);
 
-    result.fold(
+    return result.fold<PasswordCheckResult>(
       (failure) {
         switch (failure.message) {
           case 'invalid_credentials':
             _limiter = _limiter.recordFailure(_clock());
             final blocked = _limiter.isBlocked(_clock());
-            emit(state.copyWith(
-              working: false,
+            return PasswordCheckResult(
               error: blocked ? LockError.blocked : LockError.wrongPassword,
               attemptsLeft: blocked ? 0 : _limiter.attemptsLeft,
               blockedUntil: _limiter.blockedUntil,
-              clearBlockedUntil: _limiter.blockedUntil == null,
-            ));
+            );
           case 'network_error':
             // Not the user's fault: it does not count as a wrong password.
-            emit(state.copyWith(working: false, error: LockError.network));
+            return PasswordCheckResult(
+              error: LockError.network,
+              attemptsLeft: _limiter.attemptsLeft,
+            );
           case 'rate_limited':
-            emit(state.copyWith(working: false, error: LockError.rateLimited));
+            return PasswordCheckResult(
+              error: LockError.rateLimited,
+              attemptsLeft: _limiter.attemptsLeft,
+            );
           default:
-            emit(state.copyWith(working: false, error: LockError.other));
+            return PasswordCheckResult(
+              error: LockError.other,
+              attemptsLeft: _limiter.attemptsLeft,
+            );
         }
       },
       (_) {
         _limiter = const AttemptLimiter();
-        _lastActivity = _clock();
-        emit(state.copyWith(
-          locked: false,
-          working: false,
-          error: LockError.none,
-          attemptsLeft: AttemptLimiter.maxFailures,
-          clearBlockedUntil: true,
-        ));
+        return const PasswordCheckResult();
       },
     );
   }
+
+  /// Shows the phone's prompt (fingerprint, face or PIN) for a protected action.
+  /// True when it was confirmed. It never locks the app by itself.
+  Future<bool> confirmWithDevice(String reason) => _askDevice(reason);
 
   Future<bool> _askDevice(String reason) async {
     _authenticating = true;
@@ -225,6 +262,27 @@ class AppLockCubit extends Cubit<AppLockState> {
       }
     }
     await _save(state.settings.copyWith(biometricEnabled: enabled));
+  }
+
+  /// What it takes to switch workspace. Choosing the phone's biometrics first
+  /// asks the phone to confirm, so a sensor that does not work cannot make
+  /// switching impossible.
+  Future<void> setSwitchProtection(SwitchProtection level) async {
+    if (level == state.settings.switchProtection) return;
+    emit(state.copyWith(error: LockError.none));
+
+    if (level == SwitchProtection.biometric) {
+      if (!state.deviceSupported) {
+        emit(state.copyWith(error: LockError.biometricUnavailable));
+        return;
+      }
+      final ok = await _askDevice('Confirme para proteger a troca de workspace');
+      if (!ok) {
+        emit(state.copyWith(error: LockError.biometricNotConfirmed));
+        return;
+      }
+    }
+    await _save(state.settings.copyWith(switchProtection: level));
   }
 
   Future<void> _save(LockSettings next) async {

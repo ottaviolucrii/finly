@@ -71,7 +71,7 @@ found; cosmetic items are done in batches.
 - [ ] Android 8 and older: the launch theme must inherit from Theme.AppCompat for the biometric prompt (the phone in use is Android 15; minSdk is 24)
 - [ ] iOS: add NSFaceIDUsageDescription to Info.plist before building for iPhone
 - [ ] Enrolling a new fingerprint in the OS should force the password again (FR-A08): not detected yet
-- [ ] Protected workspace switch with the levels Confirm / Biometric / Password (FR-W04): only "confirm" exists; the column switch_protection is ready
+- [x] Protected workspace switch (FR-W04): Confirm (default), Biometric or PIN with the password as a fallback, or Password; chosen in Settings and saved in user_settings; wrong passwords share the 5-in-5-minutes block with the lock screen
 - [x] Supabase dashboard settings written down in docs/SUPABASE_SETUP.md (the Reset Password template must show {{ .Token }})
 - [ ] Set Minimum password length to 8 and the letters-and-digits requirement in Supabase, so the server matches the app
 - [ ] Set up custom SMTP in Supabase (needs an owned domain): the built-in sender allows only 2 e-mails per hour for the whole project
@@ -121,4 +121,4 @@ found; cosmetic items are done in batches.
 - Dashboard with balance, month, charts, budgets, upcoming items and alerts; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 960 automated tests
+- About 1040 automated tests
