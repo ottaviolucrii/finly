@@ -4,6 +4,8 @@ import 'package:finly/core/di/injection.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
 import 'package:finly/features/auth/presentation/pages/auth_gate.dart';
+import 'package:finly/features/lock/presentation/cubit/app_lock_cubit.dart';
+import 'package:finly/features/lock/presentation/widgets/app_lock_gate.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -25,12 +27,20 @@ Future<void> main() async {
 
   if (kDebugMode) await _checkConnection();
 
-  // The bloc sits above MaterialApp so every pushed page can reach it.
+  // The blocs sit above MaterialApp so every pushed page can reach them.
   // AuthStarted restores the stored session before the first real screen.
+  // The session lock wraps everything the navigator shows.
   runApp(
-    BlocProvider(
-      create: (_) => sl<AuthBloc>()..add(const AuthStarted()),
-      child: const FinlyApp(home: AuthGate()),
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => sl<AuthBloc>()..add(const AuthStarted())),
+        BlocProvider(create: (_) => sl<AppLockCubit>()),
+      ],
+      child: FinlyApp(
+        home: const AuthGate(),
+        builder: (context, child) =>
+            AppLockGate(child: child ?? const SizedBox.shrink()),
+      ),
     ),
   );
 }
