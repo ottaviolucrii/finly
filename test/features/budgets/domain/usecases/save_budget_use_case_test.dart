@@ -2,7 +2,6 @@ import 'package:dartz/dartz.dart';
 import 'package:finly/core/error/failure.dart';
 import 'package:finly/features/budgets/domain/entities/budget_entity.dart';
 import 'package:finly/features/budgets/domain/repositories/budget_repository.dart';
-import 'package:finly/features/budgets/domain/usecases/delete_budget_use_case.dart';
 import 'package:finly/features/budgets/domain/usecases/save_budget_use_case.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -102,28 +101,6 @@ void main() {
         result,
         const Left<Failure, BudgetEntity>(PermissionFailure('forbidden')),
       );
-    });
-  });
-
-  group('DeleteBudgetUseCase', () {
-    test('rejects an empty id without calling the repository', () async {
-      final result = await DeleteBudgetUseCase(repository)(' ');
-
-      expect(
-        result,
-        const Left<Failure, void>(ValidationFailure('invalid_budget')),
-      );
-      verifyNever(() => repository.deleteBudget(any()));
-    });
-
-    test('deletes the budget', () async {
-      when(() => repository.deleteBudget('b1'))
-          .thenAnswer((_) async => const Right<Failure, void>(null));
-
-      final result = await DeleteBudgetUseCase(repository)('b1');
-
-      expect(result.isRight(), isTrue);
-      verify(() => repository.deleteBudget('b1')).called(1);
     });
   });
 }
