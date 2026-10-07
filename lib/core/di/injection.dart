@@ -9,6 +9,7 @@ import 'package:finly/features/lock/di/lock_di.dart';
 import 'package:finly/features/recurring/di/recurring_di.dart';
 import 'package:finly/features/reminders/di/reminders_di.dart';
 import 'package:finly/features/alerts/di/alerts_di.dart';
+import 'package:finly/features/appearance/di/appearance_di.dart';
 import 'package:finly/features/trash/di/trash_di.dart';
 import 'package:finly/features/reports/di/reports_di.dart';
 import 'package:finly/features/settings/di/settings_di.dart';
@@ -32,6 +33,7 @@ void configureDependencies() {
 void registerFeatureModules(GetIt sl) {
   registerReportsModule(sl);
   registerAlertsModule(sl);
+  registerAppearanceModule(sl);
   registerAuthModule(sl);
   registerWorkspacesModule(sl);
   registerAccountsModule(sl);

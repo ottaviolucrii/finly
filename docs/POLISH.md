@@ -17,6 +17,8 @@ found; cosmetic items are done in batches.
 - [ ] Charts are drawn by hand (no chart package); revisit if more chart types are needed
 - [ ] Selected chips are gold (brand secondary): decide whether to use Tech Blue via a chip theme
 - [ ] Check dark and light mode, 200% font scale and TalkBack on every screen (charts, report, trash, the alerts card and the lock screen included)
+- [x] Appearance setting: system, light or dark, saved in user_settings and applied to the whole app
+- [ ] On a cold start the app shows the phone's theme for a moment until the saved choice is read (the choice is not cached on the phone yet)
 - [ ] Home: seven shortcut buttons wrap onto three lines; consider a bottom navigation bar
 
 ## Missing in finished features
@@ -133,4 +135,4 @@ found; cosmetic items are done in batches.
 - Dashboard with balance, month, charts, budgets, upcoming items and alerts; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 1250 automated tests
+- About 1290 automated tests

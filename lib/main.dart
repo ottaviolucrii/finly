@@ -1,6 +1,9 @@
 import 'package:finly/app.dart';
 import 'package:finly/core/config/app_config.dart';
 import 'package:finly/core/di/injection.dart';
+import 'package:finly/features/appearance/presentation/appearance_mode_x.dart';
+import 'package:finly/features/appearance/presentation/cubit/appearance_cubit.dart';
+import 'package:finly/features/appearance/presentation/widgets/appearance_gate.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
 import 'package:finly/features/auth/presentation/pages/auth_gate.dart';
@@ -31,19 +34,24 @@ Future<void> main() async {
 
   // The blocs sit above MaterialApp so every pushed page can reach them.
   // AuthStarted restores the stored session before the first real screen.
-  // The session lock wraps everything the navigator shows, and the reminders
-  // gate (inside it) keeps the scheduled notifications in step with the data.
+  // The appearance gate gives MaterialApp the theme the user chose, the session
+  // lock wraps everything the navigator shows, and the reminders gate (inside
+  // it) keeps the scheduled notifications in step with the data.
   runApp(
     MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => sl<AuthBloc>()..add(const AuthStarted())),
+        BlocProvider(create: (_) => sl<AppearanceCubit>()),
         BlocProvider(create: (_) => sl<AppLockCubit>()),
         BlocProvider(create: (_) => sl<RemindersCubit>()),
       ],
-      child: FinlyApp(
-        home: const AuthGate(),
-        builder: (context, child) => AppLockGate(
-          child: RemindersGate(child: child ?? const SizedBox.shrink()),
+      child: AppearanceGate(
+        builder: (context, mode) => FinlyApp(
+          themeMode: mode.themeMode,
+          home: const AuthGate(),
+          builder: (context, child) => AppLockGate(
+            child: RemindersGate(child: child ?? const SizedBox.shrink()),
+          ),
         ),
       ),
     ),
