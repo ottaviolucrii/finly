@@ -6,19 +6,19 @@ The whole product is planned; phases only fix the order (each depends on the one
 
 ## Where the project is today
 
-Phases 0, 2 and 3 are done (except the items marked open), Phase 1 is mostly done, Phase 4 has the dashboard and charts. About 740 Dart tests and 90 database checks pass, CI runs on every pull request. Next in line: reports, notifications, the session lock, then Phase 5.
+Phases 0 to 4 are done except the items marked open: identity, the session lock and the protected switch, the full ledger with trash and restore, cards, budgets, recurring bills, the dashboard with charts and alerts, the monthly report with CSV export, and local reminders. About 1,150 Dart tests and 90 database checks pass, and CI runs on every pull request. Next in line: the offline cache, push notifications and the notification centre, then Phase 5 (intelligence).
 
 ## Phase 0 - Foundation
 
 - [x] Compile errors fixed; models and entities consistent
-- [x] Supabase project with `sql/00` to `sql/12` applied; 14 tables with RLS on
+- [x] Supabase project with `sql/00` to `sql/14` applied; 14 tables with RLS on
 - [x] Database tests (`run_db_tests.py`): 90 checks
-- [x] Packages: `supabase_flutter`, `flutter_bloc`, `get_it`, `mocktail`, `bloc_test` (others are added when a feature needs them)
+- [x] Packages added as features needed them (see ARCHITECTURE section 12)
 - [x] `core/config` (`--dart-define-from-file=env.json`), `core/di` (one module per feature)
 - [x] `core/theme`: `AppColors`, Poppins + Inter bundled, tabular figures
 - [x] `core/money/Money` + tests; `core/error` failure set + error mapper + tests
 - [x] Validators: e-mail, CPF, CNPJ (alphanumeric included)
-- [x] GitHub Actions: analyze, test, database tests; pull request template
+- [x] GitHub Actions: analyze, test, database tests; pull request template; Flutter version pinned to the development machine's
 - [ ] Repo hygiene to verify: `hs_err_pid*.log` removed and ignored, `.env*` ignored, no leftover `.github/java-upgrade`, `.github/modernize`
 - [ ] Protect `develop` and `main` on GitHub (require a pull request and the two CI checks)
 
@@ -27,24 +27,24 @@ Phases 0, 2 and 3 are done (except the items marked open), Phase 1 is mostly don
 - [x] Sign up (terms), sign in, sign out (this device / all), session restore, e-mail verification
 - [x] Change password (re-authentication), delete account (typed confirmation), forgot password (one-time code)
 - [x] `AuthRemoteDataSource` + `AuthRepositoryImpl`; every error mapped to a failure
-- [x] Workspace use cases (create, switch); active workspace flows through `AuthBloc` and keyed providers (no `WorkspaceSessionCubit` was needed)
+- [x] Workspace use cases (create, switch); active workspace flows through `AuthBloc` and keyed providers
 - [x] Onboarding flow (resumable) and second-workspace flow
-- [x] Settings: password, sign out everywhere, delete account
+- [x] Settings: password, sign out everywhere, delete account, app lock, notifications
+- [x] Session lock (timeout, background, every start), biometric or PIN unlock with the password as a fallback, five wrong passwords block for five minutes (FR-A07 to FR-A09); content covered in the app switcher (best effort)
+- [x] Protected workspace switch: confirm, biometrics or PIN, or password (FR-W04)
 - [ ] Change e-mail (needs a confirmation page or a code flow like the password reset)
 - [ ] Sign-up confirmation by code (also removes the localhost link problem)
-- [ ] `ReauthenticateUseCase` and protected switch beyond "confirm" (biometric / password), attempt lockout
-- [x] Session lock (timeout, background, cold start), biometric or PIN unlock (local_auth) with the password as a fallback, 5 wrong passwords block for 5 minutes, content hidden in the task switcher by a cover (best effort)
-- [ ] Settings: appearance (theme), language, privacy and terms screen, notification preferences
+- [ ] Settings: appearance (theme), language, privacy and terms screen
+- [ ] Block screenshots (`FLAG_SECURE`) as an option; force the password after a new fingerprint
 - [ ] Force-update check against `app_config`
 
 ## Phase 2 - Core ledger (FR-C, FR-G01-02, FR-T01-04, FR-X01-02, FR-U01)
 
 - [x] Accounts: create, edit (name, opening balance), archive, restore, derived balances
 - [x] Categories: create, edit, archive, restore
-- [x] Transactions: create, edit, confirm pending, soft delete + 10-second undo, search, filters, pages of 20
+- [x] Transactions: create, edit, confirm pending, soft delete + 10-second undo, search, filters (type, status, account, category, period), pages of 20
 - [x] Transfers: internal and owner withdrawal/contribution via RPC; delete via RPC
-- [x] Trash screen: deleted transactions stay 30 days and can be restored; a daily job removes them for good after that
-- [x] Transfers: a deleted transfer can be restored from the trash (both legs; a card payment cannot)
+- [x] Trash (Lixeira): deleted transactions and transfers stay 30 days and can be restored; a daily job removes them for good after that
 - [ ] Local read cache (Drift) per workspace, offline banner (starts FR-Y01)
 
 ## Phase 3 - Cards, budgets, recurring (FR-K, FR-B01-02, FR-R, FR-T05-06)
@@ -53,22 +53,20 @@ Phases 0, 2 and 3 are done (except the items marked open), Phase 1 is mostly don
 - [x] Installments via RPC; pay invoice via RPC
 - [x] Budgets with versions and end markers, progress UI
 - [x] Recurring: create, pause/resume, edit, delete; `generate_my_recurring` on open and by a daily job
-- [x] Daily jobs with `pg_cron`: close invoices, generate recurring occurrences
+- [x] Daily jobs with `pg_cron`: close invoices, generate recurring occurrences, purge the trash
 - [ ] Partial invoice payment
 - [ ] Receipt attach (private bucket)
-- [x] Transactions: filter by date range
 - [ ] Transactions: "move to another account"
 
 ## Phase 4 - Overview and alerts (FR-D, FR-N, FR-B03, FR-U02, FR-Y01)
 
 - [x] Dashboard: balance, month, budgets, upcoming
 - [x] Charts: income vs expenses (6 months), spending by category
+- [x] In-app alerts on the dashboard: budgets at 80% and over the limit, bills overdue or due in 3 days
+- [x] Monthly report: summary against the month before, spending by category, biggest expenses
+- [x] Local notifications: reminders at 9h for pending bills (the day before, or `lead_days`, and the due day) and card invoices (3 days before and the due day), for the active workspace
 - [ ] Dashboard cache first, refresh in background (needs the local cache)
-- [x] Reports: monthly report (summary vs the month before, spending by category, biggest expenses)
-- [ ] Report export (CSV / PDF)
-- [ ] Local notifications (due dates, bills, pending digest); FCM token registration; Edge Function jobs
-- [x] In-app alerts on the dashboard: budgets at 80% and 100%, bills overdue or due in 3 days
-- [ ] Notification centre screen
+- [ ] Notification centre screen; push notifications (FCM token registration, Edge Function jobs) and budget alerts that arrive with the app closed
 - [ ] Audit log viewer
 
 ## Phase 5 - Intelligence (FR-I, FR-G03)
@@ -81,7 +79,8 @@ Phases 0, 2 and 3 are done (except the items marked open), Phase 1 is mostly don
 
 ## Phase 6 - Data and currency (FR-E, FR-M, FR-X03, FR-Y02)
 
-- [ ] CSV/PDF export; export-my-data file
+- [x] CSV export of a month, from the report screen, through the share sheet
+- [ ] PDF export, custom periods, export-my-data file
 - [ ] OFX import with preview and duplicate detection
 - [ ] Multi-currency totals and display conversion (rate adapter)
 - [ ] Offline write queue + conflict screen
@@ -93,6 +92,7 @@ Phases 0, 2 and 3 are done (except the items marked open), Phase 1 is mostly don
 - [ ] Custom SMTP with an owned domain; leaked-password protection (Pro plan)
 - [ ] Performance pass (cold start, 100 000-row dataset)
 - [ ] Localisation (pt-BR and en)
+- [ ] iOS setup (Face ID usage text, notification permission, `AppDelegate`)
 - [ ] Store assets, privacy labels, release build, crash reporting
 
 ## Workflow

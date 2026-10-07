@@ -20,7 +20,7 @@ The SQL under `sql/` is the **source of truth**. This file explains it and must 
 | 11 | `10_schedule_jobs.sql` | Schedules the two daily jobs with `pg_cron` (**Supabase only**) |
 | 12 | `11_monthly_flow.sql` | View `monthly_flow` for the dashboard chart |
 | 13 | `12_recurring_edit_delete.sql` | `update_recurring`, `delete_recurring` |
-| 14 | `13_schedule_purge.sql` | Schedules the daily purge of the trash (**Supabase only**) |
+| 14 | `13_schedule_purge.sql` | Schedules the daily purge of the trash with `pg_cron` (**Supabase only**) |
 | 15 | `14_restore_transfer.sql` | `restore_transfer`: brings a deleted transfer back |
 
 The Supabase project `Finly` (region sa-east-1) has `00` to `05`, `07` to `14` applied. Run a file in the Supabase **SQL Editor** (or as a migration), once, in order. Keep every change in git: never edit tables by hand in the dashboard without copying the change back into `sql/`.
@@ -32,7 +32,7 @@ pip install pgserver "psycopg[binary]"
 python sql/tests/run_db_tests.py        # 90 checks (applies 00-04, 07-09, 11, 12, 14)
 ```
 
-`sql/tests/00_mock_supabase.sql` only fakes `auth.users` and `auth.uid()` for that test. Never run it in Supabase. File `10` needs `pg_cron`, which only Supabase has, so the test does not apply it.
+`sql/tests/00_mock_supabase.sql` only fakes `auth.users` and `auth.uid()` for that test. Never run it in Supabase. Files `10` and `13` need `pg_cron`, which only Supabase has, so the test does not apply them (it does test `private.purge_deleted()` and `restore_transfer`). On Windows the embedded Postgres has no time zone database, so run these tests in CI (or copy the `tzdata` files into the virtual environment).
 
 ## 2. Entity-relationship diagram
 
@@ -230,7 +230,7 @@ erDiagram
 | `switch_workspace(workspace_id)` | Ownership check, stores active workspace |
 | `create_transfer(from, to, amount, description, occurred_at, kind, to_amount, status)` | Two legs; enforces kind rules and currency rules |
 | `delete_transfer(transfer_id)` | Soft-deletes both legs; reopens an invoice this transfer had paid |
-| `restore_transfer(transfer_id)` | Brings a deleted transfer back (both legs); refused for a card invoice payment |
+| `restore_transfer(transfer_id)` | Brings a deleted transfer back, both legs together. Refused when the transfer touches a credit card (an invoice payment: the invoice has to be paid again), when it is not deleted, and for anyone but its owner |
 | `create_credit_card(workspace, name, currency, limit, closing_day, due_day)` | Creates the card account and its settings in one operation; opening balance 0 |
 | `create_installments(account, category, total, n, description, purchase_at)` | N charges on consecutive invoices; remainder to the first |
 | `pay_invoice(invoice, from_account, paid_at)` | Creates the payment transfer and marks the invoice paid |
@@ -244,7 +244,7 @@ erDiagram
 | view `monthly_category_spend` | spent per category per month (America/Sao_Paulo; pending counts, like in budgets) |
 | view `monthly_flow` | posted income and expenses per workspace, currency and month (America/Sao_Paulo); transfers excluded |
 
-Private jobs: `close_due_invoices` and `generate_all_recurring` are scheduled by `10_schedule_jobs.sql` with `pg_cron` at 03:05 and 03:15 UTC (00:05 and 00:15 in Sao Paulo); `purge_deleted` (removes for good what was deleted more than 30 days ago) is scheduled by `13_schedule_purge.sql` at 03:25 UTC. Check them with `select * from cron.job_run_details order by start_time desc limit 10;`.
+Private jobs: `close_due_invoices` and `generate_all_recurring` are scheduled by `10_schedule_jobs.sql` with `pg_cron` at 03:05 and 03:15 UTC (00:05 and 00:15 in Sao Paulo); `purge_deleted` (removes for good what was soft-deleted more than 30 days ago, and the transfers left with no legs) is scheduled by `13_schedule_purge.sql` at 03:25 UTC. Check them with `select * from cron.job_run_details order by start_time desc limit 10;`.
 
 Stable error keys the app maps (see ARCHITECTURE section 5): `invalid_tax_id`, `workspace_type_already_exists`, `forbidden`, `not authenticated`, `invoice already paid`, `invalid status change`, `category kind does not match transaction type`, `transfer legs are managed through ...`.
 
@@ -268,16 +268,19 @@ Stable error keys the app maps (see ARCHITECTURE section 5): `invalid_tax_id`, `
 | `recurring_id` and `scheduled_for` are set or cleared together | `CHECK tx_recurring_shape` |
 | A recurring item that has history cannot be hard-deleted | foreign key without cascade; `delete_recurring` detaches the history first |
 | Audit is append-only | trigger (bypassed only by account erasure) |
+| Deleted rows stay readable by their owner and are removed after 30 days | soft delete (`deleted_at`) + the daily purge job |
+| Only the owner can restore a transfer, and never an invoice payment | checks inside `restore_transfer` |
 
 ### Known behavior worth remembering
 
 - If an end date removes pending occurrences and the end date is later cleared, those occurrences do **not** come back: `generated_count` already moved past them and the unique index still holds their dates, so the series continues after the gap. Tracked in `POLISH.md`.
 - Editing a recurring item never changes occurrences that are already confirmed or overdue.
-- `lead_days` exists on recurring items but nothing uses it yet (it is for notifications, *(planned)*).
+- `lead_days` on a recurring item is how many days before the due date the app announces its pending occurrences (3 by default); the reminders read it through the foreign key `transactions.recurring_id`.
+- `user_settings.notification_prefs` is a JSON object; the app uses `bill_reminder` and `card_due` and keeps every other key as it is (`budget_alert`, `low_balance`, `pending_digest` are reserved for later).
 
 ## 7. What stays in the app (not in the database)
 
-Password policy, session lock, switch protection prompts, notification scheduling, forecast, yield and tax-reserve calculations, OCR parsing, OFX parsing, CSV/PDF export, the 10-second undo, chart drawing and all display formatting.
+Password policy, the session lock and its brute-force counter, switch protection prompts, the scheduling of reminders, the alerts card, CSV export, forecast, yield and tax-reserve calculations *(planned)*, OCR parsing *(planned)*, OFX parsing *(planned)*, PDF export *(planned)*, the 10-second undo, chart drawing and all display formatting. The app only stores the **settings** of these in `user_settings`.
 
 ## 8. Mapping to Dart enums
 
