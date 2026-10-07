@@ -13,6 +13,7 @@ import 'package:finly/features/cards/presentation/pages/cards_page.dart';
 import 'package:finly/features/categories/presentation/pages/categories_page.dart';
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import 'package:finly/features/dashboard/presentation/widgets/dashboard_view.dart';
+import 'package:finly/features/forecast/presentation/pages/forecast_page.dart';
 import 'package:finly/features/lock/presentation/cubit/app_lock_cubit.dart';
 import 'package:finly/features/recurring/presentation/pages/recurring_page.dart';
 import 'package:finly/features/reports/presentation/pages/reports_page.dart';
@@ -270,6 +271,12 @@ class _HomeBody extends StatelessWidget {
                 label: const Text('Relatórios'),
                 onPressed: () =>
                     openAndRefresh(context, ReportsPage(workspace: workspace)),
+              ),
+              FilledButton.tonalIcon(
+                icon: const Icon(Icons.show_chart),
+                label: const Text('Previs\u00e3o'),
+                onPressed: () =>
+                    openAndRefresh(context, ForecastPage(workspace: workspace)),
               ),
             ],
           ),
