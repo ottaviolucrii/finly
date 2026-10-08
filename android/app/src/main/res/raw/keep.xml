@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The notification icon is looked up by its name when a notification is shown,
+  so the build must not remove it as "unused" in a release.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_finly" />

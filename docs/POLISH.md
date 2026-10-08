@@ -53,7 +53,7 @@ found; cosmetic items are done in batches.
 - [ ] Reminders are rebuilt when the app is used (sign-in, workspace change, leaving or returning to the app): if it is not opened for 30 days, the schedule runs out
 - [ ] Reminders are inexact (a few minutes late is normal) and fixed at 9h; the hour is not configurable yet
 - [ ] Reminders only cover the active workspace; the bills of the other workspace are not announced
-- [ ] The notification icon is the launcher icon; use a monochrome status-bar icon
+- [x] The notification icon is the launcher icon; use a monochrome status-bar icon (fixed: a one-colour shield with an arrow, ic_stat_finly)
 - [ ] The reminders time zone is fixed to America/Sao_Paulo
 - [ ] On Xiaomi/HyperOS the system can stop scheduled notifications: Autostart on and battery "No restrictions" for Finly
 - [ ] Notifications are not set up for iOS yet (permission and AppDelegate)
@@ -85,6 +85,9 @@ found; cosmetic items are done in batches.
 - [ ] Goals: no contributions of their own (the progress is the balance of the account), no history of the progress and no notice when a goal is reached
 - [ ] Goals: the history of changes shows them only under "Tudo" (there is no filter for them yet)
 - [ ] Goals: a goal cannot be moved to an account in another currency (the currency of a goal is fixed)
+- [x] App icon: the Finly shield as the launcher icon on Android (adaptive, and a one-colour version for the themed icons of Android 13)
+- [ ] App icon: iOS still has the default icon (only Android was done)
+- [ ] The application id is still com.example.finly: it has to change before the first store release
 - [ ] PDF: the standard font covers Portuguese but not every character (a description with an emoji or non-Latin letters can show wrong)
 - [x] Balance forecast for 30, 60 and 90 days: the confirmed balance of the accounts (no credit cards), plus pending bills and incomes, recurring items not generated yet and unpaid card invoices on their due day
 - [ ] Forecast: no yield on investments, no tax reserve and no scenarios ("what if I pay this later")

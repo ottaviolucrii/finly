@@ -41,7 +41,7 @@ class LocalReminderScheduler implements ReminderScheduler {
     tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
     await _plugin.initialize(
       const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        android: AndroidInitializationSettings('@drawable/ic_stat_finly'),
       ),
     );
     _initialized = true;
