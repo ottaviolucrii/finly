@@ -15,6 +15,7 @@ import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart
 import 'package:finly/features/dashboard/presentation/widgets/dashboard_view.dart';
 import 'package:finly/features/forecast/presentation/pages/forecast_page.dart';
 import 'package:finly/features/tax_reserve/presentation/pages/tax_reserve_page.dart';
+import 'package:finly/features/yield_simulator/presentation/pages/yield_simulator_page.dart';
 import 'package:finly/features/lock/presentation/cubit/app_lock_cubit.dart';
 import 'package:finly/features/recurring/presentation/pages/recurring_page.dart';
 import 'package:finly/features/reports/presentation/pages/reports_page.dart';
@@ -285,6 +286,12 @@ class _HomeBody extends StatelessWidget {
                   label: const Text('Reserva de impostos'),
                   onPressed: () =>
                       openAndRefresh(context, TaxReservePage(workspace: workspace)),
+                ),
+              FilledButton.tonalIcon(
+                icon: const Icon(Icons.trending_up),
+                label: const Text('Simulador'),
+                onPressed: () =>
+                    openAndRefresh(context, const YieldSimulatorPage()),
               ),
             ],
           ),
