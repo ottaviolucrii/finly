@@ -40,6 +40,7 @@ Clean Architecture, feature-first. `presentation` (Cubit/BLoC) -> `domain` (enti
 * **Balance forecast:** the balance for the next 30, 60 or 90 days from pending bills, recurring items and card invoices, with a chart and a warning when it can go negative
 * **Appearance:** light, dark or follow the phone, saved with your account
 * **My data:** export everything you registered as one JSON file (data portability)
+* **Tax reserve** (company workspace): choose the share of the month's income to set aside, and see it against the taxes you registered
 * **Account security:** session lock with biometrics or PIN and a password fallback, brute-force limit, change password, forgot password by e-mail code, sign out of all devices, delete account
 * **Brazilian specifics:** CPF and CNPJ (including alphanumeric CNPJ) validated by check digits
 

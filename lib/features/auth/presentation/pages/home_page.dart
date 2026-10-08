@@ -14,6 +14,7 @@ import 'package:finly/features/categories/presentation/pages/categories_page.dar
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import 'package:finly/features/dashboard/presentation/widgets/dashboard_view.dart';
 import 'package:finly/features/forecast/presentation/pages/forecast_page.dart';
+import 'package:finly/features/tax_reserve/presentation/pages/tax_reserve_page.dart';
 import 'package:finly/features/lock/presentation/cubit/app_lock_cubit.dart';
 import 'package:finly/features/recurring/presentation/pages/recurring_page.dart';
 import 'package:finly/features/reports/presentation/pages/reports_page.dart';
@@ -277,6 +278,13 @@ class _HomeBody extends StatelessWidget {
                 label: const Text('Previs\u00e3o'),
                 onPressed: () =>
                     openAndRefresh(context, ForecastPage(workspace: workspace)),
+              ),
+              if (workspace.type == WorkspaceType.business)
+                FilledButton.tonalIcon(
+                  icon: const Icon(Icons.savings_outlined),
+                  label: const Text('Reserva de impostos'),
+                  onPressed: () =>
+                      openAndRefresh(context, TaxReservePage(workspace: workspace)),
               ),
             ],
           ),

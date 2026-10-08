@@ -279,6 +279,7 @@ Stable error keys the app maps (see ARCHITECTURE section 5): `invalid_tax_id`, `
 - If an end date removes pending occurrences and the end date is later cleared, those occurrences do **not** come back: `generated_count` already moved past them and the unique index still holds their dates, so the series continues after the gap. Tracked in `POLISH.md`.
 - Editing a recurring item never changes occurrences that are already confirmed or overdue.
 - `lead_days` on a recurring item is how many days before the due date the app announces its pending occurrences (3 by default); the reminders read it through the foreign key `transactions.recurring_id`.
+- `workspaces.tax_reserve_bps` is the share of the income a company sets aside for taxes, in basis points (650 = 6.5%); only a business workspace can have a value above zero (a check of the table). The app reads it with the posted income of `monthly_flow` and the spending of the categories with `is_tax` (the default "Impostos") in `monthly_category_spend`.
 - `user_settings.notification_prefs` is a JSON object; the app uses `bill_reminder` and `card_due` and keeps every other key as it is (`budget_alert`, `low_balance`, `pending_digest` are reserved for later).
 
 ## 7. What stays in the app (not in the database)
