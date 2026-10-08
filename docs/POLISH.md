@@ -74,6 +74,10 @@ found; cosmetic items are done in batches.
 - [ ] Tax reserve: only the default "Impostos" category counts as tax; there is no screen to mark another category as tax
 - [ ] Tax reserve: base currency only, and it is a guide: no separate account and no transfer is made
 - [ ] Tax reserve: no rule per tax regime (MEI, Simples Nacional, Lucro Presumido), only one flat percentage
+- [x] Yield simulator: first deposit, monthly deposits, a share of the CDI or a fixed rate, regressive income tax deposit by deposit or exempt
+- [ ] Yield simulator: the CDI is typed by the person (13,65% is only the starting value, from September 2026); no automatic fetch
+- [ ] Yield simulator: one constant rate; no inflation, custody fee (Tesouro), IOF or other costs; months are counted as 365/12 days for the income tax
+- [ ] Yield simulator: no chart yet, only the table year by year; the screen is not saved and cannot be shared
 - [ ] PDF: the standard font covers Portuguese but not every character (a description with an emoji or non-Latin letters can show wrong)
 - [x] Balance forecast for 30, 60 and 90 days: the confirmed balance of the accounts (no credit cards), plus pending bills and incomes, recurring items not generated yet and unpaid card invoices on their due day
 - [ ] Forecast: no yield on investments, no tax reserve and no scenarios ("what if I pay this later")
@@ -147,4 +151,4 @@ found; cosmetic items are done in batches.
 - Dashboard with balance, month, charts, budgets, upcoming items and alerts; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 1540 automated tests
+- About 1620 automated tests

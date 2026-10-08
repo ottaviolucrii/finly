@@ -59,6 +59,7 @@ lib/
     reminders/                 local notifications for pending bills and card invoices
     forecast/                  balance forecast for 30, 60 and 90 days (pure rules, one chart painter)
     tax_reserve/               tax reserve of a company workspace (a percentage of the month's income)
+    yield_simulator/           yield simulator: pure rules and one screen, no server
     lock/                      session lock, biometrics or PIN, password fallback, brute-force limit
     settings/                  change password, sign out everywhere, delete account, app lock, notifications
       <each feature>/
@@ -73,7 +74,7 @@ docs/
 .github/workflows/ci.yml       analyze, test, database tests
 ```
 
-*(planned)* features, not started: `yield_simulator`, `receipt_ocr`, `import_export` (import, export of all data, custom periods), `currency`, `audit` viewer, a notification centre and push notifications.
+*(planned)* features, not started: `receipt_ocr`, `import_export` (import, export of all data, custom periods), `currency`, `audit` viewer, a notification centre and push notifications.
 
 Known untidiness (tracked in `POLISH.md`): `switchWorkspace` still lives in the auth repository. The repository method `deleteBudget` is unused (budgets are stopped with an end marker).
 
@@ -225,7 +226,7 @@ To do (Phase 7 hardening):
 | Wiring | `test/core/di/injection_test.dart` | builds every bloc and cubit from the DI modules with a fake Supabase client |
 | Device | manual checklist per feature | every screen on a phone before a PR |
 
-About 1,540 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
+About 1,620 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
 
 ## 11. Conventions
 
@@ -271,3 +272,4 @@ In use: `supabase_flutter`, `flutter_bloc`, `equatable`, `dartz`, `get_it`, `sha
 | ADR-22 | The trash keeps deleted rows for 30 days, then a daily job removes them; deleted transfers are restored by a function, never leg by leg; a card invoice payment is not restorable | Mistakes are recoverable; a restored payment would lower the card debt while the invoice stays open |
 | ADR-23 | The PDF report is drawn with the `pdf` package behind an interface (`ReportPdfBuilder`), with the standard Helvetica font and only Latin-1 characters; each section is a top-level widget of a `MultiPage` | No font files to ship or load; the use case stays free of the package and is tested with a fake; a long table can go on to the next page |
 | ADR-24 | "Export my data" reads the tables through the normal API, one by one in pages, and builds the file in the app; there is no database function for it | Row Level Security already limits every read to the user, so the export cannot show more than the user can see; no new server code to secure; the file is grouped by workspace and money stays in cents |
+| ADR-25 | The yield simulator is a pure calculation in the app: whole cents, the rate typed by the person, interest compounded monthly, and the income tax worked out deposit by deposit | No server and no network for a "what if"; each deposit stayed a different time, so one tax rate for all of them would overstate the tax of the recent ones |
