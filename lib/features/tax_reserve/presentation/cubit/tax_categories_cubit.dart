@@ -1,4 +1,3 @@
-import 'package:finly/features/tax_reserve/domain/entities/tax_category.dart';
 import 'package:finly/features/tax_reserve/domain/usecases/get_tax_categories_use_case.dart';
 import 'package:finly/features/tax_reserve/domain/usecases/set_category_tax_use_case.dart';
 import 'package:finly/features/tax_reserve/presentation/cubit/tax_categories_state.dart';
