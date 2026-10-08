@@ -6,13 +6,13 @@ The whole product is planned; phases only fix the order (each depends on the one
 
 ## Where the project is today
 
-Phases 0 to 4 are done except the items marked open: identity, the session lock and the protected switch, the full ledger with trash and restore, cards, budgets, recurring bills, the dashboard with charts and alerts, the monthly report with CSV export, and local reminders. About 1,700 Dart tests and 109 database checks pass, and CI runs on every pull request. Next in line: the offline cache, push notifications and the notification centre, then Phase 5 (intelligence).
+Phases 0 to 4 are done except the items marked open: identity, the session lock and the protected switch, the full ledger with trash and restore, cards, budgets, recurring bills, the dashboard with charts and alerts, the monthly report with CSV export, and local reminders. About 1,850 Dart tests and 126 database checks pass, and CI runs on every pull request. Next in line: the offline cache, push notifications and the notification centre, then Phase 5 (intelligence).
 
 ## Phase 0 - Foundation
 
 - [x] Compile errors fixed; models and entities consistent
-- [x] Supabase project with `sql/00` to `sql/14` applied; 14 tables with RLS on
-- [x] Database tests (`run_db_tests.py`): 109 checks
+- [x] Supabase project with `sql/00` to `sql/16` applied; 15 tables with RLS on
+- [x] Database tests (`run_db_tests.py`): 126 checks
 - [x] Packages added as features needed them (see ARCHITECTURE section 12)
 - [x] `core/config` (`--dart-define-from-file=env.json`), `core/di` (one module per feature)
 - [x] `core/theme`: `AppColors`, Poppins + Inter bundled, tabular figures
@@ -64,6 +64,7 @@ Phases 0 to 4 are done except the items marked open: identity, the session lock 
 - [x] Dashboard: balance, month, budgets, upcoming
 - [x] Charts: income vs expenses (6 months), spending by category
 - [x] In-app alerts on the dashboard: budgets at 80% and over the limit, bills overdue or due in 3 days
+- [x] Savings goals ("metas"): a goal follows an account, with a target and an optional date, and says what to put aside each month
 - [x] Monthly report: summary against the month before, spending by category, biggest expenses
 - [x] Local notifications: reminders at 9h for pending bills (the day before, or `lead_days`, and the due day) and card invoices (3 days before and the due day), for the active workspace
 - [ ] Dashboard cache first, refresh in background (needs the local cache)

@@ -6,6 +6,7 @@ import 'package:finly/features/categories/di/categories_di.dart';
 import 'package:finly/features/dashboard/di/dashboard_di.dart';
 import 'package:finly/features/data_export/di/data_export_di.dart';
 import 'package:finly/features/forecast/di/forecast_di.dart';
+import 'package:finly/features/goals/di/goals_di.dart';
 import 'package:finly/features/lock/di/lock_di.dart';
 import 'package:finly/features/recurring/di/recurring_di.dart';
 import 'package:finly/features/reminders/di/reminders_di.dart';
@@ -57,6 +58,7 @@ void registerFeatureModules(GetIt sl) {
   registerDashboardModule(sl);
   registerDataExportModule(sl);
   registerForecastModule(sl);
+  registerGoalsModule(sl);
   registerSettingsModule(sl);
   registerTaxReserveModule(sl);
 }

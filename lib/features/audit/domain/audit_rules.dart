@@ -38,6 +38,8 @@ _Entity _entityOf(String table, Map<String, dynamic> data) {
       return const _Entity('Dados do cartão', false);
     case 'credit_card_invoices':
       return const _Entity('Fatura', true);
+    case 'goals':
+      return const _Entity('Meta', true);
     default:
       return _Entity(table, false);
   }
@@ -107,6 +109,8 @@ const Map<String, String> _labels = {
   'tax_reserve_bps': 'Reserva para impostos',
   'base_currency': 'Moeda base',
   'tax_id': 'CPF/CNPJ',
+  'target_cents': 'Valor da meta',
+  'target_date': 'Prazo',
 };
 
 const Map<String, String> _statuses = {
@@ -180,6 +184,7 @@ String _valueText(
     return lookup.accountNames[value] ?? 'Conta removida';
   }
   if (key == 'end_date' && value == null) return 'Sem fim';
+  if (key == 'target_date' && value == null) return 'Sem prazo';
   if (value == null) return '—';
 
   if (value is bool) return value ? 'Sim' : 'Não';
@@ -189,7 +194,7 @@ String _valueText(
   }
   if (key == 'tax_reserve_bps' && value is num) return _percentOfBps(value.toInt());
   if (value is String) {
-    if (const {'occurred_at', 'start_date', 'end_date', 'effective_from', 'due_date'}.contains(key)) {
+    if (const {'occurred_at', 'start_date', 'end_date', 'effective_from', 'due_date', 'target_date'}.contains(key)) {
       return _dateText(value);
     }
     if (key == 'status') return _statuses[value] ?? value;
@@ -207,6 +212,7 @@ String _nameOf(String table, Map<String, dynamic> data, AuditLookup lookup) {
     case 'accounts':
     case 'categories':
     case 'workspaces':
+    case 'goals':
       return (data['name'] ?? '').toString();
     case 'budgets':
       return lookup.categoryNames[data['category_id']] ?? '';
@@ -246,6 +252,11 @@ String _summaryOf(String table, Map<String, dynamic> data) {
         ..add(currency);
     case 'credit_card_details':
       parts.add('limite ${money('limit_cents')}');
+    case 'goals':
+      final date = data['target_date'];
+      parts
+        ..add('meta de ${money('target_cents')}')
+        ..add(date is String ? 'até ${_dateText(date)}' : '');
   }
   return parts.where((part) => part.isNotEmpty).join(' · ');
 }
