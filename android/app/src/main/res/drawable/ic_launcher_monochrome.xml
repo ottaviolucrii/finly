@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The one-colour shield (the same as the notification icon) with room around it,
+  so the phone can crop it for a themed icon without cutting the shape.
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_stat_finly"
+    android:inset="20%" />
