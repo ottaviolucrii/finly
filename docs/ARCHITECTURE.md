@@ -60,6 +60,7 @@ lib/
     forecast/                  balance forecast for 30, 60 and 90 days (pure rules, one chart painter)
     tax_reserve/               tax reserve of a company workspace (a percentage of the month's income)
     yield_simulator/           yield simulator: pure rules and one screen, no server
+    audit/                     history of changes: the audit log as plain sentences (read only)
     lock/                      session lock, biometrics or PIN, password fallback, brute-force limit
     settings/                  change password, sign out everywhere, delete account, app lock, notifications
       <each feature>/
@@ -74,7 +75,7 @@ docs/
 .github/workflows/ci.yml       analyze, test, database tests
 ```
 
-*(planned)* features, not started: `receipt_ocr`, `import_export` (import, export of all data, custom periods), `currency`, `audit` viewer, a notification centre and push notifications.
+*(planned)* features, not started: `receipt_ocr`, `import_export` (import, export of all data, custom periods), `currency`, a notification centre and push notifications.
 
 Known untidiness (tracked in `POLISH.md`): `switchWorkspace` still lives in the auth repository. The repository method `deleteBudget` is unused (budgets are stopped with an end marker).
 
@@ -173,6 +174,7 @@ The "Atenção" card (`alerts`) is computed in the app from the budget overview 
 | Move a transaction | `rpc('move_transaction', ...)` |
 | Export my data | `select` on `profiles`, `user_settings`, `workspaces`, `accounts`, `credit_card_details`, `credit_card_invoices`, `categories`, `budgets`, `recurring_transactions`, `transactions` and `transfers`, in pages of 1,000 rows |
 | Tax reserve | `from('workspaces')` read and update of `tax_reserve_bps`; `monthly_flow` (income) and `monthly_category_spend` (spending) for the month; `categories` with `is_tax` |
+| History of changes | `from('audit_logs')` of the workspace, newest first, 30 lines a page, with an optional filter by table; `accounts` and `categories` (id and name) to write the names |
 | Trash | `from('transactions')` with `deleted_at` set (RLS lets the owner read deleted rows); restore a transaction by table update, a transfer by `restore_transfer` |
 | Settings | `from('user_settings')` read and update (`lock_timeout_seconds`, `biometric_enabled`, `switch_protection`, `notification_prefs`) |
 | Reminders | `from('transactions')` (pending expenses, with the `lead_days` of the recurring item embedded), `from('accounts')`, `from('credit_card_invoices')`, `from('invoice_totals')` |
@@ -226,7 +228,7 @@ To do (Phase 7 hardening):
 | Wiring | `test/core/di/injection_test.dart` | builds every bloc and cubit from the DI modules with a fake Supabase client |
 | Device | manual checklist per feature | every screen on a phone before a PR |
 
-About 1,620 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
+About 1,700 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
 
 ## 11. Conventions
 
@@ -273,3 +275,4 @@ In use: `supabase_flutter`, `flutter_bloc`, `equatable`, `dartz`, `get_it`, `sha
 | ADR-23 | The PDF report is drawn with the `pdf` package behind an interface (`ReportPdfBuilder`), with the standard Helvetica font and only Latin-1 characters; each section is a top-level widget of a `MultiPage` | No font files to ship or load; the use case stays free of the package and is tested with a fake; a long table can go on to the next page |
 | ADR-24 | "Export my data" reads the tables through the normal API, one by one in pages, and builds the file in the app; there is no database function for it | Row Level Security already limits every read to the user, so the export cannot show more than the user can see; no new server code to secure; the file is grouped by workspace and money stays in cents |
 | ADR-25 | The yield simulator is a pure calculation in the app: whole cents, the rate typed by the person, interest compounded monthly, and the income tax worked out deposit by deposit | No server and no network for a "what if"; each deposit stayed a different time, so one tax rate for all of them would overstate the tax of the recent ones |
+| ADR-26 | The history of changes reads the audit log as it is and turns each line into a sentence in the app; ids are shown by name through two small lookups (accounts and categories of the workspace) | The database already records every insert, update and delete with the whole row before and after; no new table or function, and Row Level Security already limits it to the owner |

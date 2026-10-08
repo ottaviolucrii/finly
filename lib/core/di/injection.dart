@@ -11,6 +11,7 @@ import 'package:finly/features/recurring/di/recurring_di.dart';
 import 'package:finly/features/reminders/di/reminders_di.dart';
 import 'package:finly/features/alerts/di/alerts_di.dart';
 import 'package:finly/features/appearance/di/appearance_di.dart';
+import 'package:finly/features/audit/di/audit_di.dart';
 import 'package:finly/features/trash/di/trash_di.dart';
 import 'package:finly/features/reports/di/reports_di.dart';
 import 'package:finly/features/reports/di/reports_pdf_di.dart';
@@ -39,6 +40,7 @@ void registerFeatureModules(GetIt sl) {
   registerReportsPdfModule(sl);
   registerAlertsModule(sl);
   registerAppearanceModule(sl);
+  registerAuditModule(sl);
   registerAuthModule(sl);
   registerWorkspacesModule(sl);
   registerAccountsModule(sl);

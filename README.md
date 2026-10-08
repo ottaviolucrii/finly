@@ -42,6 +42,7 @@ Clean Architecture, feature-first. `presentation` (Cubit/BLoC) -> `domain` (enti
 * **My data:** export everything you registered as one JSON file (data portability)
 * **Tax reserve** (company workspace): choose the share of the month's income to set aside, and see it against the taxes you registered
 * **Yield simulator:** how an investment grows with a first deposit and monthly deposits (a share of the CDI or a fixed rate, with or without income tax)
+* **History of changes:** every change to your data, as plain sentences: what was created, edited, sent to the trash or removed, and what changed in an edit
 * **Account security:** session lock with biometrics or PIN and a password fallback, brute-force limit, change password, forgot password by e-mail code, sign out of all devices, delete account
 * **Brazilian specifics:** CPF and CNPJ (including alphanumeric CNPJ) validated by check digits
 

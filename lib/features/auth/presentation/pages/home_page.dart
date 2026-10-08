@@ -15,6 +15,7 @@ import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart
 import 'package:finly/features/dashboard/presentation/widgets/dashboard_view.dart';
 import 'package:finly/features/forecast/presentation/pages/forecast_page.dart';
 import 'package:finly/features/tax_reserve/presentation/pages/tax_reserve_page.dart';
+import 'package:finly/features/audit/presentation/pages/audit_history_page.dart';
 import 'package:finly/features/yield_simulator/presentation/pages/yield_simulator_page.dart';
 import 'package:finly/features/lock/presentation/cubit/app_lock_cubit.dart';
 import 'package:finly/features/recurring/presentation/pages/recurring_page.dart';
@@ -292,6 +293,12 @@ class _HomeBody extends StatelessWidget {
                 label: const Text('Simulador'),
                 onPressed: () =>
                     openAndRefresh(context, const YieldSimulatorPage()),
+              ),
+              FilledButton.tonalIcon(
+                icon: const Icon(Icons.history),
+                label: const Text('Hist\u00f3rico'),
+                onPressed: () =>
+                    openAndRefresh(context, AuditHistoryPage(workspace: workspace)),
               ),
             ],
           ),
