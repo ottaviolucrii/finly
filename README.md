@@ -71,7 +71,7 @@ flutter analyze
 flutter test
 ```
 
-Database: apply `sql/00` to `sql/16` in the Supabase SQL editor (see `docs/DATABASE.md`), then follow `docs/SUPABASE_SETUP.md`. Check the rules locally with:
+Database: apply `sql/00` to `sql/17` in the Supabase SQL editor (see `docs/DATABASE.md`), then follow `docs/SUPABASE_SETUP.md`. Check the rules locally with:
 
 ```bash
 pip install pgserver "psycopg[binary]"

@@ -4,7 +4,7 @@ Finly database tests on a throw-away local Postgres (no Docker needed).
     pip install pgserver "psycopg[binary]"
     python sql/tests/run_db_tests.py
 
-Applies 00..09, 11, 12, 14, 15 and 16 (+ the Supabase mock; 10 and 13 need pg_cron, which
+Applies 00..09, 11, 12, 14, 15, 16 and 17 (+ the Supabase mock; 10 and 13 need pg_cron, which
 only Supabase has) and checks the business rules: tax-id validation, RLS isolation,
 derived balances, monthly flow, transfers, credit card invoices/installments,
 recurring generation, edit and delete, audit log and account deletion.
@@ -15,7 +15,7 @@ import pgserver, psycopg
 SQL = pathlib.Path(__file__).resolve().parent.parent
 FILES = ["tests/00_mock_supabase.sql", "00_types.sql", "01_helpers.sql",
          "02_tables.sql", "03_logic.sql", "04_security.sql", "07_hardening.sql", "08_credit_card.sql", "09_budget_end_marker.sql",
-         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql"]
+         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql"]
 
 passed = failed = 0
 def check(name, cond, extra=""):
@@ -285,6 +285,51 @@ def main():
           len(ids2) >= 3 and rows2[0] == (False, True, True, "posted"), rows2)
     check("pending occurrences are removed and detached",
           all(r == (True, True, True, "pending") for r in rows2[1:]), rows2)
+
+    # ---- recurring: the end date can move -----------------------------------
+    print("recurring end date")
+    r3 = one(conn, "insert into public.recurring_transactions(workspace_id,account_id,currency,category_id,type,amount_cents,description,frequency,start_date) "
+                   "values (%s,%s,'BRL',%s,'expense',9000,'Internet','monthly', current_date) returning id", (ws_p, chk, cat_food))
+    live3 = lambda: one(conn, "select count(*) from public.transactions where recurring_id=%s and deleted_at is null", (r3,))
+    upd3 = lambda end: conn.execute("select public.update_recurring(%s,'Internet',9000,%s,%s)", (r3, cat_food, end))
+    conn.execute("select public.generate_my_recurring(current_date + 70)")
+    check("the item starts with three occurrences", live3() == 3, live3())
+    upd3(None)
+    check("no end date changes nothing", live3() == 3, live3())
+    conn.execute("select public.update_recurring(%s,'Internet',9000,%s,current_date + 5)", (r3, cat_food))
+    check("an end date removes the pending occurrences after it", live3() == 1, live3())
+    check("what the end date removed is gone, not left in the trash",
+          one(conn, "select count(*) from public.transactions where recurring_id=%s and deleted_at is not null", (r3,)) == 0)
+    conn.execute("select public.update_recurring(%s,'Internet',9000,%s,current_date + 40)", (r3, cat_food))
+    check("moving the end date later makes the removed occurrences again", live3() == 2, live3())
+    upd3(None)
+    conn.execute("select public.generate_my_recurring(current_date + 70)")
+    check("taking the end date off keeps going, with no duplicates",
+          live3() == 3 and one(conn, "select count(distinct scheduled_for) from public.transactions where recurring_id=%s", (r3,)) == 3, live3())
+    last3 = one(conn, "select id from public.transactions where recurring_id=%s order by scheduled_for desc limit 1", (r3,))
+    conn.execute("update public.transactions set deleted_at = now() where id=%s", (last3,))
+    conn.execute("select public.update_recurring(%s,'Internet',9000,%s,current_date + 5)", (r3, cat_food))
+    upd3(None)
+    conn.execute("select public.generate_my_recurring(current_date + 70)")
+    check("an occurrence the person deleted does not come back", live3() == 2, live3())
+    keep3 = one(conn, "select id from public.transactions where recurring_id=%s and deleted_at is null order by scheduled_for desc limit 1", (r3,))
+    conn.execute("update public.transactions set status='posted' where id=%s", (keep3,))
+    conn.execute("select public.update_recurring(%s,'Internet',9000,%s,current_date + 5)", (r3, cat_food))
+    check("a confirmed occurrence after the end date is kept",
+          one(conn, "select count(*) from public.transactions where id=%s and deleted_at is null and status='posted'", (keep3,)) == 1)
+    upd3(None)
+    conn.execute("select public.generate_my_recurring(current_date + 70)")
+    check("and it is not made twice when the end date moves back",
+          one(conn, "select count(*) from public.transactions where recurring_id=%s and scheduled_for=(select scheduled_for from public.transactions where id=%s)", (r3, keep3)) == 1)
+    conn.execute("update public.recurring_transactions set is_active=false where id=%s", (r3,))
+    conn.execute("select public.update_recurring(%s,'Internet',9000,%s,current_date + 5)", (r3, cat_food))
+    upd3(None)
+    gen3 = lambda: one(conn, "select generated_count from public.recurring_transactions where id=%s", (r3,))
+    check("a paused item is not made again by an edit", gen3() == 1, gen3())
+    conn.execute("update public.recurring_transactions set is_active=true where id=%s", (r3,))
+    upd3(None)
+    check("it is made again once it is active", gen3() == 2, gen3())
+    conn.execute("select public.delete_recurring(%s)", (r3,))
 
     # ---- trash purge ------------------------------------------------------
     print("trash purge")
