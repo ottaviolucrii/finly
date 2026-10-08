@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:finly/core/error/error_mapper.dart';
 import 'package:finly/core/error/failure.dart';
 import 'package:finly/features/tax_reserve/data/datasources/tax_reserve_remote_data_source.dart';
+import 'package:finly/features/tax_reserve/domain/entities/tax_category.dart';
 import 'package:finly/features/tax_reserve/domain/entities/tax_reserve_data.dart';
 import 'package:finly/features/tax_reserve/domain/repositories/tax_reserve_repository.dart';
 
@@ -18,6 +19,16 @@ class TaxReserveRepositoryImpl implements TaxReserveRepository {
   @override
   Future<Either<Failure, void>> savePercent(String workspaceId, int percentBps) {
     return _guard<void>(() => _remote.savePercent(workspaceId, percentBps));
+  }
+
+  @override
+  Future<Either<Failure, List<TaxCategory>>> getTaxCategories(String workspaceId) {
+    return _guard<List<TaxCategory>>(() => _remote.getTaxCategories(workspaceId));
+  }
+
+  @override
+  Future<Either<Failure, void>> setCategoryTax(String categoryId, {required bool isTax}) {
+    return _guard<void>(() => _remote.setCategoryTax(categoryId, isTax: isTax));
   }
 
   /// Runs [action]; exceptions become Left(Failure). Programming errors
