@@ -6,6 +6,7 @@ import 'package:finly/features/lock/domain/entities/lock_settings.dart';
 import 'package:finly/features/lock/presentation/cubit/app_lock_cubit.dart';
 import 'package:finly/features/lock/presentation/cubit/app_lock_state.dart';
 import 'package:finly/features/lock/presentation/lock_texts.dart';
+import 'package:finly/features/data_export/presentation/widgets/data_export_card.dart';
 import 'package:finly/features/reminders/presentation/widgets/notifications_settings_card.dart';
 import 'package:finly/features/settings/presentation/pages/change_password_page.dart';
 import 'package:finly/features/settings/presentation/pages/delete_account_page.dart';
@@ -202,6 +203,8 @@ class SettingsPage extends StatelessWidget {
             const AppearanceSettingsCard(),
             const SizedBox(height: 16),
             const NotificationsSettingsCard(),
+            const SizedBox(height: 16),
+            const DataExportCard(),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 8),
