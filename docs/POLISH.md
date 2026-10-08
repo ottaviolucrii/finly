@@ -70,6 +70,10 @@ found; cosmetic items are done in batches.
 - [x] Export of all the data of the user as one JSON file, from Settings (grouped by workspace; money in cents)
 - [ ] Export my data: no password or biometric check before exporting (only a warning); receipts and the audit log are not in the file
 - [ ] Export my data: a table longer than 100,000 rows is cut, and the file says which one
+- [x] Tax reserve for the company workspace: a percentage of the posted income of the month, against the taxes of the month
+- [ ] Tax reserve: only the default "Impostos" category counts as tax; there is no screen to mark another category as tax
+- [ ] Tax reserve: base currency only, and it is a guide: no separate account and no transfer is made
+- [ ] Tax reserve: no rule per tax regime (MEI, Simples Nacional, Lucro Presumido), only one flat percentage
 - [ ] PDF: the standard font covers Portuguese but not every character (a description with an emoji or non-Latin letters can show wrong)
 - [x] Balance forecast for 30, 60 and 90 days: the confirmed balance of the accounts (no credit cards), plus pending bills and incomes, recurring items not generated yet and unpaid card invoices on their due day
 - [ ] Forecast: no yield on investments, no tax reserve and no scenarios ("what if I pay this later")
@@ -143,4 +147,4 @@ found; cosmetic items are done in batches.
 - Dashboard with balance, month, charts, budgets, upcoming items and alerts; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 1450 automated tests
+- About 1540 automated tests

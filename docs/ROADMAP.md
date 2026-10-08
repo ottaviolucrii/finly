@@ -6,7 +6,7 @@ The whole product is planned; phases only fix the order (each depends on the one
 
 ## Where the project is today
 
-Phases 0 to 4 are done except the items marked open: identity, the session lock and the protected switch, the full ledger with trash and restore, cards, budgets, recurring bills, the dashboard with charts and alerts, the monthly report with CSV export, and local reminders. About 1,450 Dart tests and 109 database checks pass, and CI runs on every pull request. Next in line: the offline cache, push notifications and the notification centre, then Phase 5 (intelligence).
+Phases 0 to 4 are done except the items marked open: identity, the session lock and the protected switch, the full ledger with trash and restore, cards, budgets, recurring bills, the dashboard with charts and alerts, the monthly report with CSV export, and local reminders. About 1,540 Dart tests and 109 database checks pass, and CI runs on every pull request. Next in line: the offline cache, push notifications and the notification centre, then Phase 5 (intelligence).
 
 ## Phase 0 - Foundation
 
@@ -74,7 +74,7 @@ Phases 0 to 4 are done except the items marked open: identity, the session lock 
 
 - [x] Forecast: balance projection for 30, 60 and 90 days from pending bills, recurring items and card invoices, with an explanation card
 - [ ] Yield simulator (`Decimal`), optional CDI fetch adapter
-- [ ] Tax reserve (Business)
+- [x] Tax reserve (Business): a percentage of the month's income set aside, against the taxes of the month
 - [ ] Receipt OCR (ML Kit) with review step
 - [ ] Smart category suggestion (on-device)
 
