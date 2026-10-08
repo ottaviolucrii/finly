@@ -43,6 +43,7 @@ Clean Architecture, feature-first. `presentation` (Cubit/BLoC) -> `domain` (enti
 * **Tax reserve** (company workspace): choose the share of the month's income to set aside, and see it against the taxes you registered
 * **Yield simulator:** how an investment grows with a first deposit and monthly deposits (a share of the CDI or a fixed rate, with or without income tax)
 * **History of changes:** every change to your data, as plain sentences: what was created, edited, sent to the trash or removed, and what changed in an edit
+* **Goals:** save towards a target with an account that follows it: how far you are, what is missing and what to put aside each month to be on time
 * **Account security:** session lock with biometrics or PIN and a password fallback, brute-force limit, change password, forgot password by e-mail code, sign out of all devices, delete account
 * **Brazilian specifics:** CPF and CNPJ (including alphanumeric CNPJ) validated by check digits
 
@@ -70,7 +71,7 @@ flutter analyze
 flutter test
 ```
 
-Database: apply `sql/00` to `sql/14` in the Supabase SQL editor (see `docs/DATABASE.md`), then follow `docs/SUPABASE_SETUP.md`. Check the rules locally with:
+Database: apply `sql/00` to `sql/16` in the Supabase SQL editor (see `docs/DATABASE.md`), then follow `docs/SUPABASE_SETUP.md`. Check the rules locally with:
 
 ```bash
 pip install pgserver "psycopg[binary]"

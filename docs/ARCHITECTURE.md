@@ -61,6 +61,7 @@ lib/
     tax_reserve/               tax reserve of a company workspace (a percentage of the month's income)
     yield_simulator/           yield simulator: pure rules and one screen, no server
     audit/                     history of changes: the audit log as plain sentences (read only)
+    goals/                     savings goals: a target, an account that follows it and what to put aside each month
     lock/                      session lock, biometrics or PIN, password fallback, brute-force limit
     settings/                  change password, sign out everywhere, delete account, app lock, notifications
       <each feature>/
@@ -175,6 +176,7 @@ The "Atenção" card (`alerts`) is computed in the app from the budget overview 
 | Export my data | `select` on `profiles`, `user_settings`, `workspaces`, `accounts`, `credit_card_details`, `credit_card_invoices`, `categories`, `budgets`, `recurring_transactions`, `transactions` and `transfers`, in pages of 1,000 rows |
 | Tax reserve | `from('workspaces')` read and update of `tax_reserve_bps`; `monthly_flow` (income) and `monthly_category_spend` (spending) for the month; `categories` with `is_tax` |
 | History of changes | `from('audit_logs')` of the workspace, newest first, 30 lines a page, with an optional filter by table; `accounts` and `categories` (id and name) to write the names |
+| Savings goals | `from('goals')` (not archived), `account_balances` (progress) and `accounts` (names); `insert`, `update` and an archive by `archived_at` |
 | Trash | `from('transactions')` with `deleted_at` set (RLS lets the owner read deleted rows); restore a transaction by table update, a transfer by `restore_transfer` |
 | Settings | `from('user_settings')` read and update (`lock_timeout_seconds`, `biometric_enabled`, `switch_protection`, `notification_prefs`) |
 | Reminders | `from('transactions')` (pending expenses, with the `lead_days` of the recurring item embedded), `from('accounts')`, `from('credit_card_invoices')`, `from('invoice_totals')` |
@@ -221,14 +223,14 @@ To do (Phase 7 hardening):
 
 | Level | Tooling | What |
 |---|---|---|
-| Database | `python sql/tests/run_db_tests.py` (embedded Postgres) | 109 checks: RLS, constraints, triggers, RPCs, views, the trash purge, restore of transfers |
+| Database | `python sql/tests/run_db_tests.py` (embedded Postgres) | 126 checks: RLS, constraints, triggers, RPCs, views, the trash purge, restore of transfers |
 | Domain | `flutter_test`, `mocktail` | validators, `Money`, rules, use cases with mocked repositories |
 | Data | `flutter_test` | models, repository implementations with mocked data sources (including "an unexpected error becomes a failure"), error mapper |
 | Presentation | `bloc_test`, widget tests | cubit state sequences; the chart, lock screen, switch sheet, alerts and settings widgets |
 | Wiring | `test/core/di/injection_test.dart` | builds every bloc and cubit from the DI modules with a fake Supabase client |
 | Device | manual checklist per feature | every screen on a phone before a PR |
 
-About 1,700 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
+About 1,850 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
 
 ## 11. Conventions
 
@@ -276,3 +278,4 @@ In use: `supabase_flutter`, `flutter_bloc`, `equatable`, `dartz`, `get_it`, `sha
 | ADR-24 | "Export my data" reads the tables through the normal API, one by one in pages, and builds the file in the app; there is no database function for it | Row Level Security already limits every read to the user, so the export cannot show more than the user can see; no new server code to secure; the file is grouped by workspace and money stays in cents |
 | ADR-25 | The yield simulator is a pure calculation in the app: whole cents, the rate typed by the person, interest compounded monthly, and the income tax worked out deposit by deposit | No server and no network for a "what if"; each deposit stayed a different time, so one tax rate for all of them would overstate the tax of the recent ones |
 | ADR-26 | The history of changes reads the audit log as it is and turns each line into a sentence in the app; ids are shown by name through two small lookups (accounts and categories of the workspace) | The database already records every insert, update and delete with the whole row before and after; no new table or function, and Row Level Security already limits it to the owner |
+| ADR-27 | A savings goal follows one account and its progress is the posted balance of that account; there is no separate "saved" number | One number to keep right: nothing is counted twice and the goal moves with every real transaction; a credit card cannot be followed because its balance is a debt |

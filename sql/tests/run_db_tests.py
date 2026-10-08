@@ -4,7 +4,7 @@ Finly database tests on a throw-away local Postgres (no Docker needed).
     pip install pgserver "psycopg[binary]"
     python sql/tests/run_db_tests.py
 
-Applies 00..09, 11, 12, 14 and 15 (+ the Supabase mock; 10 and 13 need pg_cron, which
+Applies 00..09, 11, 12, 14, 15 and 16 (+ the Supabase mock; 10 and 13 need pg_cron, which
 only Supabase has) and checks the business rules: tax-id validation, RLS isolation,
 derived balances, monthly flow, transfers, credit card invoices/installments,
 recurring generation, edit and delete, audit log and account deletion.
@@ -15,7 +15,7 @@ import pgserver, psycopg
 SQL = pathlib.Path(__file__).resolve().parent.parent
 FILES = ["tests/00_mock_supabase.sql", "00_types.sql", "01_helpers.sql",
          "02_tables.sql", "03_logic.sql", "04_security.sql", "07_hardening.sql", "08_credit_card.sql", "09_budget_end_marker.sql",
-         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql"]
+         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql"]
 
 passed = failed = 0
 def check(name, cond, extra=""):
@@ -311,6 +311,38 @@ def main():
     check("a budget with limit 0 is allowed (end marker)", one(conn, "select count(*) from public.budgets where limit_cents = 0") == 1)
     check("a negative budget limit is still rejected", raises(conn, f"insert into public.budgets(workspace_id,category_id,effective_from,limit_cents) values (%s,%s,{next_month} + interval '1 month',-1)", (ws_p, cat_food)))
     check("monthly_category_spend view works", one(conn, "select count(*) from public.monthly_category_spend where workspace_id=%s", (ws_p,)) >= 1)
+
+    # ---- goals ------------------------------------------------------------
+    print("goals")
+    as_user(conn, A)
+    gi = "insert into public.goals(workspace_id,account_id,currency,name,target_cents,target_date) values (%s,%s,%s,%s,%s,%s) returning id"
+    g1 = one(conn, gi, (ws_p, sav, 'BRL', '  Reserva  ', 500000, None))
+    check("a goal is created and its name is trimmed", one(conn, "select name from public.goals where id=%s", (g1,)) == "Reserva")
+    check("a goal name is unique among the active goals, ignoring case", raises(conn, gi, (ws_p, chk, 'BRL', 'RESERVA', 1000, None)))
+    check("a goal cannot follow a credit card", raises(conn, gi, (ws_p, card, 'BRL', 'Cartao', 1000, None), contains="credit card"))
+    check("the currency of a goal has to be the one of its account", raises(conn, gi, (ws_p, sav, 'USD', 'Moeda', 1000, None)))
+    check("an account of another workspace is refused", raises(conn, gi, (ws_p, biz, 'BRL', 'Outra', 1000, None)))
+    check("a target of zero is refused", raises(conn, gi, (ws_p, sav, 'BRL', 'Zero', 0, None)))
+    check("an empty name is refused", raises(conn, gi, (ws_p, sav, 'BRL', '   ', 1000, None)))
+    g_usd = one(conn, gi, (ws_p, usd, 'USD', 'Viagem', 300000, '2027-12-31'))
+    check("a goal can follow an account in another currency, in that currency", g_usd is not None)
+    conn.execute("update public.goals set archived_at = now() where id=%s", (g1,))
+    g2 = one(conn, gi, (ws_p, sav, 'BRL', 'Reserva', 700000, '2027-06-30'))
+    check("an archived goal frees its name", g2 is not None)
+    check("the workspace of a goal never changes", raises(conn, "update public.goals set workspace_id=%s where id=%s", (ws_b, g2), contains="immutable"))
+    check("the currency of a goal never changes", raises(conn, "update public.goals set currency='USD' where id=%s", (g2,), contains="immutable"))
+    check("the progress comes from the balance of the account", one(conn, "select count(*) from public.goals g join public.account_balances b on b.account_id = g.account_id where g.id=%s", (g2,)) == 1)
+    check("a goal is audited", one(conn, "select count(*) from public.audit_logs where table_name='goals' and record_id=%s and action='INSERT'", (g2,)) == 1)
+    tmp_acc = one(conn, "insert into public.accounts(workspace_id,name,type) values (%s,'Temporaria','savings') returning id", (ws_p,))
+    g_tmp = one(conn, gi, (ws_p, tmp_acc, 'BRL', 'Some com a conta', 1000, None))
+    conn.execute("delete from public.accounts where id=%s", (tmp_acc,))
+    check("deleting an account removes its goals", one(conn, "select count(*) from public.goals where id=%s", (g_tmp,)) == 0)
+    as_user(conn, B)
+    check("another user sees no goals of this workspace", one(conn, "select count(*) from public.goals where workspace_id=%s", (ws_p,)) == 0)
+    check("another user cannot create a goal in this workspace", raises(conn, gi, (ws_p, sav, 'BRL', 'Intruso', 1000, None)))
+    as_user(conn, None)
+    check("anonymous sees no goals", one(conn, "select count(*) from public.goals") == 0)
+    as_user(conn, A)
 
     # ---- audit ------------------------------------------------------------
     print("audit")
