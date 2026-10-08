@@ -6,7 +6,7 @@ The whole product is planned; phases only fix the order (each depends on the one
 
 ## Where the project is today
 
-Phases 0 to 4 are done except the items marked open: identity, the session lock and the protected switch, the full ledger with trash and restore, cards, budgets, recurring bills, the dashboard with charts and alerts, the monthly report with CSV export, and local reminders. About 1,620 Dart tests and 109 database checks pass, and CI runs on every pull request. Next in line: the offline cache, push notifications and the notification centre, then Phase 5 (intelligence).
+Phases 0 to 4 are done except the items marked open: identity, the session lock and the protected switch, the full ledger with trash and restore, cards, budgets, recurring bills, the dashboard with charts and alerts, the monthly report with CSV export, and local reminders. About 1,700 Dart tests and 109 database checks pass, and CI runs on every pull request. Next in line: the offline cache, push notifications and the notification centre, then Phase 5 (intelligence).
 
 ## Phase 0 - Foundation
 
@@ -68,7 +68,7 @@ Phases 0 to 4 are done except the items marked open: identity, the session lock 
 - [x] Local notifications: reminders at 9h for pending bills (the day before, or `lead_days`, and the due day) and card invoices (3 days before and the due day), for the active workspace
 - [ ] Dashboard cache first, refresh in background (needs the local cache)
 - [ ] Notification centre screen; push notifications (FCM token registration, Edge Function jobs) and budget alerts that arrive with the app closed
-- [ ] Audit log viewer
+- [x] Audit log viewer: the history of changes of a workspace, as plain sentences, with a filter by kind of data
 
 ## Phase 5 - Intelligence (FR-I, FR-G03)
 
