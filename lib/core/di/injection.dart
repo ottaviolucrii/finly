@@ -17,6 +17,7 @@ import 'package:finly/features/trash/di/trash_di.dart';
 import 'package:finly/features/reports/di/reports_di.dart';
 import 'package:finly/features/reports/di/reports_pdf_di.dart';
 import 'package:finly/features/settings/di/settings_di.dart';
+import 'package:finly/features/screen_protection/di/screen_protection_di.dart';
 import 'package:finly/features/tax_reserve/di/tax_reserve_di.dart';
 import 'package:finly/features/transactions/di/transactions_di.dart';
 import 'package:finly/features/transactions/di/transaction_move_di.dart';
@@ -60,5 +61,6 @@ void registerFeatureModules(GetIt sl) {
   registerForecastModule(sl);
   registerGoalsModule(sl);
   registerSettingsModule(sl);
+  registerScreenProtectionModule(sl);
   registerTaxReserveModule(sl);
 }

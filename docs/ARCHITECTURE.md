@@ -36,7 +36,7 @@ lib/
     di/                        injection.dart: registers SupabaseClient, then each feature's module
     error/                     failure.dart, error_mapper.dart
     money/                     money.dart (value object)
-    security/                  device_authenticator.dart (biometrics / PIN behind an interface)
+    security/                  device_authenticator.dart (biometrics / PIN behind an interface), screen_protection.dart (blocks screenshots, by a channel to Android)
     share/                     file_sharer.dart (the share sheet behind an interface)
     theme/                     app_colors.dart, app_theme.dart (Poppins, Inter, tabular figures)
     usecase/                   usecase.dart
@@ -211,10 +211,11 @@ Done:
 - The workspace switch cannot get stuck; no data of another workspace survives a switch; it can ask for biometrics or the password (FR-W04).
 - Session lock after inactivity, in the background and at every start; unlock with biometrics, PIN or password; five wrong passwords block password prompts for five minutes (FR-A07 to FR-A09).
 - Reminders show their content only after the phone is unlocked, and signing out removes them.
+- The person can block screenshots and hide the app in the list of recent apps (Settings, Privacidade): the `FLAG_SECURE` of the window, kept on the phone by `MainActivity` and applied before the first frame.
 
 To do (Phase 7 hardening):
 - The session is stored by `supabase_flutter`'s default storage. Move tokens to `flutter_secure_storage`.
-- Block screenshots and make the app switcher reliable (`FLAG_SECURE`); force the password after a new fingerprint is enrolled; Android 8 and older need an AppCompat launch theme for the biometric prompt; iOS needs `NSFaceIDUsageDescription`.
+- Force the password after a new fingerprint is enrolled; Android 8 and older need an AppCompat launch theme for the biometric prompt; iOS needs `NSFaceIDUsageDescription`.
 - No PII in analytics or crash reports; mask CPF/CNPJ in the UI by default.
 - Leaked-password protection (needs the Pro plan) and custom SMTP for real users.
 - Receipts bucket is private; path is `<user_id>/<file>` (storage file `05`).
@@ -230,7 +231,7 @@ To do (Phase 7 hardening):
 | Wiring | `test/core/di/injection_test.dart` | builds every bloc and cubit from the DI modules with a fake Supabase client |
 | Device | manual checklist per feature | every screen on a phone before a PR |
 
-About 1,900 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
+About 1,960 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
 
 ## 11. Conventions
 
