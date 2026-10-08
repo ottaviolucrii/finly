@@ -4,10 +4,12 @@ import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/tax_reserve/domain/entities/tax_reserve_data.dart';
 import 'package:finly/features/tax_reserve/domain/tax_reserve_rules.dart';
+import 'package:finly/features/tax_reserve/presentation/cubit/tax_categories_cubit.dart';
 import 'package:finly/features/tax_reserve/presentation/cubit/tax_reserve_cubit.dart';
 import 'package:finly/features/tax_reserve/presentation/cubit/tax_reserve_state.dart';
 import 'package:finly/features/tax_reserve/presentation/tax_reserve_messages.dart';
 import 'package:finly/features/tax_reserve/presentation/widgets/percent_dialog.dart';
+import 'package:finly/features/tax_reserve/presentation/widgets/tax_categories_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -41,16 +43,23 @@ class TaxReservePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<TaxReserveCubit>()..load(workspace.id),
-      child: const TaxReserveView(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => sl<TaxReserveCubit>()..load(workspace.id)),
+        BlocProvider(create: (_) => sl<TaxCategoriesCubit>()..load(workspace.id)),
+      ],
+      child: const TaxReserveView(extra: TaxCategoriesCard()),
     );
   }
 }
 
-/// The screen itself: it uses the [TaxReserveCubit] above it.
+/// The screen itself: it uses the [TaxReserveCubit] above it. [extra] is a card
+/// shown under the numbers (the page gives it the one that marks which
+/// categories are taxes).
 class TaxReserveView extends StatelessWidget {
-  const TaxReserveView({super.key});
+  final Widget? extra;
+
+  const TaxReserveView({super.key, this.extra});
 
   Future<void> _changePercent(BuildContext context, TaxReserveData data) async {
     final cubit = context.read<TaxReserveCubit>();
@@ -134,6 +143,10 @@ class TaxReserveView extends StatelessWidget {
             saving: state.saving,
             onChangePercent: () => _changePercent(context, data),
           ),
+        if (extra != null) ...[
+          const SizedBox(height: 12),
+          extra!,
+        ],
         const SizedBox(height: 12),
         const _ExplanationCard(),
       ],

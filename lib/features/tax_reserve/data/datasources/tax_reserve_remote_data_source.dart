@@ -1,12 +1,28 @@
 import 'package:finly/core/utils/iso_date.dart';
+import 'package:finly/features/tax_reserve/domain/entities/tax_category.dart';
 import 'package:finly/features/tax_reserve/domain/entities/tax_reserve_data.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// One row of `categories` as a [TaxCategory]. Throws when a column is not what
+/// it should be, so the repository can turn it into a failure.
+TaxCategory taxCategoryFromRow(Map<String, dynamic> row) {
+  return TaxCategory(
+    id: row['id'] as String,
+    name: row['name'] as String,
+    colorHex: row['color'] as String,
+    isTax: row['is_tax'] as bool,
+  );
+}
 
 /// Talks to Supabase. Throws Supabase exceptions; the repository maps them.
 abstract class TaxReserveRemoteDataSource {
   Future<TaxReserveData> getData(String workspaceId, DateTime month);
 
   Future<void> savePercent(String workspaceId, int percentBps);
+
+  Future<List<TaxCategory>> getTaxCategories(String workspaceId);
+
+  Future<void> setCategoryTax(String categoryId, {required bool isTax});
 }
 
 class TaxReserveRemoteDataSourceImpl implements TaxReserveRemoteDataSource {
@@ -75,5 +91,24 @@ class TaxReserveRemoteDataSourceImpl implements TaxReserveRemoteDataSource {
         .from('workspaces')
         .update({'tax_reserve_bps': percentBps})
         .eq('id', workspaceId);
+  }
+
+  @override
+  Future<List<TaxCategory>> getTaxCategories(String workspaceId) async {
+    final rows = await _client
+        .from('categories')
+        .select('id, name, color, is_tax')
+        .eq('workspace_id', workspaceId)
+        .eq('kind', 'expense')
+        .filter('archived_at', 'is', 'null')
+        .order('name');
+
+    return [for (final row in rows) taxCategoryFromRow(row)];
+  }
+
+  @override
+  Future<void> setCategoryTax(String categoryId, {required bool isTax}) async {
+    // A check of the table accepts the mark only on an expense category.
+    await _client.from('categories').update({'is_tax': isTax}).eq('id', categoryId);
   }
 }

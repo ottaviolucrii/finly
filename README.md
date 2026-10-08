@@ -40,7 +40,7 @@ Clean Architecture, feature-first. `presentation` (Cubit/BLoC) -> `domain` (enti
 * **Balance forecast:** the balance for the next 30, 60 or 90 days from pending bills, recurring items and card invoices, with a chart and a warning when it can go negative
 * **Appearance:** light, dark or follow the phone, saved with your account
 * **My data:** export everything you registered as one JSON file (data portability)
-* **Tax reserve** (company workspace): choose the share of the month's income to set aside, and see it against the taxes you registered
+* **Tax reserve** (company workspace): choose the share of the month's income to set aside, choose which expense categories count as taxes, and see it against what you registered
 * **Yield simulator:** how an investment grows with a first deposit and monthly deposits (a share of the CDI or a fixed rate, with or without income tax)
 * **History of changes:** every change to your data, as plain sentences: what was created, edited, sent to the trash or removed, and what changed in an edit
 * **Goals:** save towards a target with an account that follows it: how far you are, what is missing and what to put aside each month to be on time

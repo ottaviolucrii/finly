@@ -174,7 +174,7 @@ The "Atenção" card (`alerts`) is computed in the app from the budget overview 
 | Recurring | `rpc('generate_my_recurring')` on every open, `rpc('update_recurring', ...)`, `rpc('delete_recurring', ...)`; create and pause by table |
 | Move a transaction | `rpc('move_transaction', ...)` |
 | Export my data | `select` on `profiles`, `user_settings`, `workspaces`, `accounts`, `credit_card_details`, `credit_card_invoices`, `categories`, `budgets`, `recurring_transactions`, `transactions` and `transfers`, in pages of 1,000 rows |
-| Tax reserve | `from('workspaces')` read and update of `tax_reserve_bps`; `monthly_flow` (income) and `monthly_category_spend` (spending) for the month; `categories` with `is_tax` |
+| Tax reserve | `from('workspaces')` read and update of `tax_reserve_bps`; `monthly_flow` (income) and `monthly_category_spend` (spending) for the month; `categories` with `is_tax` (read, and the switch that marks one: `update` of `is_tax`) |
 | History of changes | `from('audit_logs')` of the workspace, newest first, 30 lines a page, with an optional filter by table; `accounts` and `categories` (id and name) to write the names |
 | Savings goals | `from('goals')` (not archived), `account_balances` (progress) and `accounts` (names); `insert`, `update` and an archive by `archived_at` |
 | Trash | `from('transactions')` with `deleted_at` set (RLS lets the owner read deleted rows); restore a transaction by table update, a transfer by `restore_transfer` |
@@ -230,7 +230,7 @@ To do (Phase 7 hardening):
 | Wiring | `test/core/di/injection_test.dart` | builds every bloc and cubit from the DI modules with a fake Supabase client |
 | Device | manual checklist per feature | every screen on a phone before a PR |
 
-About 1,850 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
+About 1,900 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
 
 ## 11. Conventions
 

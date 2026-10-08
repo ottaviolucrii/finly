@@ -71,7 +71,7 @@ found; cosmetic items are done in batches.
 - [ ] Export my data: no password or biometric check before exporting (only a warning); receipts and the audit log are not in the file
 - [ ] Export my data: a table longer than 100,000 rows is cut, and the file says which one
 - [x] Tax reserve for the company workspace: a percentage of the posted income of the month, against the taxes of the month
-- [ ] Tax reserve: only the default "Impostos" category counts as tax; there is no screen to mark another category as tax
+- [x] Tax reserve: any expense category can be marked as a tax, with a switch on the tax reserve screen (the default "Impostos" is marked from the start)
 - [ ] Tax reserve: base currency only, and it is a guide: no separate account and no transfer is made
 - [ ] Tax reserve: no rule per tax regime (MEI, Simples Nacional, Lucro Presumido), only one flat percentage
 - [x] Yield simulator: first deposit, monthly deposits, a share of the CDI or a fixed rate, regressive income tax deposit by deposit or exempt
@@ -158,4 +158,4 @@ found; cosmetic items are done in batches.
 - Dashboard with balance, month, charts, budgets, upcoming items and alerts; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 1850 automated tests
+- About 1900 automated tests
