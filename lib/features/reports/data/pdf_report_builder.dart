@@ -1,17 +1,44 @@
+import 'dart:typed_data';
+
 import 'package:finly/core/money/money.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/reports/domain/entities/monthly_report.dart';
 import 'package:finly/features/reports/domain/report_pdf_builder.dart';
 import 'package:finly/features/reports/domain/report_pdf_rules.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 /// Draws the monthly report with the `pdf` package: A4, one section per
 /// currency (summary, spending by category, biggest expenses) and a footer with
-/// the page number. The standard Helvetica font is used: it covers the accents
-/// of Portuguese, and the text avoids characters it does not have.
+/// the page number. The text uses the Inter font the app already bundles: the
+/// standard PDF fonts have no Unicode support, and a font file inside the PDF
+/// shows every accent the same on any viewer.
 class PdfReportBuilder implements ReportPdfBuilder {
-  const PdfReportBuilder();
+  static const regularFontPath = 'assets/fonts/Inter-Regular.ttf';
+  static const boldFontPath = 'assets/fonts/Inter-Bold.ttf';
+
+  /// Reads a font file of the app. Tests read it from the disk instead.
+  final Future<ByteData> Function(String path) _loadAsset;
+
+  pw.ThemeData? _cachedTheme;
+
+  PdfReportBuilder({Future<ByteData> Function(String path)? loadAsset})
+      : _loadAsset = loadAsset ?? rootBundle.load;
+
+  /// The fonts are read once. A failed read caches nothing, so the next try
+  /// reads them again.
+  Future<pw.ThemeData> _theme() async {
+    final cached = _cachedTheme;
+    if (cached != null) return cached;
+
+    final regular = pw.Font.ttf(await _loadAsset(regularFontPath));
+    final bold = pw.Font.ttf(await _loadAsset(boldFontPath));
+    final theme = pw.ThemeData.withFont(base: regular, bold: bold);
+
+    _cachedTheme = theme;
+    return theme;
+  }
 
   static final _blue = PdfColor.fromHex('#1060E3');
   static final _text = PdfColor.fromHex('#101820');
@@ -33,12 +60,7 @@ class PdfReportBuilder implements ReportPdfBuilder {
       creator: 'Finly',
     );
 
-    final theme = pw.ThemeData.withFont(
-      base: pw.Font.helvetica(),
-      bold: pw.Font.helveticaBold(),
-      italic: pw.Font.helveticaOblique(),
-      boldItalic: pw.Font.helveticaBoldOblique(),
-    );
+    final theme = await _theme();
 
     final showCurrency = report.byCurrency.length > 1;
 

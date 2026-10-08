@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:finly/features/reports/data/pdf_report_builder.dart';
 import 'package:finly/features/reports/domain/entities/monthly_report.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
@@ -5,8 +8,14 @@ import 'package:finly/features/transactions/domain/entities/transaction_status.d
 import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// The fonts are read from the project folder: `flutter test` runs there.
+Future<ByteData> _fontFromDisk(String path) async {
+  final bytes = await File(path).readAsBytes();
+  return ByteData.sublistView(Uint8List.fromList(bytes));
+}
+
 void main() {
-  const builder = PdfReportBuilder();
+  final builder = PdfReportBuilder(loadAsset: _fontFromDisk);
   final month = DateTime(2026, 10);
   final now = DateTime(2026, 10, 7, 9, 5);
 
@@ -121,6 +130,65 @@ void main() {
     ]);
 
     expect(isPdf(bytes), isTrue);
+  });
+
+  test('uses the Inter fonts of the app, regular and bold', () async {
+    final paths = <String>[];
+    final tracking = PdfReportBuilder(
+      loadAsset: (path) {
+        paths.add(path);
+        return _fontFromDisk(path);
+      },
+    );
+
+    await tracking.build(
+      report: MonthlyReport(month: month, byCurrency: [currencyReport()]),
+      workspaceName: 'Pessoal',
+      generatedAt: now,
+    );
+
+    expect(paths, [PdfReportBuilder.regularFontPath, PdfReportBuilder.boldFontPath]);
+  });
+
+  test('reads the fonts only once', () async {
+    var reads = 0;
+    final counting = PdfReportBuilder(
+      loadAsset: (path) {
+        reads++;
+        return _fontFromDisk(path);
+      },
+    );
+    final report = MonthlyReport(month: month, byCurrency: [currencyReport()]);
+
+    await counting.build(report: report, workspaceName: 'A', generatedAt: now);
+    await counting.build(report: report, workspaceName: 'B', generatedAt: now);
+
+    expect(reads, 2);
+  });
+
+  test('a font that cannot be read makes the drawing fail, and the next try reads it again', () async {
+    var failing = true;
+    final flaky = PdfReportBuilder(
+      loadAsset: (path) {
+        if (failing) throw StateError('no font');
+        return _fontFromDisk(path);
+      },
+    );
+    final report = MonthlyReport(month: month, byCurrency: [currencyReport()]);
+
+    await expectLater(
+      flaky.build(report: report, workspaceName: 'A', generatedAt: now),
+      throwsStateError,
+    );
+
+    failing = false;
+    final bytes = await flaky.build(report: report, workspaceName: 'A', generatedAt: now);
+    expect(isPdf(bytes), isTrue);
+  });
+
+  test('the bundled fonts are in the project', () {
+    expect(File(PdfReportBuilder.regularFontPath).existsSync(), isTrue);
+    expect(File(PdfReportBuilder.boldFontPath).existsSync(), isTrue);
   });
 
   test('a very long table goes on to more pages', () async {
