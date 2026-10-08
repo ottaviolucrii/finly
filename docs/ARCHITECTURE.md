@@ -55,6 +55,7 @@ lib/
     dashboard/                 balance, month, charts, budgets, upcoming, "Atenção" card
     alerts/                    budgets near the limit, bills overdue or due soon (shown on the dashboard)
     reports/                   monthly report, CSV export and PDF of the month
+    data_export/               export of all the data of the user as one JSON file (Settings, Meus dados)
     reminders/                 local notifications for pending bills and card invoices
     forecast/                  balance forecast for 30, 60 and 90 days (pure rules, one chart painter)
     lock/                      session lock, biometrics or PIN, password fallback, brute-force limit
@@ -168,6 +169,7 @@ The "Atenção" card (`alerts`) is computed in the app from the budget overview 
 | Transfers | `rpc('create_transfer', ...)`, `rpc('delete_transfer', ...)`, `rpc('restore_transfer', ...)` |
 | Recurring | `rpc('generate_my_recurring')` on every open, `rpc('update_recurring', ...)`, `rpc('delete_recurring', ...)`; create and pause by table |
 | Move a transaction | `rpc('move_transaction', ...)` |
+| Export my data | `select` on `profiles`, `user_settings`, `workspaces`, `accounts`, `credit_card_details`, `credit_card_invoices`, `categories`, `budgets`, `recurring_transactions`, `transactions` and `transfers`, in pages of 1,000 rows |
 | Trash | `from('transactions')` with `deleted_at` set (RLS lets the owner read deleted rows); restore a transaction by table update, a transfer by `restore_transfer` |
 | Settings | `from('user_settings')` read and update (`lock_timeout_seconds`, `biometric_enabled`, `switch_protection`, `notification_prefs`) |
 | Reminders | `from('transactions')` (pending expenses, with the `lead_days` of the recurring item embedded), `from('accounts')`, `from('credit_card_invoices')`, `from('invoice_totals')` |
@@ -221,7 +223,7 @@ To do (Phase 7 hardening):
 | Wiring | `test/core/di/injection_test.dart` | builds every bloc and cubit from the DI modules with a fake Supabase client |
 | Device | manual checklist per feature | every screen on a phone before a PR |
 
-About 1,390 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
+About 1,450 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
 
 ## 11. Conventions
 
@@ -266,3 +268,4 @@ In use: `supabase_flutter`, `flutter_bloc`, `equatable`, `dartz`, `get_it`, `sha
 | ADR-21 | CSV export as Windows-1252 text with `;`, decimal comma and ISO dates, shared through the share sheet | The Android Sheets app and Excel in Brazil misread UTF-8 files and swap day and month in `dd/MM/yyyy` |
 | ADR-22 | The trash keeps deleted rows for 30 days, then a daily job removes them; deleted transfers are restored by a function, never leg by leg; a card invoice payment is not restorable | Mistakes are recoverable; a restored payment would lower the card debt while the invoice stays open |
 | ADR-23 | The PDF report is drawn with the `pdf` package behind an interface (`ReportPdfBuilder`), with the standard Helvetica font and only Latin-1 characters; each section is a top-level widget of a `MultiPage` | No font files to ship or load; the use case stays free of the package and is tested with a fake; a long table can go on to the next page |
+| ADR-24 | "Export my data" reads the tables through the normal API, one by one in pages, and builds the file in the app; there is no database function for it | Row Level Security already limits every read to the user, so the export cannot show more than the user can see; no new server code to secure; the file is grouped by workspace and money stays in cents |

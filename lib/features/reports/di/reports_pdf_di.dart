@@ -9,7 +9,7 @@ import 'package:get_it/get_it.dart';
 /// CSV export.
 void registerReportsPdfModule(GetIt sl) {
   sl
-    ..registerLazySingleton<ReportPdfBuilder>(() => const PdfReportBuilder())
+    ..registerLazySingleton<ReportPdfBuilder>(() => PdfReportBuilder())
     ..registerLazySingleton(() => ExportReportPdfUseCase(sl(), sl()))
     ..registerFactory(() => PdfExportCubit(exportPdf: sl(), sharer: sl()));
 }

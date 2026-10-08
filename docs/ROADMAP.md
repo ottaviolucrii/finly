@@ -6,7 +6,7 @@ The whole product is planned; phases only fix the order (each depends on the one
 
 ## Where the project is today
 
-Phases 0 to 4 are done except the items marked open: identity, the session lock and the protected switch, the full ledger with trash and restore, cards, budgets, recurring bills, the dashboard with charts and alerts, the monthly report with CSV export, and local reminders. About 1,390 Dart tests and 109 database checks pass, and CI runs on every pull request. Next in line: the offline cache, push notifications and the notification centre, then Phase 5 (intelligence).
+Phases 0 to 4 are done except the items marked open: identity, the session lock and the protected switch, the full ledger with trash and restore, cards, budgets, recurring bills, the dashboard with charts and alerts, the monthly report with CSV export, and local reminders. About 1,450 Dart tests and 109 database checks pass, and CI runs on every pull request. Next in line: the offline cache, push notifications and the notification centre, then Phase 5 (intelligence).
 
 ## Phase 0 - Foundation
 
@@ -82,7 +82,8 @@ Phases 0 to 4 are done except the items marked open: identity, the session lock 
 
 - [x] CSV export of a month, from the report screen, through the share sheet
 - [x] PDF of the monthly report, from the report screen
-- [ ] Custom periods, export-my-data file
+- [x] Export of all my data (JSON), from Settings (LGPD data portability)
+- [ ] Custom periods
 - [ ] OFX import with preview and duplicate detection
 - [ ] Multi-currency totals and display conversion (rate adapter)
 - [ ] Offline write queue + conflict screen
