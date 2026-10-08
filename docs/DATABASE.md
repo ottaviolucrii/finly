@@ -24,13 +24,13 @@ The SQL under `sql/` is the **source of truth**. This file explains it and must 
 | 15 | `14_restore_transfer.sql` | `restore_transfer`: brings a deleted transfer back |
 | 16 | `15_move_transaction.sql` | `move_transaction`: moves an income or an expense to another account; the transactions guard lets only this function change the account |
 
-The Supabase project `Finly` (region sa-east-1) has `00` to `05`, `07` to `16` applied. Run a file in the Supabase **SQL Editor** (or as a migration), once, in order. Keep every change in git: never edit tables by hand in the dashboard without copying the change back into `sql/`.
+The Supabase project `Finly` (region sa-east-1) has `00` to `05`, `07` to `17` applied. Run a file in the Supabase **SQL Editor** (or as a migration), once, in order. Keep every change in git: never edit tables by hand in the dashboard without copying the change back into `sql/`.
 
 Verify locally without Docker or Supabase (CI runs the same on every pull request):
 
 ```bash
 pip install pgserver "psycopg[binary]"
-python sql/tests/run_db_tests.py        # 126 checks (applies 00-04, 07-09, 11, 12, 14, 15, 16)
+python sql/tests/run_db_tests.py        # 137 checks (applies 00-04, 07-09, 11, 12, 14, 15, 16, 17)
 ```
 
 `sql/tests/00_mock_supabase.sql` only fakes `auth.users` and `auth.uid()` for that test. Never run it in Supabase. Files `10` and `13` need `pg_cron`, which only Supabase has, so the test does not apply them (it does test `private.purge_deleted()` and `restore_transfer`). On Windows the embedded Postgres has no time zone database, so run these tests in CI (or copy the `tzdata` files into the virtual environment).
@@ -237,7 +237,7 @@ erDiagram
 | `create_installments(account, category, total, n, description, purchase_at)` | N charges on consecutive invoices; remainder to the first |
 | `pay_invoice(invoice, from_account, paid_at)` | Creates the payment transfer and marks the invoice paid |
 | `generate_my_recurring(until)` | Creates pending occurrences (default 35 days ahead), idempotent |
-| `update_recurring(id, description, amount, category, end_date)` | Changes the item; pending occurrences from today on follow the new values; pending ones after a new end date are soft-deleted. Never touches the schedule |
+| `update_recurring(id, description, amount, category, end_date)` | Changes the item; pending occurrences from today on follow the new values; pending ones after a new end date are removed for good and the generator goes back to the first occurrence after it, so moving the end date later (or taking it off) makes them again. Confirmed and deleted occurrences are never touched or repeated. Never touches the schedule |
 | `delete_recurring(id)` | Soft-deletes pending occurrences, detaches the confirmed ones (history stays), deletes the item |
 | `delete_my_account()` | Erases the user's data, audit trail and auth record |
 | `is_valid_cpf(text)`, `is_valid_cnpj(text)` | Check-digit validators (CNPJ accepts letters) |
@@ -277,7 +277,7 @@ Stable error keys the app maps (see ARCHITECTURE section 5): `invalid_tax_id`, `
 
 ### Known behavior worth remembering
 
-- If an end date removes pending occurrences and the end date is later cleared, those occurrences do **not** come back: `generated_count` already moved past them and the unique index still holds their dates, so the series continues after the gap. Tracked in `POLISH.md`.
+- When an end date removes pending occurrences, the generator goes back (`generated_count` is lowered to the first occurrence after the end date), so if the end date is moved later or taken off they are made again at once. An occurrence the person deleted, or confirmed, is not made again (the unique index on `recurring_id` and `scheduled_for` keeps its date). An item whose end date was set before `17_recurring_end_date.sql` keeps what was soft-deleted then; those occurrences can be restored from the trash.
 - Editing a recurring item never changes occurrences that are already confirmed or overdue.
 - `lead_days` on a recurring item is how many days before the due date the app announces its pending occurrences (3 by default); the reminders read it through the foreign key `transactions.recurring_id`.
 - `workspaces.tax_reserve_bps` is the share of the income a company sets aside for taxes, in basis points (650 = 6.5%); only a business workspace can have a value above zero (a check of the table). The app reads it with the posted income of `monthly_flow` and the spending of the categories with `is_tax` (the default "Impostos") in `monthly_category_spend`.

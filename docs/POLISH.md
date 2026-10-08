@@ -44,7 +44,7 @@ found; cosmetic items are done in batches.
 - [x] Recurring: edit (description, amount, category, end date) and delete (pending occurrences removed, history kept)
 - [x] Recurring: reminder before the due date, using lead_days (3 by default)
 - [ ] Recurring: the schedule (frequency, interval, start date) cannot be edited; delete and create another
-- [ ] Recurring: clearing an end date does not bring back the occurrences that the end date removed (a gap stays; generated_count already moved past them)
+- [x] Recurring: clearing an end date does not bring back the occurrences that the end date removed (a gap stays; generated_count already moved past them) (fixed by sql/17: moving the end date later makes the removed occurrences again; items edited before it keep what was soft-deleted then)
 - [x] Dashboard: balance, month, charts, budgets, upcoming items and an "Atenção" card
 - [x] Alerts card: budgets at 80% and over the limit, pending bills overdue, due today or in the next 3 days (most urgent first, 5 at a time)
 - [ ] Alerts: pending incomes that are late ("a receber") are not reported; the 3-day window and the 80% threshold are fixed (not in the settings)
@@ -127,7 +127,7 @@ found; cosmetic items are done in batches.
 - [x] injection.dart split into one module per feature (features/<name>/di), with a test that builds every bloc and cubit
 - [x] View monthly_flow (sql/11) sums income and expenses per month in the database, so charts and reports never download every transaction
 - [x] Functions update_recurring and delete_recurring (sql/12), restore_transfer (sql/14), each tested on real data inside a rolled-back transaction
-- [x] Database tests cover monthly_flow, update_recurring / delete_recurring, purge_deleted and restore_transfer (126 checks)
+- [x] Database tests cover monthly_flow, update_recurring / delete_recurring, purge_deleted and restore_transfer (137 checks)
 - [x] GitHub Actions (.github/workflows/ci.yml): flutter analyze, flutter test and the database tests on every PR and push to develop and main
 - [x] CI uses the same Flutter version as the PC (3.41.6); move both together when upgrading
 - [x] ARCHITECTURE.md, DATABASE.md, ROADMAP.md and README.md match the code; docs/SUPABASE_SETUP.md added

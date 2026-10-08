@@ -1,6 +1,6 @@
 # Finly - Supabase setup (configured by hand)
 
-Everything in `sql/` is applied from files. The settings below live in the Supabase **dashboard**, so no file in git captures them. If you ever recreate the project, redo this list after applying `sql/00` to `sql/16`.
+Everything in `sql/` is applied from files. The settings below live in the Supabase **dashboard**, so no file in git captures them. If you ever recreate the project, redo this list after applying `sql/00` to `sql/17`.
 
 Project: `Finly`, region sa-east-1.
 
