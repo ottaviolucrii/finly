@@ -88,6 +88,8 @@ found; cosmetic items are done in batches.
 - [x] App icon: the Finly shield as the launcher icon on Android (adaptive, and a one-colour version for the themed icons of Android 13)
 - [ ] App icon: iOS still has the default icon (only Android was done)
 - [ ] The application id is still com.example.finly: it has to change before the first store release
+- [x] Option to block screenshots and hide the app in the list of recent apps (Android, Settings, Privacidade)
+- [ ] Screenshot blocking is a choice of the phone, not of the account, and it is off by default; iOS has no equivalent yet (the section is hidden there)
 - [ ] PDF: the standard font covers Portuguese but not every character (a description with an emoji or non-Latin letters can show wrong)
 - [x] Balance forecast for 30, 60 and 90 days: the confirmed balance of the accounts (no credit cards), plus pending bills and incomes, recurring items not generated yet and unpaid card invoices on their due day
 - [ ] Forecast: no yield on investments, no tax reserve and no scenarios ("what if I pay this later")
@@ -161,4 +163,4 @@ found; cosmetic items are done in batches.
 - Dashboard with balance, month, charts, budgets, upcoming items and alerts; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 1900 automated tests
+- About 1960 automated tests
