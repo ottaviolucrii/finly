@@ -6,7 +6,7 @@ The whole product is planned; phases only fix the order (each depends on the one
 
 ## Where the project is today
 
-Phases 0 to 4 are done except the items marked open: identity, the session lock and the protected switch, the full ledger with trash and restore, cards, budgets, recurring bills, the dashboard with charts and alerts, the monthly report with CSV export, and local reminders. About 1,960 Dart tests and 137 database checks pass, and CI runs on every pull request. Next in line: the offline cache, push notifications and the notification centre, then Phase 5 (intelligence).
+Phases 0 to 4 are done except the items marked open: identity, the session lock and the protected switch, the full ledger with trash and restore, cards, budgets, recurring bills, the dashboard with charts and alerts, the monthly report with CSV export, and local reminders. About 2,100 Dart tests and 137 database checks pass, and CI runs on every pull request. Next in line: the offline cache, push notifications and the notification centre, then Phase 5 (intelligence).
 
 ## Phase 0 - Foundation
 
@@ -47,7 +47,8 @@ Phases 0 to 4 are done except the items marked open: identity, the session lock 
 - [x] Transactions: create, edit, confirm pending, soft delete + 10-second undo, search, filters (type, status, account, category, period), pages of 20
 - [x] Transfers: internal and owner withdrawal/contribution via RPC; delete via RPC
 - [x] Trash (Lixeira): deleted transactions and transfers stay 30 days and can be restored; a daily job removes them for good after that
-- [ ] Local read cache (Drift) per workspace, offline banner (starts FR-Y01)
+- [x] Read cache: every read is kept as a copy on the phone and shown when there is no internet, with a banner (the HTTP client keeps the copies; see ADR-28)
+- [ ] Offline writing: a queue of changes and rules for conflicts
 
 ## Phase 3 - Cards, budgets, recurring (FR-K, FR-B01-02, FR-R, FR-T05-06)
 
@@ -68,7 +69,8 @@ Phases 0 to 4 are done except the items marked open: identity, the session lock 
 - [x] Savings goals ("metas"): a goal follows an account, with a target and an optional date, and says what to put aside each month
 - [x] Monthly report: summary against the month before, spending by category, biggest expenses
 - [x] Local notifications: reminders at 9h for pending bills (the day before, or `lead_days`, and the due day) and card invoices (3 days before and the due day), for the active workspace
-- [ ] Dashboard cache first, refresh in background (needs the local cache)
+- [x] Read cache: every read is kept as a copy on the phone and shown when there is no internet, with a banner (the HTTP client keeps the copies; see ADR-28)
+- [ ] Offline writing: a queue of changes and rules for conflicts
 - [ ] Notification centre screen; push notifications (FCM token registration, Edge Function jobs) and budget alerts that arrive with the app closed
 - [x] Audit log viewer: the history of changes of a workspace, as plain sentences, with a filter by kind of data
 

@@ -90,6 +90,14 @@ found; cosmetic items are done in batches.
 - [ ] The application id is still com.example.finly: it has to change before the first store release
 - [x] Option to block screenshots and hide the app in the list of recent apps (Android, Settings, Privacidade)
 - [ ] Screenshot blocking is a choice of the phone, not of the account, and it is off by default; iOS has no equivalent yet (the section is hidden there)
+- [x] Offline reading: every read is kept as a copy on the phone and shown when there is no internet, with a banner that says how old it is; the person stays signed in
+- [x] Opening the app without internet keeps the person signed in even when the login had expired: the phone remembers who was signed in and the saved data is shown; the login comes back by itself when the internet does
+- [ ] If the login is revoked for good while the app shows saved data, the app does not go to the login screen by itself until the next start
+- [ ] Offline: nothing can be created or edited without internet (it would need a queue of changes and rules for conflicts)
+- [ ] Offline: the copies on the phone are not encrypted (the folder is private to the app, but a rooted phone could read it)
+- [ ] Offline: when the internet comes back the person taps "Atualizar" and the app is built again, which takes them back to the first screen
+- [ ] Offline: only Android was tried; iOS should work (the cache is plain Dart) but was not tested
+- [x] The list of recent apps never shows the screen on Android 13 and above; before Android 13 the cover drawn by the app is still best effort
 - [ ] PDF: the standard font covers Portuguese but not every character (a description with an emoji or non-Latin letters can show wrong)
 - [x] Balance forecast for 30, 60 and 90 days: the confirmed balance of the accounts (no credit cards), plus pending bills and incomes, recurring items not generated yet and unpaid card invoices on their due day
 - [ ] Forecast: no yield on investments, no tax reserve and no scenarios ("what if I pay this later")
@@ -163,4 +171,4 @@ found; cosmetic items are done in batches.
 - Dashboard with balance, month, charts, budgets, upcoming items and alerts; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 1960 automated tests
+- About 2100 automated tests

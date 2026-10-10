@@ -1,6 +1,7 @@
 package com.example.finly
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -26,6 +27,14 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         apply(preferences.getBoolean(key, false))
+
+        // Android 13 and above: the list of recent apps never shows a picture of
+        // the screen, so a balance is not seen by glancing at it. A cover drawn
+        // by the app comes too late for the picture Android takes when the app
+        // goes to the background, which is why it worked only sometimes.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            setRecentsScreenshotEnabled(false)
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
