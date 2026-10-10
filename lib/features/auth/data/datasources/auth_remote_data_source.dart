@@ -1,3 +1,6 @@
+import 'package:finly/core/offline/remembered_user.dart';
+import 'package:finly/core/offline/signed_in_user.dart';
+import 'package:flutter/foundation.dart';
 import 'package:finly/features/auth/data/models/user_model.dart';
 import 'package:finly/features/auth/domain/entities/sign_up_result.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -90,9 +93,28 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<UserModel?> currentUser() async {
-    final user = _client.auth.currentUser;
-    if (user == null) return null;
-    return _loadUser(user.id, user.email ?? '');
+    // The login library has the session. When it could not renew an expired
+    // login without internet it has none, but the phone still remembers who was
+    // signed in: the app opens with the saved data instead of asking for the
+    // password again.
+    final who = await resolveSignedInUser(
+      fromLibrary: () {
+        final user = _client.auth.currentUser;
+        return user == null ? null : KnownUser(id: user.id, email: user.email ?? '');
+      },
+      memory: RememberedSession.memory,
+    );
+    if (kDebugMode) {
+      debugPrint('Session at start: ${who == null ? 'none' : who.source.name}');
+    }
+    if (who == null) return null;
+
+    try {
+      return await _loadUser(who.user.id, who.user.email);
+    } catch (error) {
+      if (kDebugMode) debugPrint('The user could not be loaded at start: $error');
+      rethrow;
+    }
   }
 
   @override

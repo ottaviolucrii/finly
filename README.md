@@ -40,6 +40,7 @@ Clean Architecture, feature-first. `presentation` (Cubit/BLoC) -> `domain` (enti
 * **Balance forecast:** the balance for the next 30, 60 or 90 days from pending bills, recurring items and card invoices, with a chart and a warning when it can go negative
 * **Appearance:** light, dark or follow the phone, saved with your account
 * **Privacy:** an option to block screenshots and to hide the app in the list of recent apps (Android)
+* **Without internet:** the last data you saw stays available when the connection drops, with a banner that says how old it is; changing data still needs internet
 * **My data:** export everything you registered as one JSON file (data portability)
 * **Tax reserve** (company workspace): choose the share of the month's income to set aside, choose which expense categories count as taxes, and see it against what you registered
 * **Yield simulator:** how an investment grows with a first deposit and monthly deposits (a share of the CDI or a fixed rate, with or without income tax)

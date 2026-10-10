@@ -37,6 +37,7 @@ lib/
     error/                     failure.dart, error_mapper.dart
     money/                     money.dart (value object)
     security/                  device_authenticator.dart (biometrics / PIN behind an interface), screen_protection.dart (blocks screenshots, by a channel to Android)
+    offline/                   copies of the reads for use without internet: the HTTP client that keeps them, the store, the banner
     share/                     file_sharer.dart (the share sheet behind an interface)
     theme/                     app_colors.dart, app_theme.dart (Poppins, Inter, tabular figures)
     usecase/                   usecase.dart
@@ -231,7 +232,7 @@ To do (Phase 7 hardening):
 | Wiring | `test/core/di/injection_test.dart` | builds every bloc and cubit from the DI modules with a fake Supabase client |
 | Device | manual checklist per feature | every screen on a phone before a PR |
 
-About 1,960 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
+About 2,100 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
 
 ## 11. Conventions
 
@@ -280,3 +281,5 @@ In use: `supabase_flutter`, `flutter_bloc`, `equatable`, `dartz`, `get_it`, `sha
 | ADR-25 | The yield simulator is a pure calculation in the app: whole cents, the rate typed by the person, interest compounded monthly, and the income tax worked out deposit by deposit | No server and no network for a "what if"; each deposit stayed a different time, so one tax rate for all of them would overstate the tax of the recent ones |
 | ADR-26 | The history of changes reads the audit log as it is and turns each line into a sentence in the app; ids are shown by name through two small lookups (accounts and categories of the workspace) | The database already records every insert, update and delete with the whole row before and after; no new table or function, and Row Level Security already limits it to the owner |
 | ADR-27 | A savings goal follows one account and its progress is the posted balance of that account; there is no separate "saved" number | One number to keep right: nothing is counted twice and the goal moves with every real transaction; a credit card cannot be followed because its balance is a debt |
+| ADR-28 | Reads are kept as copies at the HTTP client, under the whole app, instead of mirroring the tables in a local database; nothing can be written without internet | Every screen, repository and test keeps working unchanged and is shown the last copy when the server cannot be reached; editing offline needs a queue and rules for conflicts, which is a much larger and riskier project |
+| ADR-29 | When the login library loses its session because an expired login cannot be renewed without internet, the app keeps using the person remembered from the session text saved on the phone, and brings the login back when the internet returns | Opening the app without internet must not ask for the password again; the saved text is the one the library itself keeps, and signing out removes it, so nobody is remembered after that |

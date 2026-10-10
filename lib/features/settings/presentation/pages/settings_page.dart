@@ -1,5 +1,6 @@
 import 'package:finly/features/appearance/presentation/widgets/appearance_settings_card.dart';
 import 'package:finly/features/screen_protection/presentation/widgets/screen_protection_card.dart';
+import 'package:finly/features/offline_cache/presentation/widgets/offline_cache_card.dart';
 import 'package:finly/features/auth/domain/entities/user_entity.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
@@ -204,6 +205,8 @@ class SettingsPage extends StatelessWidget {
             const AppearanceSettingsCard(),
             const SizedBox(height: 16),
             const ScreenProtectionCard(),
+            const SizedBox(height: 16),
+            const OfflineCacheCard(),
             const SizedBox(height: 16),
             const NotificationsSettingsCard(),
             const SizedBox(height: 16),
