@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:finly/core/offline/cache_store.dart';
 import 'package:finly/features/offline_cache/presentation/cubit/offline_cache_cubit.dart';
-import 'package:finly/features/offline_cache/presentation/cubit/offline_cache_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 

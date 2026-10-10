@@ -105,14 +105,14 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       memory: RememberedSession.memory,
     );
     if (kDebugMode) {
-      debugPrint('Session at start: ' + (who == null ? 'none' : who.source.name));
+      debugPrint('Session at start: ${who == null ? 'none' : who.source.name}');
     }
     if (who == null) return null;
 
     try {
       return await _loadUser(who.user.id, who.user.email);
     } catch (error) {
-      if (kDebugMode) debugPrint('The user could not be loaded at start: ' + error.toString());
+      if (kDebugMode) debugPrint('The user could not be loaded at start: $error');
       rethrow;
     }
   }

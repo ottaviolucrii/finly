@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:finly/core/offline/remembered_user.dart';
 
 /// Brings the login back when the library lost it because it could not renew an

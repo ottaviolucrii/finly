@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:finly/core/offline/remembered_user.dart';
 
 enum UserSource {
