@@ -49,11 +49,13 @@ abstract class CardRepository {
     required DateTime purchaseAt,
   });
 
-  /// Pays the whole invoice from another account and marks it paid. Returns
-  /// the id of the transfer that paid it.
+  /// Pays [amountCents] of the invoice from another account, or everything
+  /// still owed when it is null. The invoice is marked paid only when nothing
+  /// is owed any more. Returns the id of the transfer that made the payment.
   Future<Either<Failure, String>> payInvoice({
     required String invoiceId,
     required String fromAccountId,
     required DateTime paidAt,
+    int? amountCents,
   });
 }

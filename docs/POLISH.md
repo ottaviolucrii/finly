@@ -34,7 +34,10 @@ found; cosmetic items are done in batches.
 - [x] Categories: create, rename, recolour, archive and restore (FR-G02)
 - [x] Credit cards: create, limit bar, invoices, installments, pay invoice
 - [x] Credit cards: edit name, limit and closing/due days; archive a card that owes nothing
-- [ ] Credit cards: partial invoice payment
+- [x] Credit cards: partial invoice payment (any amount up to what is owed, from the invoice screen)
+- [ ] Invoice partial payment: an unpaid remainder stays on the same invoice, with no interest and no carry-over to the next one
+- [ ] Invoice partial payment: an invoice whose remainder is paid off by a later refund stays "closed" with nothing owed (it is only marked paid by a payment)
+- [ ] Invoice partial payment: "Exportar meus dados" does not include the link between an invoice and its payments (the payments themselves are in the transfers)
 - [ ] Credit cards: updating a card is two writes (name, then settings); make it one database function if it ever shows a half-saved card
 - [ ] Credit cards: no alert yet for an invoice due soon or a card near its limit
 - [x] Budgets: monthly limit per category with versions and end markers
@@ -171,4 +174,4 @@ found; cosmetic items are done in batches.
 - Dashboard with balance, month, charts, budgets, upcoming items and alerts; monthly report with CSV export
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
-- About 2100 automated tests
+- About 2190 automated tests

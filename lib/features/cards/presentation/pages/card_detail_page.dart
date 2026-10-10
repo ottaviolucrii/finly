@@ -303,7 +303,6 @@ class _InvoiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final status = invoice.statusOn(today);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -335,12 +334,17 @@ class _InvoiceTile extends StatelessWidget {
                     Money(invoice.totalCents, currency).format(),
                     style: text.titleMedium,
                   ),
+                  if (invoice.isPartiallyPaid)
+                    Text(
+                      'Falta ${Money(invoice.remainingCents, currency).format()}',
+                      style: text.bodySmall,
+                    ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(invoiceStatusIcon(status), size: 14),
+                      Icon(invoiceDisplayIcon(invoice, today), size: 14),
                       const SizedBox(width: 4),
-                      Text(invoiceStatusLabel(status), style: text.bodySmall),
+                      Text(invoiceDisplayLabel(invoice, today), style: text.bodySmall),
                     ],
                   ),
                 ],

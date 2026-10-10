@@ -1,5 +1,6 @@
 import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/features/cards/domain/entities/credit_card_entity.dart';
+import 'package:finly/features/cards/domain/entities/invoice_entity.dart';
 import 'package:finly/features/cards/domain/entities/invoice_status.dart';
 import 'package:flutter/material.dart';
 
@@ -42,3 +43,15 @@ IconData invoiceStatusIcon(InvoiceStatus status) => switch (status) {
       InvoiceStatus.closed => Icons.lock_outline,
       InvoiceStatus.paid => Icons.check_circle_outline,
     };
+
+/// The label of an invoice on [today]: "Parcialmente paga" when part of it was
+/// paid and some is still owed, otherwise the label of its status.
+String invoiceDisplayLabel(InvoiceEntity invoice, DateTime today) {
+  if (invoice.isPartiallyPaid) return 'Parcialmente paga';
+  return invoiceStatusLabel(invoice.statusOn(today));
+}
+
+IconData invoiceDisplayIcon(InvoiceEntity invoice, DateTime today) {
+  if (invoice.isPartiallyPaid) return Icons.timelapse;
+  return invoiceStatusIcon(invoice.statusOn(today));
+}

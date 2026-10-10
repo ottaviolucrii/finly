@@ -11,13 +11,15 @@ class InvoiceModel extends InvoiceEntity {
     required super.dueDate,
     required super.status,
     required super.totalCents,
+    super.paidCents = 0,
   });
 
-  /// [invoice] is a row of `credit_card_invoices`; [totalCents] comes from
-  /// the `invoice_totals` view (an invoice with no charges has no total row).
+  /// [invoice] is a row of `credit_card_invoices`; [totalCents] and
+  /// [paidCents] come from the `invoice_balances` view.
   factory InvoiceModel.fromMap(
     Map<String, dynamic> invoice, {
     int totalCents = 0,
+    int paidCents = 0,
   }) {
     return InvoiceModel(
       id: invoice['id'] as String,
@@ -28,6 +30,7 @@ class InvoiceModel extends InvoiceEntity {
       dueDate: DateTime.parse(invoice['due_date'] as String),
       status: InvoiceStatus.fromDb(invoice['status'] as String),
       totalCents: totalCents,
+      paidCents: paidCents,
     );
   }
 }

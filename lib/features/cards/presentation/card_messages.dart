@@ -1,4 +1,6 @@
 import 'package:finly/core/error/failure.dart';
+import 'package:finly/core/money/money.dart';
+import 'package:finly/features/cards/domain/payment_amount.dart';
 
 /// Turns a failure code into text for the user (Portuguese for now;
 /// replaced by proper localisation in a later phase).
@@ -10,6 +12,12 @@ String cardFailureMessage(Failure failure) {
   }
   if (code.contains('nothing to pay')) {
     return 'Esta fatura não tem nada a pagar.';
+  }
+  if (code.contains('above what is owed')) {
+    return 'O valor é maior do que falta pagar.';
+  }
+  if (code.contains('amount must be positive')) {
+    return 'Informe um valor maior que zero.';
   }
   if (code.contains('amounts must match') ||
       code.contains('destination amount')) {
@@ -29,6 +37,8 @@ String cardFailureMessage(Failure failure) {
       return 'O número de parcelas vai de 2 a 48.';
     case 'invalid_amount':
       return 'Informe um valor válido para a compra.';
+    case 'invalid_payment_amount':
+      return 'Informe um valor maior que zero.';
     case 'invalid_description':
       return 'Informe uma descrição (até 200 caracteres).';
     case 'already_exists':
@@ -46,4 +56,16 @@ String cardFailureMessage(Failure failure) {
     default:
       return 'Algo deu errado. Tente novamente.';
   }
+}
+
+/// What is wrong with the amount typed to pay an invoice, or null when there
+/// is nothing to say (empty, or fine). [remaining] is what is still owed.
+String? paymentAmountMessage(PaymentAmountProblem problem, Money remaining) {
+  return switch (problem) {
+    PaymentAmountProblem.empty => null,
+    PaymentAmountProblem.invalid => 'Valor inválido. Use o formato 1.234,56.',
+    PaymentAmountProblem.notPositive => 'Informe um valor maior que zero.',
+    PaymentAmountProblem.aboveOwed =>
+      'O valor é maior do que falta pagar (${remaining.format()}).',
+  };
 }

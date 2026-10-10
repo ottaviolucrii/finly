@@ -37,10 +37,12 @@ abstract class CardRemoteDataSource {
     required DateTime purchaseAt,
   });
 
+  /// Pays [amountCents] of the invoice, or everything still owed when null.
   Future<String> payInvoice({
     required String invoiceId,
     required String fromAccountId,
     required DateTime paidAt,
+    int? amountCents,
   });
 }
 
@@ -148,24 +150,25 @@ class CardRemoteDataSourceImpl implements CardRemoteDataSource {
         .eq('account_id', accountId)
         .order('reference_month', ascending: false);
 
-    final totals = await _client
-        .from('invoice_totals')
+    // Total and paid per invoice, derived by the database (an invoice with no
+    // purchases and no payments has zero of both).
+    final balances = await _client
+        .from('invoice_balances')
         .select()
         .eq('account_id', accountId);
 
-    final totalById = {
-      for (final row in totals)
-        row['invoice_id'] as String: (row['total_cents'] as num).toInt(),
+    final balanceById = {
+      for (final row in balances) row['invoice_id'] as String: row,
     };
 
-    return invoices
-        .map(
-          (row) => InvoiceModel.fromMap(
-            row,
-            totalCents: totalById[row['id'] as String] ?? 0,
-          ),
-        )
-        .toList();
+    return invoices.map((row) {
+      final balance = balanceById[row['id'] as String];
+      return InvoiceModel.fromMap(
+        row,
+        totalCents: (balance?['total_cents'] as num?)?.toInt() ?? 0,
+        paidCents: (balance?['paid_cents'] as num?)?.toInt() ?? 0,
+      );
+    }).toList();
   }
 
   @override
@@ -212,15 +215,18 @@ class CardRemoteDataSourceImpl implements CardRemoteDataSource {
     required String invoiceId,
     required String fromAccountId,
     required DateTime paidAt,
+    int? amountCents,
   }) async {
-    // Database function (sql/03_logic.sql): creates the payment transfer and
-    // marks the invoice paid.
+    // Database function (sql/18_invoice_partial_payment.sql): creates the
+    // payment transfer; the invoice is marked paid only when nothing is owed.
+    // Without an amount it pays everything that is still owed.
     final transfer = await _client.rpc(
       'pay_invoice',
       params: {
         'p_invoice_id': invoiceId,
         'p_from_account_id': fromAccountId,
         'p_paid_at': paidAt.toUtc().toIso8601String(),
+        if (amountCents != null) 'p_amount_cents': amountCents,
       },
     );
     return transfer as String;

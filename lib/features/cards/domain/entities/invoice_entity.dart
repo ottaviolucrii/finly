@@ -17,6 +17,10 @@ class InvoiceEntity extends Equatable {
   /// Charges minus refunds, in cents. Derived by the database.
   final int totalCents;
 
+  /// What was already paid, in cents: the card side of the payments that are
+  /// still alive. Derived by the database (a deleted payment drops out).
+  final int paidCents;
+
   const InvoiceEntity({
     required this.id,
     required this.accountId,
@@ -26,12 +30,19 @@ class InvoiceEntity extends Equatable {
     required this.dueDate,
     required this.status,
     required this.totalCents,
+    this.paidCents = 0,
   });
 
   bool get isPaid => status == InvoiceStatus.paid;
 
+  /// What is still owed, in cents (never below zero).
+  int get remainingCents => totalCents > paidCents ? totalCents - paidCents : 0;
+
+  /// Part of the invoice was paid and some is still owed.
+  bool get isPartiallyPaid => !isPaid && paidCents > 0 && remainingCents > 0;
+
   /// Something is still owed on this invoice.
-  bool get needsPayment => !isPaid && totalCents > 0;
+  bool get needsPayment => !isPaid && remainingCents > 0;
 
   /// The status to show on [today]. An open invoice whose cycle already ended
   /// is shown as closed, even if the daily database job that closes invoices
@@ -54,5 +65,6 @@ class InvoiceEntity extends Equatable {
         dueDate,
         status,
         totalCents,
+        paidCents,
       ];
 }

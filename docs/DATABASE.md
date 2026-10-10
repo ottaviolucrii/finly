@@ -24,13 +24,13 @@ The SQL under `sql/` is the **source of truth**. This file explains it and must 
 | 15 | `14_restore_transfer.sql` | `restore_transfer`: brings a deleted transfer back |
 | 16 | `15_move_transaction.sql` | `move_transaction`: moves an income or an expense to another account; the transactions guard lets only this function change the account |
 
-The Supabase project `Finly` (region sa-east-1) has `00` to `05`, `07` to `17` applied. Run a file in the Supabase **SQL Editor** (or as a migration), once, in order. Keep every change in git: never edit tables by hand in the dashboard without copying the change back into `sql/`.
+The Supabase project `Finly` (region sa-east-1) has `00` to `05`, `07` to `18` applied. Run a file in the Supabase **SQL Editor** (or as a migration), once, in order. Keep every change in git: never edit tables by hand in the dashboard without copying the change back into `sql/`.
 
 Verify locally without Docker or Supabase (CI runs the same on every pull request):
 
 ```bash
 pip install pgserver "psycopg[binary]"
-python sql/tests/run_db_tests.py        # 137 checks (applies 00-04, 07-09, 11, 12, 14, 15, 16, 17)
+python sql/tests/run_db_tests.py        # 162 checks (applies 00-04, 07-09, 11, 12, 14, 15, 16, 17, 18)
 ```
 
 `sql/tests/00_mock_supabase.sql` only fakes `auth.users` and `auth.uid()` for that test. Never run it in Supabase. Files `10` and `13` need `pg_cron`, which only Supabase has, so the test does not apply them (it does test `private.purge_deleted()` and `restore_transfer`). On Windows the embedded Postgres has no time zone database, so run these tests in CI (or copy the `tzdata` files into the virtual environment).
@@ -57,6 +57,8 @@ erDiagram
   recurring_transactions ||--o{ transactions : generates
   transfers ||--o{ transactions : "2 legs"
   transfers ||--o| credit_card_invoices : "paid by"
+  credit_card_invoices ||--o{ invoice_payments : "paid in parts"
+  transfers ||--o| invoice_payments : "is a payment"
 
   profiles {
     uuid id PK "= auth.users.id"
@@ -213,6 +215,7 @@ erDiagram
 | `tyoe`, `tranfer_out` typos | fixed | script now runs |
 | weak `auth.role() = 'authenticated'` policies | owner-chained policies | the earlier ones exposed all data |
 | `invoice.total_cents` stored | `invoice_totals` view | derived, cannot go stale |
+| what was paid of an invoice stored | `invoice_balances` view | derived: deleting a payment lowers it again |
 
 ## 4. Security model
 
@@ -230,12 +233,12 @@ erDiagram
 | `create_workspace(name, type, tax_id)` | Validates tax ID, enforces one per type, seeds default categories, sets active workspace |
 | `switch_workspace(workspace_id)` | Ownership check, stores active workspace |
 | `create_transfer(from, to, amount, description, occurred_at, kind, to_amount, status)` | Two legs; enforces kind rules and currency rules |
-| `delete_transfer(transfer_id)` | Soft-deletes both legs; reopens an invoice this transfer had paid |
+| `delete_transfer(transfer_id)` | Soft-deletes both legs; reopens a paid invoice when this transfer was one of its payments (the last one, or an earlier part) |
 | `move_transaction(transaction_id, account_id)` | Moves an income or an expense to another account of the same workspace and currency. An expense of a bank account can also go to a credit card (a purchase on the invoice of its date, refused when that invoice is paid), and a card purchase can come back to a bank account while its invoice is not paid. Refused for a deleted transaction, a transfer leg, an installment, the same account, an archived account, another workspace or currency, an income going to a card, a card purchase going to another card, and anyone who is not a member |
 | `restore_transfer(transfer_id)` | Brings a deleted transfer back, both legs together. Refused when the transfer touches a credit card (an invoice payment: the invoice has to be paid again), when it is not deleted, and for anyone but its owner |
 | `create_credit_card(workspace, name, currency, limit, closing_day, due_day)` | Creates the card account and its settings in one operation; opening balance 0 |
 | `create_installments(account, category, total, n, description, purchase_at)` | N charges on consecutive invoices; remainder to the first |
-| `pay_invoice(invoice, from_account, paid_at)` | Creates the payment transfer and marks the invoice paid |
+| `pay_invoice(invoice, from_account, paid_at, amount)` | Creates the payment transfer for `amount` cents (everything still owed when the amount is left out) and links it to the invoice in `invoice_payments`. The invoice is marked paid only when nothing is owed. Refuses an amount that is zero, negative or above what is owed |
 | `generate_my_recurring(until)` | Creates pending occurrences (default 35 days ahead), idempotent |
 | `update_recurring(id, description, amount, category, end_date)` | Changes the item; pending occurrences from today on follow the new values; pending ones after a new end date are removed for good and the generator goes back to the first occurrence after it, so moving the end date later (or taking it off) makes them again. Confirmed and deleted occurrences are never touched or repeated. Never touches the schedule |
 | `delete_recurring(id)` | Soft-deletes pending occurrences, detaches the confirmed ones (history stays), deletes the item |
@@ -243,6 +246,7 @@ erDiagram
 | `is_valid_cpf(text)`, `is_valid_cnpj(text)` | Check-digit validators (CNPJ accepts letters) |
 | view `account_balances` | posted and projected balance per account |
 | view `invoice_totals` | invoice total per invoice |
+| view `invoice_balances` | total, paid and still owed per invoice (the paid part is the card side of the linked payments that are still alive) |
 | view `monthly_category_spend` | spent per category per month (America/Sao_Paulo; pending counts, like in budgets) |
 | view `monthly_flow` | posted income and expenses per workspace, currency and month (America/Sao_Paulo); transfers excluded |
 
@@ -277,6 +281,7 @@ Stable error keys the app maps (see ARCHITECTURE section 5): `invalid_tax_id`, `
 
 ### Known behavior worth remembering
 
+- Paying an invoice in parts (`18_invoice_partial_payment.sql`): what was paid is not stored, it is the card side of the linked payment transfers that are still alive, so deleting a payment lowers it again and reopens a paid invoice. What is owed is the total minus what was paid, and a purchase that joins an unpaid invoice raises it. An unpaid remainder stays on the same invoice, with no interest and no carry-over.
 - When an end date removes pending occurrences, the generator goes back (`generated_count` is lowered to the first occurrence after the end date), so if the end date is moved later or taken off they are made again at once. An occurrence the person deleted, or confirmed, is not made again (the unique index on `recurring_id` and `scheduled_for` keeps its date). An item whose end date was set before `17_recurring_end_date.sql` keeps what was soft-deleted then; those occurrences can be restored from the trash.
 - Editing a recurring item never changes occurrences that are already confirmed or overdue.
 - `lead_days` on a recurring item is how many days before the due date the app announces its pending occurrences (3 by default); the reminders read it through the foreign key `transactions.recurring_id`.
