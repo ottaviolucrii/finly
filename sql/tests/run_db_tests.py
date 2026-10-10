@@ -4,7 +4,7 @@ Finly database tests on a throw-away local Postgres (no Docker needed).
     pip install pgserver "psycopg[binary]"
     python sql/tests/run_db_tests.py
 
-Applies 00..09, 11, 12, 14, 15, 16 and 17 (+ the Supabase mock; 10 and 13 need pg_cron, which
+Applies 00..09, 11, 12, 14, 15, 16, 17 and 18 (+ the Supabase mock; 10 and 13 need pg_cron, which
 only Supabase has) and checks the business rules: tax-id validation, RLS isolation,
 derived balances, monthly flow, transfers, credit card invoices/installments,
 recurring generation, edit and delete, audit log and account deletion.
@@ -15,7 +15,7 @@ import pgserver, psycopg
 SQL = pathlib.Path(__file__).resolve().parent.parent
 FILES = ["tests/00_mock_supabase.sql", "00_types.sql", "01_helpers.sql",
          "02_tables.sql", "03_logic.sql", "04_security.sql", "07_hardening.sql", "08_credit_card.sql", "09_budget_end_marker.sql",
-         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql"]
+         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql", "18_invoice_partial_payment.sql"]
 
 passed = failed = 0
 def check(name, cond, extra=""):
@@ -243,6 +243,61 @@ def main():
     conn.execute("select public.delete_transfer(%s)", (pay,))
     check("deleting payment reopens invoice", one(conn, "select status from public.credit_card_invoices where id=%s", (i1,)) in ("open", "closed"))
     check("a card payment cannot be restored (the invoice has to be paid again)", raises(conn, "select public.restore_transfer(%s)", (pay,), contains="card payment"))
+
+    # ---- credit card: partial payment -------------------------------------
+    print("invoice partial payment")
+    bal_of = lambda inv_id: conn.execute("select total_cents, paid_cents, remaining_cents from public.invoice_balances where invoice_id=%s", (inv_id,)).fetchone()
+    state_of = lambda inv_id: conn.execute("select status, paid_at, paid_by_transfer_id from public.credit_card_invoices where id=%s", (inv_id,)).fetchone()
+    pay4 = "select public.pay_invoice(%s,%s,now(),%s)"
+    tot = bal_of(i1)[0]
+    check("invoice_balances: nothing paid yet", bal_of(i1) == (tot, 0, tot), bal_of(i1))
+    check("only one pay_invoice exists (a call cannot be ambiguous)",
+          one(conn, "select count(*) from pg_proc where proname='pay_invoice' and pronamespace='public'::regnamespace") == 1)
+    card_before = card_bal()
+    p1 = one(conn, pay4, (i1, chk, 10000))
+    st = state_of(i1)
+    check("a partial payment keeps the invoice unpaid", st[0] != "paid" and st[1] is None and st[2] is None, st)
+    check("it records what was paid and what is still owed", bal_of(i1) == (tot, 10000, tot - 10000), bal_of(i1))
+    check("the payment is a transfer to the card: the debt falls by the amount", card_bal() == card_before + 10000, (card_bal(), card_before))
+    check("the payment says it is partial", one(conn, "select description from public.transactions where transfer_id=%s and type='transfer_out'", (p1,)).endswith("(parcial)"))
+    check("a payment is linked to its invoice", one(conn, "select count(*) from public.invoice_payments where invoice_id=%s and transfer_id=%s", (i1, p1)) == 1)
+    check("paying more than is owed is refused", raises(conn, pay4, (i1, chk, tot - 10000 + 1), contains="above"))
+    check("paying zero is refused", raises(conn, pay4, (i1, chk, 0), contains="positive"))
+    check("paying a negative amount is refused", raises(conn, pay4, (i1, chk, -5), contains="positive"))
+    extra_inv = one(conn, q, (ws_p, card, cat_food, 700, 'Compra depois do pagamento parcial', d_before))
+    check("a purchase on the unpaid invoice raises what is owed",
+          str(extra_inv) == str(i1) and bal_of(i1) == (tot + 700, 10000, tot + 700 - 10000), bal_of(i1))
+    p2 = one(conn, "select public.pay_invoice(%s,%s)", (i1, chk))
+    st = state_of(i1)
+    check("paying with no amount pays what is still owed and settles the invoice",
+          st[0] == "paid" and st[1] is not None and bal_of(i1) == (tot + 700, tot + 700, 0), (st, bal_of(i1)))
+    check("the invoice remembers the last payment", str(st[2]) == str(p2), st)
+    live_payments = one(conn, "select count(*) from public.invoice_payments ip join public.transactions t on t.transfer_id = ip.transfer_id "
+                              "and t.type = 'transfer_in' and t.deleted_at is null where ip.invoice_id=%s", (i1,))
+    check("both payments are linked to the invoice (a deleted one stays linked but counts for nothing)", live_payments == 2, live_payments)
+    check("a settled invoice cannot be paid again", raises(conn, pay4, (i1, chk, 100), contains="already paid"))
+    conn.execute("select public.delete_transfer(%s)", (p1,))
+    st = state_of(i1)
+    check("deleting an earlier part reopens a paid invoice", st[0] in ("open", "closed") and st[1] is None and st[2] is None, st)
+    check("what was paid goes down by that part", bal_of(i1) == (tot + 700, tot + 700 - 10000, 10000), bal_of(i1))
+    check("a deleted part cannot be restored (the invoice has to be paid again)",
+          raises(conn, "select public.restore_transfer(%s)", (p1,), contains="card payment"))
+    p3 = one(conn, pay4, (i1, chk, 10000))
+    check("paying exactly what is left settles the invoice",
+          state_of(i1)[0] == "paid" and bal_of(i1) == (tot + 700, tot + 700, 0), (state_of(i1), bal_of(i1)))
+    as_user(conn, B)
+    check("another user cannot pay A's invoice", raises(conn, pay4, (i1, chk, 1), contains="forbidden"))
+    check("another user does not see A's invoice payments", one(conn, "select count(*) from public.invoice_payments") == 0)
+    check("another user does not see A's invoice balances", one(conn, "select count(*) from public.invoice_balances where invoice_id=%s", (i1,)) == 0)
+    as_user(conn, None)
+    check("anonymous cannot pay an invoice", raises(conn, pay4, (i1, chk, 1)))
+    as_user(conn, A)
+    check("the payments cannot be written directly", raises(conn, "insert into public.invoice_payments(invoice_id, transfer_id) values (%s,%s)", (i1, p3)))
+    conn.execute("select public.delete_transfer(%s)", (p3,))
+    conn.execute("select public.delete_transfer(%s)", (p2,))
+    check("deleting the last payments reopens the invoice and leaves the first part's debt owed",
+          state_of(i1)[0] in ("open", "closed") and bal_of(i1)[1] == 0, (state_of(i1), bal_of(i1)))
+    conn.execute("update public.transactions set deleted_at = now() where description = 'Compra depois do pagamento parcial'")
 
     # ---- recurring --------------------------------------------------------
     print("recurring")

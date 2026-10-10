@@ -144,17 +144,18 @@ class ForecastRemoteDataSourceImpl implements ForecastRemoteDataSource {
         .order('due_date');
     if (invoices.isEmpty) return const [];
 
-    final totals = await _client
-        .from('invoice_totals')
-        .select('invoice_id, total_cents')
+    // What is still owed: the total minus the payments already made.
+    final remaining = await _client
+        .from('invoice_balances')
+        .select('invoice_id, remaining_cents')
         .filter(
           'invoice_id',
           'in',
           '(${invoices.map((invoice) => invoice['id'] as String).join(',')})',
         );
     final totalById = {
-      for (final row in totals)
-        row['invoice_id'] as String: (row['total_cents'] as num).toInt(),
+      for (final row in remaining)
+        row['invoice_id'] as String: (row['remaining_cents'] as num).toInt(),
     };
 
     return [

@@ -11,13 +11,15 @@ import 'package:finly/features/cards/presentation/card_messages.dart';
 import 'package:finly/features/cards/presentation/card_style.dart';
 import 'package:finly/features/cards/presentation/cubit/invoice_detail_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/invoice_detail_state.dart';
+import 'package:finly/features/cards/presentation/widgets/invoice_pay_sheet.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:finly/features/transactions/presentation/transaction_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// One invoice: its period, due date, total, the purchases inside it, and the
-/// button to pay it.
+/// One invoice: its period, due date, total, what was paid and what is still
+/// owed, the purchases inside it, and the button to pay it (all of it or a
+/// part).
 class InvoiceDetailPage extends StatelessWidget {
   final WorkspaceEntity workspace;
   final CreditCardEntity card;
@@ -67,11 +69,12 @@ class _InvoiceDetailView extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => _PaySheet(
+      builder: (_) => InvoicePaySheet(
         invoice: current,
-        card: card,
+        currency: card.currency,
         sources: sources,
-        onConfirm: cubit.pay,
+        onConfirm: (accountId, amountCents) =>
+            cubit.pay(accountId, amountCents: amountCents),
       ),
     );
   }
@@ -86,19 +89,27 @@ class _InvoiceDetailView extends StatelessWidget {
           (current.actionFailure != null &&
               previous.actionFailure != current.actionFailure) ||
           (previous.invoice != null &&
-              !previous.invoice!.isPaid &&
-              (current.invoice?.isPaid ?? false)),
+              current.invoice != null &&
+              current.invoice!.paidCents > previous.invoice!.paidCents),
       listener: (context, state) {
         final failure = state.actionFailure;
         if (failure != null) {
           _showMessage(context, cardFailureMessage(failure));
-        } else {
+          return;
+        }
+
+        final paid = state.invoice;
+        if (paid == null) return;
+        if (paid.isPaid) {
           _showMessage(context, 'Fatura paga.');
+        } else {
+          final left = Money(paid.remainingCents, card.currency).format();
+          _showMessage(context, 'Pagamento registrado. Falta $left.');
         }
       },
       builder: (context, state) {
         final current = state.invoice ?? invoice;
-        final status = current.statusOn(DateTime.now());
+        final today = DateTime.now();
 
         return Scaffold(
           appBar: AppBar(
@@ -121,12 +132,27 @@ class _InvoiceDetailView extends StatelessWidget {
                         Money(current.totalCents, card.currency).format(),
                         style: text.headlineSmall,
                       ),
+                      if (current.paidCents > 0) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Pago ${Money(current.paidCents, card.currency).format()}',
+                          style: text.bodyMedium,
+                        ),
+                        if (!current.isPaid)
+                          Text(
+                            'Falta ${Money(current.remainingCents, card.currency).format()}',
+                            style: text.titleMedium,
+                          ),
+                      ],
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(invoiceStatusIcon(status), size: 16),
+                          Icon(invoiceDisplayIcon(current, today), size: 16),
                           const SizedBox(width: 6),
-                          Text(invoiceStatusLabel(status), style: text.bodyMedium),
+                          Text(
+                            invoiceDisplayLabel(current, today),
+                            style: text.bodyMedium,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -146,7 +172,11 @@ class _InvoiceDetailView extends StatelessWidget {
                         else
                           FilledButton.icon(
                             icon: const Icon(Icons.payments_outlined),
-                            label: const Text('Pagar fatura'),
+                            label: Text(
+                              current.isPartiallyPaid
+                                  ? 'Pagar o restante'
+                                  : 'Pagar fatura',
+                            ),
                             onPressed: state.status == InvoiceDetailStatus.loaded
                                 ? () => _openPaySheet(
                                       context,
@@ -228,91 +258,6 @@ class _PurchaseTile extends StatelessWidget {
           style: text.titleMedium?.copyWith(
             color: transaction.type.isCredit ? scheme.primary : null,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Lets the user choose which account pays the invoice.
-class _PaySheet extends StatefulWidget {
-  final InvoiceEntity invoice;
-  final CreditCardEntity card;
-  final List<AccountEntity> sources;
-  final void Function(String accountId) onConfirm;
-
-  const _PaySheet({
-    required this.invoice,
-    required this.card,
-    required this.sources,
-    required this.onConfirm,
-  });
-
-  @override
-  State<_PaySheet> createState() => _PaySheetState();
-}
-
-class _PaySheetState extends State<_PaySheet> {
-  String? _selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final total = Money(widget.invoice.totalCents, widget.card.currency).format();
-
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Pagar fatura ${monthYearLabel(widget.invoice.referenceMonth)}',
-              style: text.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(total, style: text.headlineMedium, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            if (widget.sources.isEmpty)
-              Text(
-                'Você precisa de uma conta em ${widget.card.currency} (que não '
-                'seja um cartão) para pagar. Crie uma em Contas.',
-                textAlign: TextAlign.center,
-              )
-            else ...[
-              Text('Pagar com', style: text.labelLarge),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  for (final account in widget.sources)
-                    ChoiceChip(
-                      label: Text('${account.name} · ${account.postedBalance.format()}'),
-                      selected: _selected == account.id,
-                      onSelected: (_) => setState(() => _selected = account.id),
-                    ),
-                ],
-              ),
-            ],
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _selected == null
-                  ? null
-                  : () {
-                      Navigator.of(context).pop();
-                      widget.onConfirm(_selected!);
-                    },
-              child: Text('Pagar $total'),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-          ],
         ),
       ),
     );

@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:dartz/dartz.dart';
 import 'package:finly/core/error/failure.dart';
 import 'package:finly/features/transactions/data/datasources/transaction_move_remote_data_source.dart';

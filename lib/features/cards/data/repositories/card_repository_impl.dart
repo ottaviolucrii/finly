@@ -97,13 +97,21 @@ class CardRepositoryImpl implements CardRepository {
     required String invoiceId,
     required String fromAccountId,
     required DateTime paidAt,
+    int? amountCents,
   }) {
     return _guard<String>(
-      () => _remote.payInvoice(
-        invoiceId: invoiceId,
-        fromAccountId: fromAccountId,
-        paidAt: paidAt,
-      ),
+      () => amountCents == null
+          ? _remote.payInvoice(
+              invoiceId: invoiceId,
+              fromAccountId: fromAccountId,
+              paidAt: paidAt,
+            )
+          : _remote.payInvoice(
+              invoiceId: invoiceId,
+              fromAccountId: fromAccountId,
+              paidAt: paidAt,
+              amountCents: amountCents,
+            ),
     );
   }
 

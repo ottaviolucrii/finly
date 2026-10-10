@@ -225,14 +225,14 @@ To do (Phase 7 hardening):
 
 | Level | Tooling | What |
 |---|---|---|
-| Database | `python sql/tests/run_db_tests.py` (embedded Postgres) | 137 checks: RLS, constraints, triggers, RPCs, views, the trash purge, restore of transfers |
+| Database | `python sql/tests/run_db_tests.py` (embedded Postgres) | 162 checks: RLS, constraints, triggers, RPCs, views, the trash purge, restore of transfers |
 | Domain | `flutter_test`, `mocktail` | validators, `Money`, rules, use cases with mocked repositories |
 | Data | `flutter_test` | models, repository implementations with mocked data sources (including "an unexpected error becomes a failure"), error mapper |
 | Presentation | `bloc_test`, widget tests | cubit state sequences; the chart, lock screen, switch sheet, alerts and settings widgets |
 | Wiring | `test/core/di/injection_test.dart` | builds every bloc and cubit from the DI modules with a fake Supabase client |
 | Device | manual checklist per feature | every screen on a phone before a PR |
 
-About 2,100 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
+About 2,190 Dart tests. GitHub Actions (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test` and the database tests on every pull request and push to `develop` and `main`, with the same Flutter version as the development machine (3.41.6; move both together). The database tests cannot run on Windows (the embedded Postgres has no time zone database): CI runs them. Protecting the branches so a red PR cannot merge is tracked in `POLISH.md`.
 
 ## 11. Conventions
 
@@ -283,3 +283,4 @@ In use: `supabase_flutter`, `flutter_bloc`, `equatable`, `dartz`, `get_it`, `sha
 | ADR-27 | A savings goal follows one account and its progress is the posted balance of that account; there is no separate "saved" number | One number to keep right: nothing is counted twice and the goal moves with every real transaction; a credit card cannot be followed because its balance is a debt |
 | ADR-28 | Reads are kept as copies at the HTTP client, under the whole app, instead of mirroring the tables in a local database; nothing can be written without internet | Every screen, repository and test keeps working unchanged and is shown the last copy when the server cannot be reached; editing offline needs a queue and rules for conflicts, which is a much larger and riskier project |
 | ADR-29 | When the login library loses its session because an expired login cannot be renewed without internet, the app keeps using the person remembered from the session text saved on the phone, and brings the login back when the internet returns | Opening the app without internet must not ask for the password again; the saved text is the one the library itself keeps, and signing out removes it, so nobody is remembered after that |
+| ADR-30 | What was paid of an invoice is not stored: it is the card side of the payment transfers that are still alive, linked to the invoice by `invoice_payments` | Deleting a payment lowers it again with no bookkeeping, and the card balance and the invoice cannot disagree; an invoice is marked paid only when nothing is owed |

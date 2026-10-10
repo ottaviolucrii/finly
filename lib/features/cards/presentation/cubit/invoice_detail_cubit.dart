@@ -110,8 +110,9 @@ class InvoiceDetailCubit extends Cubit<InvoiceDetailState> {
     if (invoice != null && card != null) await load(invoice, card);
   }
 
-  /// Pays the whole invoice from [fromAccountId], then reloads it.
-  Future<void> pay(String fromAccountId) async {
+  /// Pays [amountCents] of the invoice from [fromAccountId] (everything still
+  /// owed when it is null), then reloads it.
+  Future<void> pay(String fromAccountId, {int? amountCents}) async {
     final invoice = state.invoice ?? _invoice;
     if (invoice == null || state.paying) return;
 
@@ -121,6 +122,7 @@ class InvoiceDetailCubit extends Cubit<InvoiceDetailState> {
         invoiceId: invoice.id,
         fromAccountId: fromAccountId,
         paidAt: DateTime.now(),
+        amountCents: amountCents,
       ),
     );
 
