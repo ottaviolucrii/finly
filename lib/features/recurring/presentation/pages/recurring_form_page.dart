@@ -1,7 +1,7 @@
 import 'package:finly/core/di/injection.dart';
-import 'package:finly/core/money/money.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
+import 'package:finly/core/widgets/form_parts.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_kind.dart';
@@ -122,16 +122,16 @@ class _RecurringFormViewState extends State<_RecurringFormView> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    final amount = Money.tryParse(_amount.text, _account.currency);
+    final amount = centsFromInput(_amount.text);
     final interval = int.tryParse(_interval.text.trim());
-    if (amount == null || amount.cents <= 0 || interval == null) return;
+    if (amount <= 0 || interval == null) return;
 
     context.read<RecurringFormCubit>().submit(
           workspaceId: widget.workspaceId,
           accountId: _accountId,
           categoryId: _categoryId,
           type: _type,
-          amountCents: amount.cents,
+          amountCents: amount,
           currency: _account.currency,
           description: _description.text,
           frequency: _frequency,
@@ -143,13 +143,10 @@ class _RecurringFormViewState extends State<_RecurringFormView> {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-
     return BlocConsumer<RecurringFormCubit, RecurringFormState>(
       listenWhen: (previous, current) => previous.status != current.status,
       listener: (context, state) {
-        if (state.status == RecurringFormStatus.failure &&
-            state.failure != null) {
+        if (state.status == RecurringFormStatus.failure && state.failure != null) {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(
@@ -162,211 +159,131 @@ class _RecurringFormViewState extends State<_RecurringFormView> {
       },
       builder: (context, state) {
         final submitting = state.status == RecurringFormStatus.submitting;
+        final text = Theme.of(context).textTheme;
+        final income = _type == TransactionType.income;
         final options = _categoryOptions;
 
-        return Scaffold(
-          appBar: AppBar(title: const Text('Nova recorrência')),
-          body: SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Form(
-                    key: _formKey,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SegmentedButton<TransactionType>(
-                          segments: const [
-                            ButtonSegment(
-                              value: TransactionType.expense,
-                              label: Text('Saída'),
-                              icon: Icon(Icons.arrow_upward),
-                            ),
-                            ButtonSegment(
-                              value: TransactionType.income,
-                              label: Text('Entrada'),
-                              icon: Icon(Icons.arrow_downward),
-                            ),
-                          ],
-                          selected: {_type},
-                          onSelectionChanged: submitting
-                              ? null
-                              : (selection) => setState(() {
-                                    _type = selection.first;
-                                    _categoryId = null;
-                                  }),
-                        ),
-                        const SizedBox(height: 20),
-                        Text('Conta', style: text.labelLarge),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            for (final account in widget.accounts)
-                              ChoiceChip(
-                                label: Text('${account.name} (${account.currency})'),
-                                selected: _accountId == account.id,
-                                onSelected: submitting
-                                    ? null
-                                    : (_) => setState(() => _accountId = account.id),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _amount,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: const [CentsInputFormatter()],
-                          enabled: !submitting,
-                          textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(
-                            labelText: 'Valor de cada lançamento',
-                            prefixText: '${Money.symbolFor(_account.currency)} ',
-                            border: const OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            final amount =
-                                Money.tryParse(value ?? '', _account.currency);
-                            return (amount == null || amount.cents <= 0)
-                                ? 'Informe um valor maior que zero (ex.: 1.200,00).'
-                                : null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _description,
-                          enabled: !submitting,
-                          textCapitalization: TextCapitalization.sentences,
-                          textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(
-                            labelText: 'Descrição',
-                            hintText: 'Ex.: Aluguel, Netflix, Salário',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            final description = (value ?? '').trim();
-                            if (description.isEmpty || description.length > 200) {
-                              return 'Informe uma descrição (até 200 caracteres).';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        Text('Categoria', style: text.labelLarge),
-                        const SizedBox(height: 8),
-                        if (options.isEmpty)
-                          Text('Nenhuma categoria disponível.', style: text.bodyMedium)
-                        else
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 4,
-                            children: [
-                              for (final category in options)
-                                ChoiceChip(
-                                  avatar: Icon(categoryIcon(category.icon), size: 18),
-                                  label: Text(category.name),
-                                  selected: _categoryId == category.id,
-                                  onSelected: submitting
-                                      ? null
-                                      : (selected) => setState(
-                                            () => _categoryId =
-                                                selected ? category.id : null,
-                                          ),
-                                ),
-                            ],
-                          ),
-                        const SizedBox(height: 20),
-                        Text('Repete', style: text.labelLarge),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            for (final frequency in RecurrenceFrequency.values)
-                              ChoiceChip(
-                                label: Text(frequencyChipLabel(frequency)),
-                                selected: _frequency == frequency,
-                                onSelected: submitting
-                                    ? null
-                                    : (_) => setState(() => _frequency = frequency),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _interval,
-                          enabled: !submitting,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                            LengthLimitingTextInputFormatter(2),
-                          ],
-                          decoration: InputDecoration(
-                            labelText: 'A cada',
-                            suffixText: frequencyUnit(_frequency),
-                            helperText: 'De 1 a 52.',
-                            border: const OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            final interval = int.tryParse((value ?? '').trim());
-                            return (interval == null ||
-                                    interval < 1 ||
-                                    interval > 52)
-                                ? 'Informe de 1 a 52.'
-                                : null;
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.event),
-                          title: const Text('Começa em'),
-                          subtitle: Text(formatDateBr(_start)),
-                          onTap: submitting ? null : _pickStart,
-                        ),
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.event_busy),
-                          title: const Text('Termina em (opcional)'),
-                          subtitle: Text(
-                            _end == null ? 'Sem data final' : formatDateBr(_end!),
-                          ),
-                          trailing: _end == null
-                              ? null
-                              : IconButton(
-                                  tooltip: 'Remover data final',
-                                  icon: const Icon(Icons.close),
-                                  onPressed: submitting
-                                      ? null
-                                      : () => setState(() => _end = null),
-                                ),
-                          onTap: submitting ? null : _pickEnd,
-                        ),
-                        Text(
-                          'Datas passadas não geram lançamentos. Os próximos '
-                          'aparecem como pendentes em Transações.',
-                          style: text.bodySmall,
-                        ),
-                        const SizedBox(height: 24),
-                        FilledButton(
-                          onPressed: submitting ? null : _submit,
-                          child: submitting
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Salvar'),
-                        ),
-                      ],
-                    ),
-                  ),
+        return FormPage(
+          title: 'Nova recorrência',
+          saveLabel: income ? 'Salvar entrada' : 'Salvar saída',
+          saving: submitting,
+          onSave: _submit,
+          form: Form(
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ChoicePills<TransactionType>(
+                  options: const [
+                    PillOption(TransactionType.expense, 'Saída', icon: Icons.north_east),
+                    PillOption(TransactionType.income, 'Entrada', icon: Icons.south_west),
+                  ],
+                  selected: _type,
+                  onSelected: submitting
+                      ? null
+                      : (type) => setState(() {
+                            _type = type;
+                            _categoryId = null;
+                          }),
                 ),
-              ),
+                formGap,
+                AmountCard(
+                  label: 'Valor de cada lançamento',
+                  controller: _amount,
+                  currency: _account.currency,
+                  enabled: !submitting,
+                  validator: (value) => centsFromInput(value ?? '') <= 0
+                      ? 'Informe um valor maior que zero.'
+                      : null,
+                ),
+                formGap,
+                const FieldLabel('Descrição'),
+                TextFormField(
+                  controller: _description,
+                  enabled: !submitting,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: formFieldDecoration(context, hint: 'Ex.: Aluguel, Netflix, Salário'),
+                  validator: (value) {
+                    final description = (value ?? '').trim();
+                    if (description.isEmpty || description.length > 200) {
+                      return 'Informe uma descrição (até 200 caracteres).';
+                    }
+                    return null;
+                  },
+                ),
+                formGap,
+                FieldLabel(income ? 'Receber em' : 'Pagar com'),
+                ChoicePills<String>(
+                  options: [
+                    for (final account in widget.accounts)
+                      PillOption(account.id, '${account.name} (${account.currency})'),
+                  ],
+                  selected: _accountId,
+                  onSelected: submitting ? null : (id) => setState(() => _accountId = id),
+                ),
+                formGap,
+                const FieldLabel('Categoria'),
+                if (options.isEmpty)
+                  Text('Nenhuma categoria disponível.', style: text.bodyMedium)
+                else
+                  ChoicePills<String>(
+                    options: [
+                      for (final category in options)
+                        PillOption(category.id, category.name, icon: categoryIcon(category.icon)),
+                    ],
+                    selected: _categoryId,
+                    onSelected: submitting
+                        ? null
+                        : (id) => setState(() => _categoryId = _categoryId == id ? null : id),
+                  ),
+                formGap,
+                const FieldLabel('Repete'),
+                ChoicePills<RecurrenceFrequency>(
+                  options: [
+                    for (final frequency in RecurrenceFrequency.values)
+                      PillOption(frequency, frequencyChipLabel(frequency)),
+                  ],
+                  selected: _frequency,
+                  onSelected: submitting ? null : (frequency) => setState(() => _frequency = frequency),
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _interval,
+                  enabled: !submitting,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(2),
+                  ],
+                  decoration: formFieldDecoration(context, helper: 'A cada quantos períodos. De 1 a 52.').copyWith(
+                    prefixText: 'A cada ',
+                    suffixText: frequencyUnit(_frequency),
+                  ),
+                  validator: (value) {
+                    final interval = int.tryParse((value ?? '').trim());
+                    return (interval == null || interval < 1 || interval > 52) ? 'Informe de 1 a 52.' : null;
+                  },
+                ),
+                formGap,
+                const FieldLabel('Começa em'),
+                DateCard(value: formatDateBr(_start), onTap: submitting ? null : _pickStart),
+                const SizedBox(height: 12),
+                const FieldLabel('Termina em (opcional)'),
+                DateCard(
+                  icon: Icons.event_busy,
+                  value: _end == null ? 'Sem data final' : formatDateBr(_end!),
+                  onTap: submitting ? null : _pickEnd,
+                  onClear: (_end == null || submitting) ? null : () => setState(() => _end = null),
+                  clearTooltip: 'Remover data final',
+                ),
+                formGap,
+                const InfoBox(
+                  icon: Icons.info_outline,
+                  text: 'Datas passadas não geram lançamentos. Os próximos aparecem como pendentes em '
+                      'Extrato, prontos para confirmar.',
+                ),
+              ],
             ),
           ),
         );

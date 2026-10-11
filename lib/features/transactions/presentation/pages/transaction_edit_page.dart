@@ -1,7 +1,7 @@
 import 'package:finly/core/di/injection.dart';
-import 'package:finly/core/money/money.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
+import 'package:finly/core/widgets/form_parts.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_kind.dart';
@@ -153,13 +153,13 @@ class _TransactionEditViewState extends State<_TransactionEditView> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    final amount = Money.tryParse(_amount.text, _currency);
-    if (amount == null || amount.cents <= 0) return;
+    final amount = centsFromInput(_amount.text);
+    if (amount <= 0) return;
 
     context.read<TransactionEditCubit>().submit(
           transactionId: widget.transaction.id,
           categoryId: _categoryId,
-          amountCents: amount.cents,
+          amountCents: amount,
           description: _description.text,
           occurredAt: _occurredAt,
           status: _pending ? TransactionStatus.pending : TransactionStatus.posted,
@@ -185,162 +185,109 @@ class _TransactionEditViewState extends State<_TransactionEditView> {
         }
       },
       child: BlocConsumer<TransactionEditCubit, TransactionEditState>(
-      listenWhen: (previous, current) => previous.status != current.status,
-      listener: (context, state) {
-        if (state.status == TransactionEditStatus.failure &&
-            state.failure != null) {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(content: Text(transactionFailureMessage(state.failure!))),
-            );
-        }
-        if (state.status == TransactionEditStatus.success) {
-          Navigator.of(context).pop(true);
-        }
-      },
-      builder: (context, state) {
-        final submitting = state.status == TransactionEditStatus.submitting;
-        final moving = context.watch<TransactionMoveCubit>().state.status ==
-            TransactionMoveStatus.moving;
+        listenWhen: (previous, current) => previous.status != current.status,
+        listener: (context, state) {
+          if (state.status == TransactionEditStatus.failure && state.failure != null) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(content: Text(transactionFailureMessage(state.failure!))),
+              );
+          }
+          if (state.status == TransactionEditStatus.success) {
+            Navigator.of(context).pop(true);
+          }
+        },
+        builder: (context, state) {
+          final submitting = state.status == TransactionEditStatus.submitting;
+          final moving = context.watch<TransactionMoveCubit>().state.status == TransactionMoveStatus.moving;
 
-        return Scaffold(
-          appBar: AppBar(title: const Text('Editar transação')),
-          body: SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Form(
-                    key: _formKey,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          '${isIncome ? 'Entrada' : 'Saída'} · '
-                          '${widget.account?.name ?? 'Conta'} ($_currency)',
-                          style: text.titleMedium,
-                        ),
-                        const SizedBox(height: 4),
-                        if (_canMove) ...[
-                          Text('O tipo não pode ser alterado.', style: text.bodySmall),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: TextButton.icon(
-                              icon: const Icon(Icons.swap_horiz),
-                              label: const Text('Mover para outra conta'),
-                              onPressed: (submitting || moving) ? null : _pickAccount,
-                            ),
-                          ),
-                        ] else
-                          Text(
-                            'O tipo e a conta não podem ser alterados.',
-                            style: text.bodySmall,
-                          ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _amount,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: const [CentsInputFormatter()],
-                          enabled: !submitting,
-                          textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(
-                            labelText: 'Valor',
-                            prefixText: '${Money.symbolFor(_currency)} ',
-                            border: const OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            final amount = Money.tryParse(value ?? '', _currency);
-                            return (amount == null || amount.cents <= 0)
-                                ? 'Informe um valor maior que zero (ex.: 25,90).'
-                                : null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        Text('Categoria', style: text.labelLarge),
-                        const SizedBox(height: 8),
-                        if (options.isEmpty)
-                          Text('Nenhuma categoria disponível.', style: text.bodyMedium)
-                        else
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 4,
-                            children: [
-                              for (final category in options)
-                                ChoiceChip(
-                                  avatar: Icon(categoryIcon(category.icon), size: 18),
-                                  label: Text(category.name),
-                                  selected: _categoryId == category.id,
-                                  onSelected: submitting
-                                      ? null
-                                      : (selected) => setState(
-                                            () => _categoryId =
-                                                selected ? category.id : null,
-                                          ),
-                                ),
-                            ],
-                          ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _description,
-                          enabled: !submitting,
-                          textCapitalization: TextCapitalization.sentences,
-                          textInputAction: TextInputAction.done,
-                          decoration: const InputDecoration(
-                            labelText: 'Descrição',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            final description = (value ?? '').trim();
-                            if (description.isEmpty || description.length > 200) {
-                              return 'Informe uma descrição (até 200 caracteres).';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.event),
-                          title: const Text('Data'),
-                          subtitle: Text(formatDateBr(_date)),
-                          onTap: submitting ? null : _pickDate,
-                        ),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Ainda não aconteceu (pendente)'),
-                          subtitle: const Text(
-                            'Entra no saldo previsto, não no saldo atual.',
-                          ),
-                          value: _pending,
-                          onChanged: submitting
-                              ? null
-                              : (value) => setState(() => _pending = value),
-                        ),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: (submitting || moving) ? null : _submit,
-                          child: submitting
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Salvar alterações'),
-                        ),
+          return FormPage(
+            title: isIncome ? 'Editar receita' : 'Editar despesa',
+            saveLabel: 'Salvar alterações',
+            saving: submitting,
+            onSave: moving ? null : _submit,
+            form: Form(
+              key: _formKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AmountCard(
+                    label: 'Valor',
+                    controller: _amount,
+                    currency: _currency,
+                    enabled: !submitting,
+                    validator: (value) => centsFromInput(value ?? '') <= 0
+                        ? 'Informe um valor maior que zero.'
+                        : null,
+                  ),
+                  formGap,
+                  const FieldLabel('Descrição'),
+                  TextFormField(
+                    controller: _description,
+                    enabled: !submitting,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: formFieldDecoration(context),
+                    validator: (value) {
+                      final description = (value ?? '').trim();
+                      if (description.isEmpty || description.length > 200) {
+                        return 'Informe uma descrição (até 200 caracteres).';
+                      }
+                      return null;
+                    },
+                  ),
+                  formGap,
+                  const FieldLabel('Categoria'),
+                  if (options.isEmpty)
+                    Text('Nenhuma categoria disponível.', style: text.bodyMedium)
+                  else
+                    ChoicePills<String>(
+                      options: [
+                        for (final category in options)
+                          PillOption(category.id, category.name, icon: categoryIcon(category.icon)),
                       ],
+                      selected: _categoryId,
+                      onSelected: submitting
+                          ? null
+                          : (id) => setState(() => _categoryId = _categoryId == id ? null : id),
+                    ),
+                  formGap,
+                  FieldLabel(isIncome ? 'Recebida em' : 'Paga com'),
+                  Card(
+                    margin: EdgeInsets.zero,
+                    clipBehavior: Clip.antiAlias,
+                    child: ListTile(
+                      leading: const Icon(Icons.account_balance_wallet_outlined),
+                      title: Text('${widget.account?.name ?? 'Conta'} ($_currency)'),
+                      subtitle: Text(_canMove ? 'Toque para mover para outra conta' : 'A conta não pode ser alterada'),
+                      trailing: _canMove ? const Icon(Icons.swap_horiz) : null,
+                      onTap: (_canMove && !submitting && !moving) ? _pickAccount : null,
                     ),
                   ),
-                ),
+                  formGap,
+                  const FieldLabel('Data'),
+                  DateCard(value: formatDateBr(_date), onTap: submitting ? null : _pickDate),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Ainda não aconteceu'),
+                    subtitle: const Text('Fica pendente: entra no previsto, não no saldo de hoje.'),
+                    value: _pending,
+                    onChanged: submitting ? null : (value) => setState(() => _pending = value),
+                  ),
+                  formGap,
+                  InfoBox(
+                    icon: Icons.lock_outline,
+                    text: isIncome
+                        ? 'Uma receita continua receita: para virar despesa, exclua e lance de novo.'
+                        : 'Uma despesa continua despesa: para virar receita, exclua e lance de novo.',
+                  ),
+                ],
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
       ),
     );
   }
