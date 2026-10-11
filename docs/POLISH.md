@@ -193,3 +193,5 @@ found; cosmetic items are done in batches.
 - [ ] Design step 6 (Mais) folded into the polish round: only small touches left
 - [ ] Design: the inside of the Empresa screens (Metas, Orcamentos, Previsao, Recorrencias, Relatorio, Contas, Categorias, Historico, Lixeira, Reserva) still uses the older layout; restyle them one by one from screenshots
 - [x] Polish 3: all money fields typed like in bank apps (CentsInputFormatter; a minus sign only for opening balances); Metas with a summary card, sections and rings
+- [x] Group 1: Contas (blue total card, accounts and cards in white cards, archived folded), Orcamentos (ring with the total, categories by how close to the limit, what is left per day, categories without a budget as chips), Recorrencias (what comes in and goes out each month, Entradas and Saidas)
+- [ ] Design: "Sem orcamento" chips open the form without the category already chosen

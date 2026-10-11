@@ -1,10 +1,13 @@
 import 'package:finly/core/di/injection.dart';
+import 'package:finly/core/money/money.dart';
 import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/core/utils/date_format.dart';
+import 'package:finly/core/widgets/grouped_list.dart';
 import 'package:finly/core/widgets/workspace_title.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
+import 'package:finly/features/recurring/domain/entities/recurrence_frequency.dart';
 import 'package:finly/features/recurring/domain/entities/recurring_entity.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_cubit.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_delete_cubit.dart';
@@ -185,20 +188,150 @@ class _RecurringView extends StatelessWidget {
 
     final accountById = {for (final a in state.accounts) a.id: a};
     final cubit = context.read<RecurringCubit>();
+    final incomes = [for (final item in state.items) if (item.type.isCredit) item];
+    final expenses = [for (final item in state.items) if (!item.type.isCredit) item];
+
+    Widget group(List<RecurringEntity> list) => Card(
+          margin: EdgeInsets.zero,
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              for (var i = 0; i < list.length; i++) ...[
+                if (i > 0) const Divider(indent: 68),
+                _RecurringTile(
+                  item: list[i],
+                  account: accountById[list[i].accountId],
+                  onTap: () => _openEdit(context, state, list[i]),
+                  onEdit: () => _openEdit(context, state, list[i]),
+                  onToggle: () => cubit.toggleActive(list[i]),
+                  onDelete: () => _confirmDelete(context, list[i]),
+                ),
+              ],
+            ],
+          ),
+        );
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
       children: [
-        for (final item in state.items)
-          _RecurringTile(
-            item: item,
-            account: accountById[item.accountId],
-            onTap: () => _openEdit(context, state, item),
-            onEdit: () => _openEdit(context, state, item),
-            onToggle: () => cubit.toggleActive(item),
-            onDelete: () => _confirmDelete(context, item),
-          ),
+        _MonthlySummary(items: state.items, today: DateTime.now()),
+        if (incomes.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          const SectionLabel('Entradas'),
+          group(incomes),
+        ],
+        if (expenses.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          const SectionLabel('Saídas'),
+          group(expenses),
+        ],
       ],
+    );
+  }
+}
+
+/// What an item adds up to in a month, on average: weekly ones count 52/12
+/// times, yearly ones a twelfth, every 2 months half, and so on.
+int monthlyEquivalentCents(RecurringEntity item) {
+  final every = item.intervalCount < 1 ? 1 : item.intervalCount;
+  final perMonth = switch (item.frequency) {
+    RecurrenceFrequency.daily => item.amountCents * 365 / 12,
+    RecurrenceFrequency.weekly => item.amountCents * 52 / 12,
+    RecurrenceFrequency.monthly => item.amountCents.toDouble(),
+    RecurrenceFrequency.yearly => item.amountCents / 12,
+  };
+  return (perMonth / every).round();
+}
+
+/// True while the item still makes transactions (not paused, not ended).
+bool isRunning(RecurringEntity item, DateTime today) =>
+    item.isActive && item.nextDate(today) != null;
+
+/// The top card: how much comes in and goes out each month from what repeats
+/// (paused and ended items left out), and what is left of it.
+class _MonthlySummary extends StatelessWidget {
+  final List<RecurringEntity> items;
+  final DateTime today;
+
+  const _MonthlySummary({required this.items, required this.today});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    // Items in other currencies are not added to the first one.
+    final currency = items.first.currency;
+    var incoming = 0, outgoing = 0;
+    for (final item in items) {
+      if (item.currency != currency || !isRunning(item, today)) continue;
+      if (item.type.isCredit) {
+        incoming += monthlyEquivalentCents(item);
+      } else {
+        outgoing += monthlyEquivalentCents(item);
+      }
+    }
+    final left = incoming - outgoing;
+    String money(int cents) => Money(cents, currency).format();
+
+    Widget tile(String label, String value, Color background, Color foreground) => Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(14)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(fontSize: 12, color: foreground)),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(value, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: foreground)),
+                ),
+              ],
+            ),
+          ),
+        );
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Todo mês, pelo que se repete', style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                tile(
+                  'Entra',
+                  money(incoming),
+                  dark ? AppColors.positive.withValues(alpha: 0.25) : AppColors.positiveTint,
+                  dark ? const Color(0xFF6FD39B) : AppColors.positive,
+                ),
+                const SizedBox(width: 12),
+                tile(
+                  'Sai',
+                  money(outgoing),
+                  dark ? AppColors.gold.withValues(alpha: 0.18) : AppColors.goldTint,
+                  dark ? AppColors.goldOnBand : AppColors.goldOnLight,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              left >= 0
+                  ? 'Sobram uns ${money(left)} por mês antes dos outros gastos.'
+                  : 'Sai mais do que entra: faltam uns ${money(-left)} por mês.',
+              style: text.bodySmall?.copyWith(
+                color: left < 0 ? scheme.error : scheme.onSurfaceVariant,
+                fontWeight: left < 0 ? FontWeight.w600 : null,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -224,86 +357,97 @@ class _RecurringTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     final next = item.nextDate(DateTime.now());
-    final status = !item.isActive
-        ? 'Pausada'
-        : (next == null ? 'Encerrada' : 'Próxima: ${formatDateBr(next)}');
-    final sign = item.type.isCredit ? '+' : '-';
+    final credit = item.type.isCredit;
+    final amountColor = credit ? (dark ? const Color(0xFF6FD39B) : AppColors.positive) : null;
 
-    // The description gets a full line (two at most) and the amount its own
-    // line, so nothing is cut off on a narrow phone or with a large font.
+    final Widget status;
+    if (!item.isActive || next == null) {
+      status = Container(
+        height: 22,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: dark ? AppColors.borderDark : AppColors.hairline,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          item.isActive ? 'Encerrada' : 'Pausada',
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+        ),
+      );
+    } else {
+      status = Text(
+        'Próxima ${formatDateBr(next).substring(0, 5)}',
+        style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+      );
+    }
+
     return Opacity(
       opacity: item.isActive ? 1 : 0.6,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 0, 12),
+          child: Row(
+            children: [
+              IconBadge(icon: credit ? Icons.south_west : Icons.repeat),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.repeat, color: scheme.primary),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        item.description,
-                        style: text.titleMedium,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    Text(
+                      item.description,
+                      style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    PopupMenuButton<String>(
-                      tooltip: 'Mais opções',
-                      onSelected: (value) {
-                        switch (value) {
-                          case 'edit':
-                            onEdit();
-                          case 'toggle':
-                            onToggle();
-                          case 'delete':
-                            onDelete();
-                        }
-                      },
-                      itemBuilder: (_) => [
-                        const PopupMenuItem(value: 'edit', child: Text('Editar')),
-                        PopupMenuItem(
-                          value: 'toggle',
-                          child: Text(item.isActive ? 'Pausar' : 'Retomar'),
-                        ),
-                        const PopupMenuItem(value: 'delete', child: Text('Excluir')),
-                      ],
+                    Text(
+                      '${frequencyLabel(item.frequency, item.intervalCount)} · ${account?.name ?? 'Conta'}',
+                      style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 36, right: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$sign ${item.amount.format()}',
-                        style: text.titleLarge?.copyWith(
-                          color: item.type.isCredit ? scheme.primary : null,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${frequencyLabel(item.frequency, item.intervalCount)} · '
-                        '${account?.name ?? 'Conta'}',
-                        style: text.bodySmall,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(status, style: text.bodySmall),
-                    ],
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${credit ? '+ ' : ''}${item.amount.format()}',
+                    style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w700, color: amountColor),
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 4),
+                  status,
+                ],
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'Mais opções',
+                onSelected: (value) {
+                  switch (value) {
+                    case 'edit':
+                      onEdit();
+                    case 'toggle':
+                      onToggle();
+                    case 'delete':
+                      onDelete();
+                  }
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'edit', child: Text('Editar')),
+                  PopupMenuItem(
+                    value: 'toggle',
+                    child: Text(item.isActive ? 'Pausar' : 'Retomar'),
+                  ),
+                  const PopupMenuItem(value: 'delete', child: Text('Excluir')),
+                ],
+              ),
+            ],
           ),
         ),
       ),

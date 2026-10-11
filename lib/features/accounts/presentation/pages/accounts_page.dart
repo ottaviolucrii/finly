@@ -1,7 +1,10 @@
 import 'package:finly/core/di/injection.dart';
+import 'package:finly/core/money/money.dart';
 import 'package:finly/core/theme/app_colors.dart';
+import 'package:finly/core/widgets/grouped_list.dart';
 import 'package:finly/core/widgets/workspace_title.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
+import 'package:finly/features/accounts/domain/entities/account_type.dart';
 import 'package:finly/features/accounts/presentation/account_messages.dart';
 import 'package:finly/features/accounts/presentation/account_style.dart';
 import 'package:finly/features/accounts/presentation/cubit/accounts_cubit.dart';
@@ -13,6 +16,7 @@ import 'package:finly/features/accounts/presentation/pages/account_form_page.dar
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/dashboard/domain/dashboard_rules.dart';
+import 'package:finly/features/dashboard/domain/entities/dashboard_data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -167,68 +171,135 @@ class _AccountList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-
     // Credit cards are not part of the total (it is what you have); what is
     // owed on them is shown on its own line, like on the dashboard.
     final totals = totalsByCurrency(accounts);
+    final regular = [for (final a in accounts) if (a.type != AccountType.creditCard) a];
+    final cards = [for (final a in accounts) if (a.type == AccountType.creditCard) a];
+
+    Widget group(List<AccountEntity> list) => Card(
+          margin: EdgeInsets.zero,
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              for (var i = 0; i < list.length; i++) ...[
+                if (i > 0) const Divider(indent: 68),
+                _AccountRow(
+                  account: list[i],
+                  onTap: () => onEdit(list[i]),
+                  onEdit: () => onEdit(list[i]),
+                  onArchive: () => onArchive(list[i]),
+                ),
+              ],
+            ],
+          ),
+        );
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
       children: [
         if (accounts.isEmpty)
           const _EmptyCard()
         else ...[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Saldo total', style: text.titleMedium),
-                  const SizedBox(height: 8),
-                  for (final total in totals) ...[
-                    Text(
-                      total.posted.format(),
-                      style: text.headlineSmall?.copyWith(
-                        color: total.posted.isNegative ? scheme.error : null,
-                      ),
-                    ),
-                    if (total.cardDebtCents > 0)
-                      Text(
-                        'Cartões em uso: ${total.cardDebt.format()}',
-                        style: text.bodySmall,
-                      ),
-                    const SizedBox(height: 4),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          for (final account in accounts)
-            _AccountTile(
-              account: account,
-              onTap: () => onEdit(account),
-              onEdit: () => onEdit(account),
-              onArchive: () => onArchive(account),
-            ),
+          _TotalCard(totals: totals, count: regular.length),
+          if (regular.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            const SectionLabel('Contas'),
+            group(regular),
+          ],
+          if (cards.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            const SectionLabel('Cartões de crédito'),
+            group(cards),
+          ],
         ],
-        const SizedBox(height: 8),
+        const SizedBox(height: 20),
         footer,
       ],
     );
   }
 }
 
-class _AccountTile extends StatelessWidget {
+/// The dark blue card at the top: the balance in accounts and, below it, what
+/// is expected, what is in use on cards and how many accounts there are.
+class _TotalCard extends StatelessWidget {
+  final List<CurrencyBalance> totals;
+  final int count;
+
+  const _TotalCard({required this.totals, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final main = totals.isEmpty ? null : totals.first;
+
+    Widget pill(String label, String? value, {Color valueColor = AppColors.white}) => Container(
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.white.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 13, color: AppColors.onBand)),
+              if (value != null) ...[
+                const SizedBox(width: 6),
+                Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: valueColor)),
+              ],
+            ],
+          ),
+        );
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: AppColors.deepBlue, borderRadius: BorderRadius.circular(22)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Saldo em contas', style: TextStyle(fontSize: 13, color: AppColors.onBand)),
+          const SizedBox(height: 4),
+          Text(
+            main == null ? 'R\$ 0,00' : main.posted.format(),
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+              fontSize: 30,
+              color: main != null && main.postedCents < 0 ? AppColors.goldOnBand : AppColors.white,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          for (final other in totals.skip(1))
+            Text(
+              other.posted.format(),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.white),
+            ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (main != null && main.hasPendingEffect) pill('Previsto', main.projected.format()),
+              if (main != null && main.cardDebtCents > 0)
+                pill('Cartões em uso', main.cardDebt.format(), valueColor: AppColors.goldOnBand),
+              pill(count == 1 ? '1 conta' : '$count contas', null),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One account in the list: its icon, name, type and balance (in red below
+/// zero), what is expected when something is pending, and its menu.
+class _AccountRow extends StatelessWidget {
   final AccountEntity account;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onArchive;
 
-  const _AccountTile({
+  const _AccountRow({
     required this.account,
     required this.onTap,
     required this.onEdit,
@@ -240,71 +311,82 @@ class _AccountTile extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final balance = account.postedBalance;
+    final card = account.type == AccountType.creditCard;
+    final used = Money(-balance.cents, balance.currency);
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Icon(accountTypeIcon(account.type), color: scheme.primary),
-              ),
-              const SizedBox(width: 16),
-              // The name gets the full width; the balance sits below it.
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      account.name,
-                      style: text.titleMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(accountTypeLabel(account.type), style: text.bodySmall),
-                    const SizedBox(height: 6),
-                    Text(
-                      balance.format(),
-                      style: text.titleLarge?.copyWith(
-                        color: balance.isNegative ? scheme.error : null,
-                      ),
-                    ),
-                    if (account.hasPendingEffect)
-                      Text(
-                        'Previsto: ${account.projectedBalance.format()}',
-                        style: text.bodySmall,
-                      ),
-                  ],
-                ),
-              ),
-              PopupMenuButton<String>(
-                tooltip: 'Mais opções',
-                onSelected: (value) {
-                  if (value == 'edit') {
-                    onEdit();
-                  } else {
-                    onArchive();
-                  }
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'edit', child: Text('Editar')),
-                  PopupMenuItem(value: 'archive', child: Text('Arquivar')),
+    final String amount;
+    if (card) {
+      amount = balance.cents < 0 ? 'Em uso ${used.format()}' : 'Sem uso';
+    } else {
+      amount = balance.format();
+    }
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 0, 12),
+        child: Row(
+          children: [
+            IconBadge(icon: accountTypeIcon(account.type)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    account.name,
+                    style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    accountTypeLabel(account.type),
+                    style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  amount,
+                  style: text.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: !card && balance.isNegative ? scheme.error : null,
+                  ),
+                ),
+                if (!card && account.hasPendingEffect)
+                  Text(
+                    'Previsto ${account.projectedBalance.format()}',
+                    style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+              ],
+            ),
+            PopupMenuButton<String>(
+              tooltip: 'Mais opções',
+              onSelected: (value) {
+                if (value == 'edit') {
+                  onEdit();
+                } else {
+                  onArchive();
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'edit', child: Text('Editar')),
+                PopupMenuItem(value: 'archive', child: Text('Arquivar')),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// The archived accounts, with a button to bring each one back.
+/// The archived accounts, folded in one row, with a button to bring each one
+/// back.
 class _ArchivedSection extends StatelessWidget {
   final void Function(AccountEntity account) onRestore;
 
@@ -329,26 +411,38 @@ class _ArchivedSection extends StatelessWidget {
         if (state.accounts.isEmpty) return const SizedBox.shrink();
 
         final text = Theme.of(context).textTheme;
+        final count = state.accounts.length;
 
-        return Card(
-          child: ExpansionTile(
-            title: Text('Arquivadas (${state.accounts.length})'),
-            children: [
-              for (final account in state.accounts)
-                ListTile(
-                  leading: Icon(accountTypeIcon(account.type)),
-                  title: Text(account.name, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(
-                    '${accountTypeLabel(account.type)} · ${account.currency}',
-                    style: text.bodySmall,
-                  ),
-                  trailing: TextButton(
-                    onPressed: () => onRestore(account),
-                    child: const Text('Restaurar'),
-                  ),
-                ),
-            ],
-          ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SectionLabel('Arquivadas'),
+            Card(
+              margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
+              child: ExpansionTile(
+                shape: const Border(),
+                collapsedShape: const Border(),
+                leading: const IconBadge(icon: Icons.inventory_2_outlined),
+                title: Text(count == 1 ? '1 conta arquivada' : '$count contas arquivadas'),
+                children: [
+                  for (final account in state.accounts)
+                    ListTile(
+                      leading: Icon(accountTypeIcon(account.type)),
+                      title: Text(account.name, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(
+                        '${accountTypeLabel(account.type)} · ${account.currency}',
+                        style: text.bodySmall,
+                      ),
+                      trailing: TextButton(
+                        onPressed: () => onRestore(account),
+                        child: const Text('Restaurar'),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
