@@ -45,9 +45,11 @@ class TransactionsCubit extends Cubit<TransactionsState> {
         _deleteTransfer = deleteTransfer,
         super(const TransactionsState());
 
-  Future<void> load(String workspaceId) async {
+  /// Loads the first page. [filter] replaces the current one (Extrato starts
+  /// on the current month); without it the current filter is kept.
+  Future<void> load(String workspaceId, {TransactionFilter? filter}) async {
     _workspaceId = workspaceId;
-    await _refresh(lookups: true);
+    await _refresh(lookups: true, filter: filter);
   }
 
   /// Back to the first page with the current filter. Used after anything

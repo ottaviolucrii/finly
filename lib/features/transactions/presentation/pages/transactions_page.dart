@@ -1,14 +1,11 @@
 import 'dart:async';
 
 import 'package:finly/core/di/injection.dart';
-import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
-import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:finly/features/categories/domain/entities/category_entity.dart';
-import 'package:finly/features/categories/presentation/category_style.dart';
+import 'package:finly/features/dashboard/presentation/cubit/month_totals_cubit.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:finly/features/trash/presentation/pages/trash_page.dart';
@@ -17,33 +14,47 @@ import 'package:finly/features/transactions/presentation/cubit/transactions_cubi
 import 'package:finly/features/transactions/presentation/cubit/transactions_state.dart';
 import 'package:finly/features/transactions/presentation/pages/transaction_edit_page.dart';
 import 'package:finly/features/transactions/presentation/pages/transaction_form_page.dart';
+import 'package:finly/features/transactions/presentation/statement_filters.dart';
 import 'package:finly/features/transactions/presentation/transaction_messages.dart';
-import 'package:finly/features/transactions/presentation/transaction_style.dart';
+import 'package:finly/features/transactions/presentation/widgets/statement_band.dart';
+import 'package:finly/features/transactions/presentation/widgets/statement_list.dart';
 import 'package:finly/features/transactions/presentation/widgets/transaction_filter_sheet.dart';
 import 'package:finly/features/transfers/presentation/pages/transfer_form_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// Transactions of one workspace. The cubit is created for [workspace], so it
-/// never shows data of another workspace.
+/// Extrato: the transactions of one workspace, a month at a time. The cubits
+/// are created for [workspace], so it never shows data of another workspace.
 class TransactionsPage extends StatelessWidget {
   final WorkspaceEntity workspace;
 
-  const TransactionsPage({super.key, required this.workspace});
+  /// "Now", to start on the current month; tests pass a fixed date.
+  final DateTime Function()? clock;
+
+  const TransactionsPage({super.key, required this.workspace, this.clock});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<TransactionsCubit>()..load(workspace.id),
-      child: _TransactionsView(workspace: workspace),
+    final now = (clock ?? DateTime.now)();
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => sl<TransactionsCubit>()
+            ..load(workspace.id, filter: filterForMonth(const TransactionFilter(), now)),
+        ),
+        BlocProvider(create: (_) => sl<MonthTotalsCubit>()..load(workspace.id, now)),
+      ],
+      child: _TransactionsView(workspace: workspace, now: now),
     );
   }
 }
 
 class _TransactionsView extends StatefulWidget {
   final WorkspaceEntity workspace;
+  final DateTime now;
 
-  const _TransactionsView({required this.workspace});
+  const _TransactionsView({required this.workspace, required this.now});
 
   @override
   State<_TransactionsView> createState() => _TransactionsViewState();
@@ -53,6 +64,9 @@ class _TransactionsViewState extends State<_TransactionsView> {
   final _search = TextEditingController();
   final _scroll = ScrollController();
   Timer? _debounce;
+
+  /// The search box is open.
+  bool _searching = false;
 
   WorkspaceEntity get _workspace => widget.workspace;
 
@@ -101,11 +115,41 @@ class _TransactionsViewState extends State<_TransactionsView> {
     cubit.setFilter(cubit.state.filter.withSearch(''));
   }
 
+  void _toggleSearch() {
+    if (_searching) {
+      setState(() => _searching = false);
+      if (_search.text.isNotEmpty) _clearSearch();
+    } else {
+      setState(() => _searching = true);
+    }
+  }
+
   void _clearAllFilters() {
     _search.clear();
     _debounce?.cancel();
-    setState(() {});
-    context.read<TransactionsCubit>().setFilter(const TransactionFilter());
+    setState(() => _searching = false);
+    final cubit = context.read<TransactionsCubit>();
+    // Back to the month that was shown (or this month), nothing else set.
+    final month = monthOfFilter(cubit.state.filter) ?? widget.now;
+    cubit.setFilter(filterForMonth(const TransactionFilter(), month));
+  }
+
+  /// Moves the statement [months] months from the one shown.
+  void _moveMonth(int months) {
+    final cubit = context.read<TransactionsCubit>();
+    final filter = cubit.state.filter;
+    final shown = monthOfFilter(filter) ?? widget.now;
+    cubit.setFilter(filterForMonth(filter, DateTime(shown.year, shown.month + months)));
+  }
+
+  void _thisMonth() {
+    final cubit = context.read<TransactionsCubit>();
+    cubit.setFilter(filterForMonth(cubit.state.filter, widget.now));
+  }
+
+  void _confirm(String id) {
+    final totals = context.read<MonthTotalsCubit>();
+    context.read<TransactionsCubit>().confirm(id).then((_) => totals.reload());
   }
 
   Future<void> _openFilters(TransactionsState state) async {
@@ -242,107 +286,139 @@ class _TransactionsViewState extends State<_TransactionsView> {
 
   @override
   Widget build(BuildContext context) {
-    final isBusiness = _workspace.type == WorkspaceType.business;
-
-    return BlocConsumer<TransactionsCubit, TransactionsState>(
-      listenWhen: (previous, current) =>
-          (current.actionFailure != null &&
-              previous.actionFailure != current.actionFailure) ||
-          (current.deletedTransaction != null &&
-              previous.deletedTransaction != current.deletedTransaction),
-      listener: (context, state) {
-        final failure = state.actionFailure;
-        if (failure != null) {
-          _showMessage(transactionFailureMessage(failure));
-          return;
-        }
-        if (state.deletedTransaction != null) {
-          final cubit = context.read<TransactionsCubit>();
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(
-                content: const Text('Transação excluída.'),
-                duration: const Duration(seconds: 10),
-                action: SnackBarAction(
-                  label: 'Desfazer',
-                  onPressed: cubit.undoDelete,
-                ),
-              ),
-            );
-        }
-      },
-      builder: (context, state) {
-        final pickers = state.filter.pickerCount;
-
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Transações'),
-            backgroundColor: isBusiness ? AppColors.deepBlue : null,
-            foregroundColor: isBusiness ? AppColors.white : null,
-            actions: [
-              IconButton(
-                tooltip: 'Filtros',
-                icon: Badge(
-                  isLabelVisible: pickers > 0,
-                  label: Text('$pickers'),
-                  child: const Icon(Icons.filter_list),
-                ),
-                onPressed: () => _openFilters(state),
-              ),
-              IconButton(
-                tooltip: 'Transferir',
-                icon: const Icon(Icons.swap_horiz),
-                onPressed: () => _openTransferForm(state),
-              ),
-              IconButton(
-                tooltip: 'Lixeira',
-                icon: const Icon(Icons.delete_outline),
-                onPressed: _openTrash,
-              ),
-            ],
-          ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _openForm(state),
-            icon: const Icon(Icons.add),
-            label: const Text('Nova transação'),
-          ),
-          body: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: TextField(
-                  controller: _search,
-                  onChanged: _onSearchChanged,
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por descrição',
-                    isDense: true,
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _search.text.isEmpty
-                        ? null
-                        : IconButton(
-                            tooltip: 'Limpar busca',
-                            icon: const Icon(Icons.close),
-                            onPressed: _clearSearch,
-                          ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<TransactionsCubit, TransactionsState>(
+          // The month (or anything) read again: so do the totals of the band.
+          listenWhen: (previous, current) =>
+              current.status == TransactionsStatus.loading &&
+              previous.status != TransactionsStatus.loading,
+          listener: (context, state) {
+            final month = monthOfFilter(state.filter);
+            if (month != null) context.read<MonthTotalsCubit>().load(_workspace.id, month);
+          },
+        ),
+        BlocListener<TransactionsCubit, TransactionsState>(
+          listenWhen: (previous, current) =>
+              (current.actionFailure != null &&
+                  previous.actionFailure != current.actionFailure) ||
+              (current.deletedTransaction != null &&
+                  previous.deletedTransaction != current.deletedTransaction),
+          listener: (context, state) {
+            final failure = state.actionFailure;
+            if (failure != null) {
+              _showMessage(transactionFailureMessage(failure));
+              return;
+            }
+            if (state.deletedTransaction != null) {
+              final cubit = context.read<TransactionsCubit>();
+              final totals = context.read<MonthTotalsCubit>();
+              totals.reload();
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(
+                    content: const Text('Transação excluída.'),
+                    duration: const Duration(seconds: 10),
+                    action: SnackBarAction(
+                      label: 'Desfazer',
+                      onPressed: () => cubit.undoDelete().then((_) => totals.reload()),
                     ),
                   ),
-                ),
+                );
+            }
+          },
+        ),
+      ],
+      child: BlocBuilder<TransactionsCubit, TransactionsState>(
+        builder: (context, state) {
+          final filter = state.filter;
+          final month = monthOfFilter(filter);
+          final period = month != null
+              ? StatementPeriod.month
+              : (filter.hasPeriod ? StatementPeriod.custom : StatementPeriod.all);
+          // Opened from another screen (no tab bar): its own back arrow and "+".
+          final pushed = ModalRoute.of(context)?.canPop ?? false;
+          final showSearch = _searching || _search.text.isNotEmpty;
+
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value: SystemUiOverlayStyle.light,
+            child: Scaffold(
+              floatingActionButton: pushed
+                  ? FloatingActionButton(
+                      tooltip: 'Nova transação',
+                      onPressed: () => _openForm(state),
+                      child: const Icon(Icons.add),
+                    )
+                  : null,
+              body: Column(
+                children: [
+                  BlocBuilder<MonthTotalsCubit, MonthTotalsState>(
+                    builder: (context, totals) => StatementBand(
+                      month: month ?? widget.now,
+                      period: period,
+                      totals: totals.main,
+                      loadingTotals: totals.status == MonthTotalsStatus.loading && totals.entries.isEmpty,
+                      filterCount: sheetFilterCount(filter),
+                      searching: showSearch,
+                      showBack: pushed,
+                      onPrevious: () => _moveMonth(-1),
+                      onNext: () => _moveMonth(1),
+                      onThisMonth: _thisMonth,
+                      onSearch: _toggleSearch,
+                      onFilters: () => _openFilters(state),
+                      onTransfer: () => _openTransferForm(state),
+                      onTrash: _openTrash,
+                    ),
+                  ),
+                  if (showSearch)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                      child: TextField(
+                        controller: _search,
+                        autofocus: _search.text.isEmpty,
+                        onChanged: _onSearchChanged,
+                        textInputAction: TextInputAction.search,
+                        decoration: InputDecoration(
+                          hintText: 'Buscar por descrição',
+                          isDense: true,
+                          filled: true,
+                          fillColor: Theme.of(context).colorScheme.surface,
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _search.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Limpar busca',
+                                  icon: const Icon(Icons.close),
+                                  onPressed: _clearSearch,
+                                ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  QuickFilterChips(
+                    selected: quickOf(filter),
+                    onSelected: (quick) =>
+                        context.read<TransactionsCubit>().setFilter(filterWithQuick(filter, quick)),
+                  ),
+                  if (state.status == TransactionsStatus.loading && state.transactions.isNotEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: LinearProgressIndicator(minHeight: 2),
+                    )
+                  else
+                    const SizedBox(height: 10),
+                  Expanded(child: _body(state)),
+                ],
               ),
-              if (state.status == TransactionsStatus.loading &&
-                  state.transactions.isNotEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: LinearProgressIndicator(minHeight: 2),
-                ),
-              Expanded(child: _body(state)),
-            ],
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -353,48 +429,55 @@ class _TransactionsViewState extends State<_TransactionsView> {
         onRetry: () => context.read<TransactionsCubit>().reload(),
       );
     }
-    if (state.status != TransactionsStatus.loaded &&
-        state.transactions.isEmpty) {
+    if (state.status != TransactionsStatus.loaded && state.transactions.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
     if (state.transactions.isEmpty) {
-      return state.filter.isActive
-          ? _NoResultsView(onClear: _clearAllFilters)
-          : const _EmptyView();
+      final onlyMonth = state.filter.search.trim().isEmpty &&
+          state.filter.type == null &&
+          state.filter.status == null &&
+          state.filter.accountId == null &&
+          state.filter.categoryId == null;
+      if (onlyMonth && monthOfFilter(state.filter) != null) return const _EmptyMonthView();
+      return state.filter.isActive ? _NoResultsView(onClear: _clearAllFilters) : const _EmptyView();
     }
 
     final accountById = {for (final a in state.accounts) a.id: a};
     final categoryById = {for (final c in state.categories) c.id: c};
     final now = DateTime.now();
-    final text = Theme.of(context).textTheme;
     final cubit = context.read<TransactionsCubit>();
 
-    final children = <Widget>[];
-    String? lastLabel;
+    // Consecutive transactions of the same day go in one card.
+    final groups = <({String label, List<TransactionEntity> items})>[];
     for (final transaction in state.transactions) {
       final label = dayLabel(transaction.occurredAt, now);
-      if (label != lastLabel) {
-        children.add(
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 16, 4, 4),
-            child: Text(label, style: text.titleSmall),
-          ),
-        );
-        lastLabel = label;
+      if (groups.isEmpty || groups.last.label != label) {
+        groups.add((label: label, items: [transaction]));
+      } else {
+        groups.last.items.add(transaction);
       }
+    }
+
+    final children = <Widget>[];
+    for (final group in groups) {
+      if (children.isNotEmpty) children.add(const SizedBox(height: 20));
       children.add(
-        _TransactionTile(
-          transaction: transaction,
-          account: accountById[transaction.accountId],
-          category: categoryById[transaction.categoryId],
-          onTap: () => _openEdit(state, transaction),
-          onConfirm: () => cubit.confirm(transaction.id),
-          onDelete: () => transaction.isTransferLeg
-              ? cubit.deleteTransfer(transaction)
-              : cubit.delete(transaction),
-          confirmDelete: transaction.isTransferLeg
-              ? _confirmTransferDelete
-              : null,
+        StatementDayGroup(
+          label: group.label,
+          rows: [
+            for (final transaction in group.items)
+              StatementRow(
+                transaction: transaction,
+                account: accountById[transaction.accountId],
+                category: categoryById[transaction.categoryId],
+                onTap: () => _openEdit(state, transaction),
+                onConfirm: () => _confirm(transaction.id),
+                onDelete: () => transaction.isTransferLeg
+                    ? cubit.deleteTransfer(transaction)
+                    : cubit.delete(transaction),
+                confirmDelete: transaction.isTransferLeg ? _confirmTransferDelete : null,
+              ),
+          ],
         ),
       );
     }
@@ -418,144 +501,41 @@ class _TransactionsViewState extends State<_TransactionsView> {
       );
     }
 
-    return ListView(
-      controller: _scroll,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-      children: children,
+    return RefreshIndicator(
+      onRefresh: () => cubit.reload(),
+      child: ListView(
+        controller: _scroll,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
+        children: children,
+      ),
     );
   }
 }
 
-class _TransactionTile extends StatelessWidget {
-  final TransactionEntity transaction;
-  final AccountEntity? account;
-  final CategoryEntity? category;
-  final VoidCallback onTap;
-  final VoidCallback onConfirm;
-  final VoidCallback onDelete;
-
-  /// Asks before deleting (used for transfers). Null means no question.
-  final Future<bool> Function()? confirmDelete;
-
-  const _TransactionTile({
-    required this.transaction,
-    required this.account,
-    required this.category,
-    required this.onTap,
-    required this.onConfirm,
-    required this.onDelete,
-    required this.confirmDelete,
-  });
+class _EmptyMonthView extends StatelessWidget {
+  const _EmptyMonthView();
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
 
-    final avatarColor = category != null
-        ? categoryColor(category!.colorHex)
-        : AppColors.structure;
-    final avatarForeground =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-        ? AppColors.white
-        : AppColors.midnight;
-    final icon = category != null
-        ? categoryIcon(category!.icon)
-        : transactionTypeIcon(transaction.type);
-
-    final subtitle = [
-      category?.name ??
-          (transaction.isTransferLeg
-              ? 'Transferência'
-              : (transaction.categoryId != null
-                    ? 'Categoria arquivada'
-                    : 'Sem categoria')),
-      account?.name ?? 'Conta',
-    ].join(' · ');
-
-    return Dismissible(
-      key: ValueKey(transaction.id),
-      direction: DismissDirection.endToStart,
-      confirmDismiss: confirmDelete == null
-          ? null
-          : (_) => confirmDelete!.call(),
-      onDismissed: (_) => onDelete(),
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 24),
-        color: scheme.error,
-        child: Icon(Icons.delete_outline, color: scheme.onError),
-      ),
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: avatarColor,
-                  foregroundColor: avatarForeground,
-                  child: Icon(icon),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        transaction.description,
-                        style: text.titleMedium,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        subtitle,
-                        style: text.bodySmall,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      transactionAmountText(transaction),
-                      style: text.titleMedium?.copyWith(
-                        color: transaction.type.isCredit
-                            ? scheme.primary
-                            : null,
-                      ),
-                    ),
-                    if (transaction.isPending) ...[
-                      Text('Pendente', style: text.bodySmall),
-                      TextButton(
-                        style: TextButton.styleFrom(
-                          minimumSize: const Size(0, 32),
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                        ),
-                        onPressed: onConfirm,
-                        child: const Text('Confirmar'),
-                      ),
-                    ],
-                  ],
-                ),
-                PopupMenuButton<String>(
-                  tooltip: 'Mais opções',
-                  onSelected: (_) async {
-                    final ask = confirmDelete;
-                    if (ask != null && !await ask()) return;
-                    onDelete();
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'delete', child: Text('Excluir')),
-                  ],
-                ),
-              ],
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.event_note_outlined, size: 56),
+            const SizedBox(height: 16),
+            Text('Nada neste mês', style: text.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              'Use as setas para ver outro mês, ou toque no + para lançar.',
+              style: text.bodyMedium,
+              textAlign: TextAlign.center,
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -580,7 +560,7 @@ class _EmptyView extends StatelessWidget {
             Text('Nenhuma transação ainda', style: text.titleMedium),
             const SizedBox(height: 8),
             Text(
-              'Toque em "Nova transação" para lançar a primeira.',
+              'Toque no + para lançar a primeira.',
               style: text.bodyMedium,
               textAlign: TextAlign.center,
             ),
