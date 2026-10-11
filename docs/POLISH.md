@@ -186,7 +186,7 @@ found; cosmetic items are done in batches.
 - [x] Design step 4: cards drawn as cards (logo, chip, days, limit), the limit bar, the invoice that matters now highlighted (a closed one to pay first, otherwise the open one) with "Pagar fatura" opening the payment at once, the other invoices with colored tags, purchases in a white card
 - [ ] Design: a new single purchase on a card is still made from the "+" (choosing the card as the account); the card screen offers only installment purchases
 - [x] Design step 5: Planejar with the forecast (30-day line, end of the month, lowest day or the day it turns negative), the budgets of the month (a ring with the total and the three closest to the limit), up to four goals with rings, and the tools
-- [ ] Design: the bottom of some screens sits under the phone navigation bar (Android 15 draws apps edge to edge); fix it once for the whole app
+- [x] Polish 1: the whole app stays above the phone navigation bar (SystemBarsFrame at the root); the balance on Inicio opens Contas; "Minhas contas" on Inicio (a card per account, a tap opens its statement of the month, "Nova conta")
 - [ ] Design: the text under "Adicionar cartao" in the carousel is too plain; give it a proper empty state
 - [x] Design step 7: the "+" opens a sheet (Despesa, Receita, Transferencia; a big amount; category, account and day as chips; the category name when there is no description; a future day is pending by itself)
 - [ ] Design: "Repetir todo mes" of the mockup is not in the sheet; repeating items are created in Recorrencias

@@ -1,4 +1,8 @@
 import 'package:finly/core/di/injection.dart';
+import 'package:finly/features/accounts/presentation/cubit/accounts_cubit.dart';
+import 'package:finly/features/accounts/presentation/cubit/accounts_state.dart';
+import 'package:finly/features/accounts/presentation/pages/account_form_page.dart';
+import 'package:finly/features/accounts/presentation/pages/accounts_page.dart';
 import 'package:finly/features/alerts/presentation/widgets/dashboard_alerts_card.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/budgets/presentation/pages/budgets_page.dart';
@@ -10,6 +14,7 @@ import 'package:finly/features/dashboard/presentation/cubit/dashboard_state.dart
 import 'package:finly/features/dashboard/presentation/dashboard_messages.dart';
 import 'package:finly/features/dashboard/presentation/widgets/dashboard_charts_card.dart';
 import 'package:finly/features/dashboard/presentation/widgets/dashboard_view.dart';
+import 'package:finly/features/dashboard/presentation/widgets/home/home_accounts.dart';
 import 'package:finly/features/dashboard/presentation/widgets/home/home_band.dart';
 import 'package:finly/features/dashboard/presentation/widgets/home/home_cards.dart';
 import 'package:finly/features/dashboard/presentation/widgets/home/home_shortcuts.dart';
@@ -80,6 +85,7 @@ class _HomeViewState extends State<HomeView> {
       providers: [
         BlocProvider(create: (_) => sl<CardsCubit>()..load(workspace.id)),
         BlocProvider(create: (_) => sl<GoalsCubit>()..load(workspace.id)),
+        BlocProvider(create: (_) => sl<AccountsCubit>()..load(workspace.id)),
       ],
       child: Builder(
         builder: (context) => BlocListener<DashboardCubit, DashboardState>(
@@ -91,6 +97,7 @@ class _HomeViewState extends State<HomeView> {
           listener: (context, _) {
             context.read<CardsCubit>().reload();
             context.read<GoalsCubit>().reload();
+            context.read<AccountsCubit>().reload();
           },
           child: AnnotatedRegion<SystemUiOverlayStyle>(
             // The band is dark: light icons in the status bar.
@@ -134,6 +141,7 @@ class _HomeViewState extends State<HomeView> {
                   balances: data?.balances,
                   hasAccounts: data?.hasAccounts ?? true,
                   bottomSpace: overlap + 16,
+                  onOpenAccounts: () => open(AccountsPage(workspace: workspace)),
                 ),
                 const SizedBox(height: 60),
               ],
@@ -156,6 +164,22 @@ class _HomeViewState extends State<HomeView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              BlocBuilder<AccountsCubit, AccountsState>(
+                // When the accounts cannot be read, the row steps aside (the
+                // balance above still opens Contas).
+                builder: (context, accounts) => accounts.status == AccountsStatus.failure && accounts.accounts.isEmpty
+                    ? const SizedBox.shrink()
+                    : HomeAccountsRow(
+                  accounts: accounts.status == AccountsStatus.loaded || accounts.accounts.isNotEmpty
+                      ? homeAccounts(accounts.accounts)
+                      : null,
+                  hidden: _hidden,
+                  onOpenAccount: (account) => open(TransactionsPage(workspace: workspace, accountId: account.id)),
+                  onSeeAll: () => open(AccountsPage(workspace: workspace)),
+                  onNewAccount: () => open(AccountFormPage(workspaceId: workspace.id)),
+                    ),
+              ),
+              const SizedBox(height: 20),
               DashboardAlertsCard(
                 workspace: workspace,
                 onOpenBudgets: () => open(BudgetsPage(workspace: workspace)),

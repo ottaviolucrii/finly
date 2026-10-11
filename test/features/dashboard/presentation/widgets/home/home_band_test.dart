@@ -11,12 +11,13 @@ void main() {
   const plain = CurrencyBalance(currency: 'BRL', postedCents: 50000, projectedCents: 50000, cardDebtCents: 0);
   const usd = CurrencyBalance(currency: 'USD', postedCents: 12000, projectedCents: 12000, cardDebtCents: 0);
 
-  late int toggles, profiles, switches;
+  late int toggles, profiles, switches, opens;
 
   setUp(() {
     toggles = 0;
     profiles = 0;
     switches = 0;
+    opens = 0;
   });
 
   Future<void> show(
@@ -26,6 +27,7 @@ void main() {
     bool canSwitch = true,
     bool hasAccounts = true,
     String label = 'Pessoal',
+    bool canOpenAccounts = false,
   }) async {
     tester.view.physicalSize = const Size(900, 1600);
     tester.view.devicePixelRatio = 1;
@@ -45,6 +47,7 @@ void main() {
               onProfile: () => profiles++,
               balances: balances,
               hasAccounts: hasAccounts,
+              onOpenAccounts: canOpenAccounts ? () => opens++ : null,
             ),
           ),
         ),
@@ -156,5 +159,20 @@ void main() {
     await show(tester, label: 'Empresa');
 
     expect(find.text('Empresa'), findsOneWidget);
+  });
+
+  testWidgets('a tap on the balance opens the accounts, with an arrow to say so', (tester) async {
+    await show(tester, canOpenAccounts: true);
+
+    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+    await tester.tap(find.text('R\$ 12.480,35'));
+
+    expect(opens, 1);
+  });
+
+  testWidgets('without it, the balance is plain text', (tester) async {
+    await show(tester);
+
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
   });
 }

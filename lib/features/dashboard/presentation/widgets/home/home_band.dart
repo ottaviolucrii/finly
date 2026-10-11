@@ -37,6 +37,9 @@ class HomeBand extends StatelessWidget {
   /// The space left under the band for the shortcuts that overlap it.
   final double bottomSpace;
 
+  /// Opens the accounts (a tap on the balance); null makes it plain text.
+  final VoidCallback? onOpenAccounts;
+
   const HomeBand({
     super.key,
     required this.workspaceLabel,
@@ -48,6 +51,7 @@ class HomeBand extends StatelessWidget {
     required this.balances,
     required this.hasAccounts,
     this.bottomSpace = 72,
+    this.onOpenAccounts,
   });
 
   @override
@@ -99,26 +103,41 @@ class HomeBand extends StatelessWidget {
               _Avatar(initial: initial, onTap: onProfile),
             ],
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'Saldo em contas',
-            style: TextStyle(fontSize: 14, color: AppColors.onBand),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            main == null
-                ? (list == null ? '—' : maskedMoney(const Money(0, 'BRL'), hidden: hidden))
-                : maskedMoney(main.posted, hidden: hidden),
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
-              fontSize: 36,
-              height: 1.15,
-              letterSpacing: -0.6,
-              color: main != null && main.postedCents < 0 && !hidden
-                  ? AppColors.goldOnBand
-                  : AppColors.white,
-              fontFeatures: const [FontFeature.tabularFigures()],
+          const SizedBox(height: 18),
+          _BalanceTap(
+            onTap: onOpenAccounts,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Saldo em contas',
+                      style: TextStyle(fontSize: 14, color: AppColors.onBand),
+                    ),
+                    if (onOpenAccounts != null)
+                      const Icon(Icons.chevron_right, size: 18, color: AppColors.onBand),
+                  ],
+                ),
+                const SizedBox(height: 6),
+              Text(
+                main == null
+                    ? (list == null ? '—' : maskedMoney(const Money(0, 'BRL'), hidden: hidden))
+                    : maskedMoney(main.posted, hidden: hidden),
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 36,
+                  height: 1.15,
+                  letterSpacing: -0.6,
+                  color: main != null && main.postedCents < 0 && !hidden
+                      ? AppColors.goldOnBand
+                      : AppColors.white,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              ],
             ),
           ),
           if (list != null && !hasAccounts)
@@ -295,6 +314,33 @@ class _BandChip extends StatelessWidget {
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: valueColor),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The balance, tappable to open the accounts when [onTap] is set.
+class _BalanceTap extends StatelessWidget {
+  final VoidCallback? onTap;
+  final Widget child;
+
+  const _BalanceTap({required this.onTap, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final tap = onTap;
+    if (tap == null) return child;
+    return Semantics(
+      button: true,
+      hint: 'Abrir as contas',
+      onTap: tap,
+      child: InkWell(
+        onTap: tap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: child,
+        ),
       ),
     );
   }
