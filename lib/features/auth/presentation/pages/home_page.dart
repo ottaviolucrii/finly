@@ -29,7 +29,7 @@ import 'package:finly/features/shell/presentation/more_hub.dart';
 import 'package:finly/features/shell/presentation/plan_hub.dart';
 import 'package:finly/features/shell/presentation/plan_tab.dart';
 import 'package:finly/features/tax_reserve/presentation/pages/tax_reserve_page.dart';
-import 'package:finly/features/transactions/presentation/pages/transaction_form_page.dart';
+import 'package:finly/features/transactions/presentation/widgets/new_transaction_sheet.dart';
 import 'package:finly/features/transactions/presentation/pages/transactions_page.dart';
 import 'package:finly/features/transfers/presentation/pages/transfer_form_page.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_cubit.dart';
@@ -124,12 +124,12 @@ class _HomeShellState extends State<_HomeShell> {
   Future<void> _quickAdd(
     BuildContext context,
     WorkspaceEntity workspace,
+    WorkspaceEntity? other,
     DashboardCubit dashboard,
   ) async {
     if (_adding) return;
     setState(() => _adding = true);
 
-    final navigator = Navigator.of(context);
     final accountsResult = await sl<GetAccountsUseCase>()(workspace.id);
     final categoriesResult = await sl<GetAllCategoriesUseCase>()(workspace.id);
     if (!mounted) return;
@@ -147,18 +147,20 @@ class _HomeShellState extends State<_HomeShell> {
       return;
     }
 
-    final created = await navigator.push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => TransactionFormPage(
-          workspaceId: workspace.id,
-          accounts: accounts,
-          categories: categories,
-        ),
-      ),
+    if (!context.mounted) return;
+    final result = await showNewTransactionSheet(
+      context,
+      workspaceId: workspace.id,
+      accounts: accounts,
+      categories: categories,
     );
-    if (created == true && mounted) {
+    if (!mounted) return;
+    if (result == NewTransactionResult.created) {
       setState(() => _statementVersion++);
       await dashboard.reload();
+    } else if (result == NewTransactionResult.transfer) {
+      if (!context.mounted) return;
+      await _openTransfer(context, workspace, other, dashboard);
     }
   }
 
@@ -319,7 +321,7 @@ class _HomeShellState extends State<_HomeShell> {
                 ? null
                 : () => _openSwitchSheet(context, active, other!),
             onProfile: () => _select(FinlyTab.more, dashboard),
-            onAdd: _adding ? null : () => _quickAdd(context, active, dashboard),
+            onAdd: _adding ? null : () => _quickAdd(context, active, other, dashboard),
             onTransfer: _adding ? null : () => _openTransfer(context, active, other, dashboard),
           ),
         FinlyTab.statement => KeyedSubtree(
@@ -358,7 +360,7 @@ class _HomeShellState extends State<_HomeShell> {
         bottomNavigationBar: FinlyTabBar(
           current: _tab,
           onSelect: (which) => _select(which, dashboard),
-          onAdd: _adding ? null : () => _quickAdd(context, active, dashboard),
+          onAdd: _adding ? null : () => _quickAdd(context, active, other, dashboard),
         ),
       ),
     );

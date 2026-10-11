@@ -13,11 +13,11 @@ import 'package:finly/features/transactions/domain/entities/transaction_status.d
 import 'package:finly/features/transactions/presentation/cubit/transactions_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_state.dart';
 import 'package:finly/features/transactions/presentation/pages/transaction_edit_page.dart';
-import 'package:finly/features/transactions/presentation/pages/transaction_form_page.dart';
 import 'package:finly/features/transactions/presentation/statement_filters.dart';
 import 'package:finly/features/transactions/presentation/transaction_messages.dart';
 import 'package:finly/features/transactions/presentation/widgets/statement_band.dart';
 import 'package:finly/features/transactions/presentation/widgets/statement_list.dart';
+import 'package:finly/features/transactions/presentation/widgets/new_transaction_sheet.dart';
 import 'package:finly/features/transactions/presentation/widgets/transaction_filter_sheet.dart';
 import 'package:finly/features/transfers/presentation/pages/transfer_form_page.dart';
 import 'package:flutter/material.dart';
@@ -189,16 +189,17 @@ class _TransactionsViewState extends State<_TransactionsView> {
       return;
     }
     final cubit = context.read<TransactionsCubit>();
-    final created = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => TransactionFormPage(
-          workspaceId: _workspace.id,
-          accounts: state.accounts,
-          categories: state.categories,
-        ),
-      ),
+    final result = await showNewTransactionSheet(
+      context,
+      workspaceId: _workspace.id,
+      accounts: state.accounts,
+      categories: state.categories,
     );
-    if (created == true) await cubit.reload();
+    if (result == NewTransactionResult.created) {
+      await cubit.reload();
+    } else if (result == NewTransactionResult.transfer && mounted) {
+      await _openTransferForm(cubit.state);
+    }
   }
 
   Future<void> _openEdit(

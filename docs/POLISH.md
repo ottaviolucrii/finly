@@ -188,3 +188,6 @@ found; cosmetic items are done in batches.
 - [x] Design step 5: Planejar with the forecast (30-day line, end of the month, lowest day or the day it turns negative), the budgets of the month (a ring with the total and the three closest to the limit), up to four goals with rings, and the tools
 - [ ] Design: the bottom of some screens sits under the phone navigation bar (Android 15 draws apps edge to edge); fix it once for the whole app
 - [ ] Design: the text under "Adicionar cartao" in the carousel is too plain; give it a proper empty state
+- [x] Design step 7: the "+" opens a sheet (Despesa, Receita, Transferencia; a big amount; category, account and day as chips; the category name when there is no description; a future day is pending by itself)
+- [ ] Design: "Repetir todo mes" of the mockup is not in the sheet; repeating items are created in Recorrencias
+- [ ] Design step 6 (Mais) folded into the polish round: only small touches left
