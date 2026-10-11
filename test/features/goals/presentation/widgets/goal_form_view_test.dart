@@ -97,7 +97,8 @@ void main() {
     await tester.pump();
   }
 
-  Finder field(String label) => find.widgetWithText(TextFormField, label);
+  /// The fields are found by their keys (the labels sit above them now).
+  Finder field(String label) => find.byKey(ValueKey('goal-field-$label'));
 
   SaveGoalParams savedParams() {
     return verify(() => cubit.save(captureAny())).captured.single as SaveGoalParams;
@@ -272,8 +273,10 @@ void main() {
     testWidgets('the account of the goal is already chosen', (tester) async {
       await show(tester, ready(), goal: editing);
 
-      final chip = tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Poupança (BRL)'));
-      expect(chip.selected, isTrue);
+      final pill = tester.widget<Semantics>(
+        find.byWidgetPredicate((w) => w is Semantics && w.properties.label == 'Poupança (BRL)'),
+      );
+      expect(pill.properties.selected, isTrue);
     });
 
     testWidgets('saves with the id of the goal and keeps its date', (tester) async {

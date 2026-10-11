@@ -194,4 +194,6 @@ found; cosmetic items are done in batches.
 - [ ] Design: the inside of the Empresa screens (Metas, Orcamentos, Previsao, Recorrencias, Relatorio, Contas, Categorias, Historico, Lixeira, Reserva) still uses the older layout; restyle them one by one from screenshots
 - [x] Polish 3: all money fields typed like in bank apps (CentsInputFormatter; a minus sign only for opening balances); Metas with a summary card, sections and rings
 - [x] Group 1: Contas (blue total card, accounts and cards in white cards, archived folded), Orcamentos (ring with the total, categories by how close to the limit, what is left per day, categories without a budget as chips), Recorrencias (what comes in and goes out each month, Entradas and Saidas)
-- [ ] Design: "Sem orcamento" chips open the form without the category already chosen
+- [x] "Sem orcamento" chips open the form with their category
+- [x] Group 2a: shared form parts (FormPage with the save bar at the bottom, ChoicePills, AmountCard, InfoBox); Conta (new and edit, sign as pills), Orcamento and Meta in the new style; a card in Contas shows what is in use like "Cartoes em uso"
+- [ ] Group 2b: Cartao (new and edit), Compra parcelada, Recorrencia (new and edit), editing a transaction and Transferencia in the new style

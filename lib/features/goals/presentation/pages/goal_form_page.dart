@@ -2,6 +2,7 @@ import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
+import 'package:finly/core/widgets/form_parts.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/goals/domain/entities/goal_progress.dart';
@@ -104,8 +105,8 @@ class _GoalFormViewState extends State<GoalFormView> {
     }
     if (!_formKey.currentState!.validate()) return;
 
-    final target = Money.tryParse(_target.text, account.currency);
-    if (target == null || target.cents <= 0) return;
+    final cents = centsFromInput(_target.text);
+    if (cents <= 0) return;
 
     context.read<GoalFormCubit>().save(
           SaveGoalParams(
@@ -114,7 +115,7 @@ class _GoalFormViewState extends State<GoalFormView> {
             accountId: account.id,
             currency: account.currency,
             name: _name.text,
-            targetCents: target.cents,
+            targetCents: cents,
             targetDate: _date,
           ),
         );
@@ -146,8 +147,6 @@ class _GoalFormViewState extends State<GoalFormView> {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-
     return BlocConsumer<GoalFormCubit, GoalFormState>(
       listenWhen: (previous, current) =>
           previous.status != current.status || previous.saveFailure != current.saveFailure,
@@ -163,165 +162,140 @@ class _GoalFormViewState extends State<GoalFormView> {
         }
       },
       builder: (context, state) {
+        final title = _isEditing ? 'Editar meta' : 'Nova meta';
+
+        if (state.status == GoalFormStatus.loading) {
+          return Scaffold(
+            appBar: AppBar(title: Text(title)),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (state.status == GoalFormStatus.loadFailed) {
+          return Scaffold(
+            appBar: AppBar(title: Text(title)),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(goalFailureMessage(state.loadFailure!), textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => context.read<GoalFormCubit>().load(widget.workspaceId),
+                      child: const Text('Tentar de novo'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
         final options = _options(state.accounts);
         _chosen = _selected(options);
         final saving = state.status == GoalFormStatus.saving;
 
-        return Scaffold(
-          appBar: AppBar(title: Text(_isEditing ? 'Editar meta' : 'Nova meta')),
-          body: _body(context, state, options, saving, text),
+        return FormPage(
+          title: title,
+          saveLabel: _isEditing ? 'Salvar alterações' : 'Criar meta',
+          saving: saving,
+          onSave: () => _submit(options),
+          form: _form(context, options, saving),
         );
       },
     );
   }
 
-  Widget _body(
-    BuildContext context,
-    GoalFormState state,
-    List<AccountEntity> options,
-    bool saving,
-    TextTheme text,
-  ) {
-    if (state.status == GoalFormStatus.loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (state.status == GoalFormStatus.loadFailed) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(goalFailureMessage(state.loadFailure!), textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => context.read<GoalFormCubit>().load(widget.workspaceId),
-                child: const Text('Tentar de novo'),
-              ),
-            ],
+  Widget _form(BuildContext context, List<AccountEntity> options, bool saving) {
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final date = _date;
+
+    return Form(
+      key: _formKey,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const FieldLabel('Nome'),
+          TextFormField(
+            key: const ValueKey('goal-field-Nome da meta'),
+            controller: _name,
+            enabled: !saving,
+            maxLength: SaveGoalUseCase.maxNameLength,
+            textCapitalization: TextCapitalization.sentences,
+            textInputAction: TextInputAction.next,
+            decoration: formFieldDecoration(context, hint: 'Ex.: Reserva de emergência'),
+            validator: (value) =>
+                (value ?? '').trim().isEmpty ? 'Informe um nome para a meta.' : null,
           ),
-        ),
-      );
-    }
-
-    final chosen = _chosen;
-
-    return SafeArea(
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Form(
-              key: _formKey,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    controller: _name,
-                    enabled: !saving,
-                    maxLength: SaveGoalUseCase.maxNameLength,
-                    textCapitalization: TextCapitalization.sentences,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Nome da meta',
-                      hintText: 'Ex.: Reserva de emergência',
-                      border: OutlineInputBorder(),
+          const SizedBox(height: 12),
+          const FieldLabel('Conta que acompanha a meta'),
+          if (options.isEmpty)
+            Text(
+              _isEditing
+                  ? 'Nenhuma conta ativa em ${widget.editing!.goal.currency}.'
+                  : 'Crie uma conta (que não seja cartão) para acompanhar uma meta.',
+              style: text.bodyMedium,
+            )
+          else
+            ChoicePills<String>(
+              options: [
+                for (final account in options)
+                  PillOption(
+                    account.id,
+                    '${account.name} (${account.currency})',
+                    icon: Icons.account_balance_wallet_outlined,
+                  ),
+              ],
+              selected: _accountId,
+              onSelected: saving ? null : (id) => setState(() => _accountId = id),
+            ),
+          const SizedBox(height: 6),
+          Text(
+            'O progresso é o saldo dessa conta.',
+            style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          formGap,
+          AmountCard(
+            fieldKey: const ValueKey('goal-field-Valor da meta'),
+            label: 'Valor da meta',
+            controller: _target,
+            currency: _currency,
+            enabled: !saving,
+            validator: (value) => centsFromInput(value ?? '') <= 0
+                ? 'Informe um valor maior que zero.'
+                : null,
+          ),
+          formGap,
+          const FieldLabel('Prazo (opcional)'),
+          Card(
+            margin: EdgeInsets.zero,
+            clipBehavior: Clip.antiAlias,
+            child: ListTile(
+              leading: const Icon(Icons.event),
+              title: Text(date == null ? 'Sem prazo' : formatDateBr(date)),
+              subtitle: Text(date == null ? 'Toque para escolher uma data' : 'Toque para mudar a data'),
+              trailing: date == null
+                  ? null
+                  : IconButton(
+                      tooltip: 'Tirar o prazo',
+                      icon: const Icon(Icons.close),
+                      onPressed: saving ? null : () => setState(() => _date = null),
                     ),
-                    validator: (value) =>
-                        (value ?? '').trim().isEmpty ? 'Informe um nome para a meta.' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  Text('Conta que acompanha a meta', style: text.labelLarge),
-                  const SizedBox(height: 4),
-                  Text(
-                    'O progresso é o saldo dessa conta.',
-                    style: text.bodySmall,
-                  ),
-                  const SizedBox(height: 8),
-                  if (options.isEmpty)
-                    Text(
-                      _isEditing
-                          ? 'Nenhuma conta ativa em ${widget.editing!.goal.currency}.'
-                          : 'Crie uma conta (que não seja cartão) para acompanhar uma meta.',
-                      style: text.bodyMedium,
-                    )
-                  else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: [
-                        for (final account in options)
-                          ChoiceChip(
-                            avatar: const Icon(Icons.account_balance_wallet_outlined, size: 18),
-                            label: Text('${account.name} (${account.currency})'),
-                            selected: account.id == _accountId,
-                            onSelected: saving
-                                ? null
-                                : (_) => setState(() => _accountId = account.id),
-                          ),
-                      ],
-                    ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _target,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: const [CentsInputFormatter()],
-                    enabled: !saving,
-                    textInputAction: TextInputAction.done,
-                    decoration: InputDecoration(
-                      labelText: 'Valor da meta',
-                      prefixText: '${Money.symbolFor(chosen?.currency ?? _currency)} ',
-                      border: const OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      final amount = Money.tryParse(value ?? '', _currency);
-                      return (amount == null || amount.cents <= 0)
-                          ? 'Informe um valor maior que zero (ex.: 5000,00).'
-                          : null;
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.event),
-                    title: const Text('Prazo (opcional)'),
-                    subtitle: Text(_date == null ? 'Sem prazo' : formatDateBr(_date!)),
-                    trailing: _date == null
-                        ? null
-                        : IconButton(
-                            tooltip: 'Tirar o prazo',
-                            icon: const Icon(Icons.close),
-                            onPressed: saving ? null : () => setState(() => _date = null),
-                          ),
-                    onTap: saving ? null : _pickDate,
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: saving ? null : () => _submit(options),
-                    child: saving
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(_isEditing ? 'Salvar alterações' : 'Criar meta'),
-                  ),
-                  if (_isEditing)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: TextButton(
-                        onPressed: saving ? null : _confirmArchive,
-                        child: const Text('Arquivar meta'),
-                      ),
-                    ),
-                ],
-              ),
+              onTap: saving ? null : _pickDate,
             ),
           ),
-        ),
+          if (_isEditing) ...[
+            const SizedBox(height: 12),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: scheme.error),
+              onPressed: saving ? null : _confirmArchive,
+              child: const Text('Arquivar meta'),
+            ),
+          ],
+        ],
       ),
     );
   }

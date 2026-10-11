@@ -291,6 +291,14 @@ class _TotalCard extends StatelessWidget {
   }
 }
 
+/// What a credit card shows in the list: what is in use on it, counted like
+/// "Cartões em uso" (purchases count in the expected balance, since they are
+/// paid later with the invoice).
+String cardUseLabel(AccountEntity card) {
+  final owed = card.projectedBalanceCents < 0 ? -card.projectedBalanceCents : 0;
+  return owed > 0 ? 'Em uso ${Money(owed, card.currency).format()}' : 'Sem uso';
+}
+
 /// One account in the list: its icon, name, type and balance (in red below
 /// zero), what is expected when something is pending, and its menu.
 class _AccountRow extends StatelessWidget {
@@ -312,11 +320,10 @@ class _AccountRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final balance = account.postedBalance;
     final card = account.type == AccountType.creditCard;
-    final used = Money(-balance.cents, balance.currency);
 
     final String amount;
     if (card) {
-      amount = balance.cents < 0 ? 'Em uso ${used.format()}' : 'Sem uso';
+      amount = cardUseLabel(account);
     } else {
       amount = balance.format();
     }

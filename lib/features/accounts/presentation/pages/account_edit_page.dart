@@ -1,6 +1,7 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
+import 'package:finly/core/widgets/form_parts.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/accounts/domain/entities/account_type.dart';
 import 'package:finly/features/accounts/presentation/account_messages.dart';
@@ -37,14 +38,15 @@ class _AccountEditView extends StatefulWidget {
 
 class _AccountEditViewState extends State<_AccountEditView> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _name =
-      TextEditingController(text: widget.account.name);
+  late final TextEditingController _name = TextEditingController(text: widget.account.name);
+
+  /// The opening balance without its sign (the sign is in [_negative]).
   late final TextEditingController _opening = TextEditingController(
     text: _isCard
         ? ''
-        : Money(widget.account.openingBalanceCents, widget.account.currency)
-            .format(withSymbol: false),
+        : Money(widget.account.openingBalanceCents.abs(), widget.account.currency).format(withSymbol: false),
   );
+  late bool _negative = widget.account.openingBalanceCents < 0;
 
   bool get _isCard => widget.account.type == AccountType.creditCard;
 
@@ -57,12 +59,10 @@ class _AccountEditViewState extends State<_AccountEditView> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-
     int? opening;
     if (!_isCard) {
-      final parsed = Money.tryParse(_opening.text, widget.account.currency);
-      if (parsed == null) return;
-      opening = parsed.cents;
+      final cents = centsFromInput(_opening.text);
+      opening = _negative ? -cents : cents;
     }
 
     context.read<AccountEditCubit>().submit(
@@ -74,7 +74,6 @@ class _AccountEditViewState extends State<_AccountEditView> {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
     final account = widget.account;
 
     return BlocConsumer<AccountEditCubit, AccountEditState>(
@@ -94,100 +93,67 @@ class _AccountEditViewState extends State<_AccountEditView> {
       builder: (context, state) {
         final submitting = state.status == AccountEditStatus.submitting;
 
-        return Scaffold(
-          appBar: AppBar(title: const Text('Editar conta')),
-          body: SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Form(
-                    key: _formKey,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          '${accountTypeLabel(account.type)} · ${account.currency}',
-                          style: text.titleMedium,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'O tipo e a moeda não podem ser alterados: há '
-                          'lançamentos que dependem deles.',
-                          style: text.bodySmall,
-                        ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _name,
-                          enabled: !submitting,
-                          textCapitalization: TextCapitalization.sentences,
-                          textInputAction:
-                              _isCard ? TextInputAction.done : TextInputAction.next,
-                          decoration: const InputDecoration(
-                            labelText: 'Nome da conta',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            final name = (value ?? '').trim();
-                            if (name.isEmpty || name.length > 80) {
-                              return 'Informe um nome (até 80 caracteres).';
-                            }
-                            return null;
-                          },
-                        ),
-                        if (!_isCard) ...[
-                          const SizedBox(height: 20),
-                          TextFormField(
-                            controller: _opening,
-                            keyboardType: const TextInputType.numberWithOptions(signed: true),
-                            inputFormatters: const [CentsInputFormatter(allowNegative: true)],
-                            enabled: !submitting,
-                            textInputAction: TextInputAction.done,
-                            decoration: InputDecoration(
-                              labelText: 'Saldo inicial',
-                              prefixText: '${Money.symbolFor(account.currency)} ',
-                              helperText: 'O saldo atual é o saldo inicial mais '
-                                  'as movimentações. Mudar o saldo inicial muda '
-                                  'o saldo atual pelo mesmo valor.',
-                              helperMaxLines: 4,
-                              border: const OutlineInputBorder(),
-                            ),
-                            validator: (value) {
-                              final parsed =
-                                  Money.tryParse(value ?? '', account.currency);
-                              return parsed == null
-                                  ? 'Informe um valor válido (ex.: 1.500,00).'
-                                  : null;
-                            },
-                          ),
-                        ] else ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            'Limite, fechamento e vencimento do cartão ficam na '
-                            'tela Cartões.',
-                            style: text.bodySmall,
-                          ),
-                        ],
-                        const SizedBox(height: 24),
-                        FilledButton(
-                          onPressed: submitting ? null : _submit,
-                          child: submitting
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Salvar alterações'),
-                        ),
-                      ],
+        return FormPage(
+          title: 'Editar conta',
+          saveLabel: 'Salvar alterações',
+          saving: submitting,
+          onSave: _submit,
+          form: Form(
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const FieldLabel('Nome'),
+                TextFormField(
+                  controller: _name,
+                  enabled: !submitting,
+                  textCapitalization: TextCapitalization.sentences,
+                  textInputAction: TextInputAction.done,
+                  decoration: formFieldDecoration(context),
+                  validator: (value) {
+                    final name = (value ?? '').trim();
+                    if (name.isEmpty || name.length > 80) {
+                      return 'Informe um nome (até 80 caracteres).';
+                    }
+                    return null;
+                  },
+                ),
+                formGap,
+                InfoBox(
+                  icon: Icons.lock_outline,
+                  text: '${accountTypeLabel(account.type)} · ${account.currency}. O tipo e a moeda '
+                      'não podem ser alterados: há lançamentos que dependem deles.',
+                ),
+                formGap,
+                if (_isCard)
+                  const InfoBox(
+                    icon: Icons.credit_card,
+                    text: 'Limite, fechamento e vencimento do cartão ficam na tela Cartões.',
+                  )
+                else ...[
+                  AmountCard(
+                    label: 'Saldo inicial',
+                    controller: _opening,
+                    currency: account.currency,
+                    enabled: !submitting,
+                    footer: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: ChoicePills<bool>(
+                        options: const [PillOption(false, 'Positivo'), PillOption(true, 'Negativo')],
+                        selected: _negative,
+                        onSelected: submitting ? null : (value) => setState(() => _negative = value),
+                      ),
                     ),
                   ),
-                ),
-              ),
+                  formGap,
+                  const InfoBox(
+                    icon: Icons.info_outline,
+                    text: 'O saldo atual é o saldo inicial mais as movimentações. '
+                        'Mudar o saldo inicial muda o saldo atual pelo mesmo valor.',
+                  ),
+                ],
+              ],
             ),
           ),
         );

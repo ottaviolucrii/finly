@@ -43,6 +43,7 @@ class _BudgetsView extends StatelessWidget {
     BuildContext context,
     BudgetsState state, {
     BudgetProgress? editing,
+    String? categoryId,
   }) async {
     final overview = state.overview;
     if (overview == null) return;
@@ -55,6 +56,7 @@ class _BudgetsView extends StatelessWidget {
           month: state.month,
           categories: overview.expenseCategories,
           editing: editing,
+          initialCategoryId: categoryId,
         ),
       ),
     );
@@ -200,7 +202,7 @@ class _BudgetsView extends StatelessWidget {
                 ActionChip(
                   avatar: const Icon(Icons.add, size: 18),
                   label: Text(category.name),
-                  onPressed: () => _openForm(context, state),
+                  onPressed: () => _openForm(context, state, categoryId: category.id),
                 ),
             ],
           ),
