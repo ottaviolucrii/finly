@@ -1,6 +1,7 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
 import 'package:finly/core/theme/app_colors.dart';
+import 'package:finly/core/widgets/workspace_title.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/tax_reserve/domain/entities/tax_reserve_data.dart';
 import 'package:finly/features/tax_reserve/domain/tax_reserve_rules.dart';
@@ -84,7 +85,7 @@ class TaxReserveView extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Reserva para impostos'),
+            title: const WorkspaceTitle('Reserva para impostos', isBusiness: true),
             backgroundColor: AppColors.deepBlue,
             foregroundColor: AppColors.white,
           ),

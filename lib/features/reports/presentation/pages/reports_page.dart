@@ -2,6 +2,7 @@ import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
 import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/core/utils/date_format.dart';
+import 'package:finly/core/widgets/workspace_title.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
@@ -71,7 +72,7 @@ class _ReportsViewState extends State<_ReportsView> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Relatório'),
+          title: WorkspaceTitle('Relatório', isBusiness: isBusiness),
           backgroundColor: isBusiness ? AppColors.deepBlue : null,
           foregroundColor: isBusiness ? AppColors.white : null,
           actions: [

@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/theme/app_colors.dart';
+import 'package:finly/core/widgets/workspace_title.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/goals/domain/entities/goal_progress.dart';
@@ -63,7 +64,7 @@ class GoalsView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Metas'),
+        title: WorkspaceTitle('Metas', isBusiness: isBusiness),
         backgroundColor: isBusiness ? AppColors.deepBlue : null,
         foregroundColor: isBusiness ? AppColors.white : null,
       ),

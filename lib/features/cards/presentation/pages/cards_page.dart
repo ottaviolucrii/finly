@@ -242,7 +242,6 @@ class _CardsViewState extends State<_CardsView> {
   }
 
   Widget _body(BuildContext context, CardsState state, CreditCardEntity? current, DateTime today) {
-    final text = Theme.of(context).textTheme;
     final cubit = context.read<CardsCubit>();
 
     if (state.status == CardsStatus.failure && state.cards.isEmpty) {
@@ -272,13 +271,7 @@ class _CardsViewState extends State<_CardsView> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: current == null
-                ? Text(
-                    state.cards.isEmpty
-                        ? 'Nenhum cartão ainda. Toque em "Adicionar cartão" para cadastrar o primeiro.'
-                        : 'Toque em "Adicionar cartão" para cadastrar outro.',
-                    style: text.bodyMedium,
-                    textAlign: TextAlign.center,
-                  )
+                ? AddCardHint(first: state.cards.isEmpty, onAdd: _openForm)
                 : CardDetailsSection(
                     key: ValueKey('${current.accountId}-$_version'),
                     workspace: widget.workspace,

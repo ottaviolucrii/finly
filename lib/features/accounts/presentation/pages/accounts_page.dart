@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/theme/app_colors.dart';
+import 'package:finly/core/widgets/workspace_title.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/accounts/presentation/account_messages.dart';
 import 'package:finly/features/accounts/presentation/account_style.dart';
@@ -106,7 +107,7 @@ class _AccountsView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Contas'),
+        title: WorkspaceTitle('Contas', isBusiness: isBusiness),
         backgroundColor: isBusiness ? AppColors.deepBlue : null,
         foregroundColor: isBusiness ? AppColors.white : null,
       ),

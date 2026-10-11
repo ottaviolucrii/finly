@@ -1,3 +1,4 @@
+import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/features/cards/domain/entities/credit_card_entity.dart';
 import 'package:finly/features/cards/presentation/widgets/card_art.dart';
 import 'package:flutter/material.dart';
@@ -175,4 +176,64 @@ class _DashedBorder extends CustomPainter {
   @override
   bool shouldRepaint(_DashedBorder oldDelegate) =>
       oldDelegate.color != color || oldDelegate.radius != radius;
+}
+
+/// Shown under the carousel when "Adicionar cartão" is in front: what a card
+/// is good for here, and the button to add one.
+class AddCardHint extends StatelessWidget {
+  /// True when there is no card yet (the first one).
+  final bool first;
+  final VoidCallback onAdd;
+
+  const AddCardHint({super.key, required this.first, required this.onAdd});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+        child: Column(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: dark ? AppColors.blueTintDark : AppColors.blueTint,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.credit_card, color: scheme.primary, size: 28),
+            ),
+            const SizedBox(height: 14),
+            Semantics(
+              container: true,
+              header: true,
+              child: Text(
+                first ? 'Adicione o seu primeiro cartão' : 'Mais um cartão?',
+                textAlign: TextAlign.center,
+                style: text.titleLarge?.copyWith(fontSize: 18),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Acompanhe o limite e as faturas, veja quando cada uma fecha e '
+              'pague em poucos toques.',
+              textAlign: TextAlign.center,
+              style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add),
+              label: const Text('Cadastrar cartão'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

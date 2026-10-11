@@ -187,7 +187,8 @@ found; cosmetic items are done in batches.
 - [ ] Design: a new single purchase on a card is still made from the "+" (choosing the card as the account); the card screen offers only installment purchases
 - [x] Design step 5: Planejar with the forecast (30-day line, end of the month, lowest day or the day it turns negative), the budgets of the month (a ring with the total and the three closest to the limit), up to four goals with rings, and the tools
 - [x] Polish 1: the whole app stays above the phone navigation bar (SystemBarsFrame at the root); the balance on Inicio opens Contas; "Minhas contas" on Inicio (a card per account, a tap opens its statement of the month, "Nova conta")
-- [ ] Design: the text under "Adicionar cartao" in the carousel is too plain; give it a proper empty state
+- [x] Polish 2: a proper empty state under "Adicionar cartao"; the "Empresa" tag on the ten screens with the blue bar (WorkspaceTitle); Mais says where the data export is
 - [x] Design step 7: the "+" opens a sheet (Despesa, Receita, Transferencia; a big amount; category, account and day as chips; the category name when there is no description; a future day is pending by itself)
 - [ ] Design: "Repetir todo mes" of the mockup is not in the sheet; repeating items are created in Recorrencias
 - [ ] Design step 6 (Mais) folded into the polish round: only small touches left
+- [ ] Design: the inside of the Empresa screens (Metas, Orcamentos, Previsao, Recorrencias, Relatorio, Contas, Categorias, Historico, Lixeira, Reserva) still uses the older layout; restyle them one by one from screenshots

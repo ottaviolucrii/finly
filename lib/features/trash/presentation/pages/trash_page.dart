@@ -2,6 +2,7 @@ import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
 import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/core/utils/date_format.dart';
+import 'package:finly/core/widgets/workspace_title.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/accounts/domain/entities/account_type.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
@@ -86,7 +87,7 @@ class _TrashView extends StatelessWidget {
       builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Lixeira'),
+            title: WorkspaceTitle('Lixeira', isBusiness: isBusiness),
             backgroundColor: isBusiness ? AppColors.deepBlue : null,
             foregroundColor: isBusiness ? AppColors.white : null,
           ),

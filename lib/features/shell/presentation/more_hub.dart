@@ -110,7 +110,7 @@ class MoreHub extends StatelessWidget {
               GroupedItem(
                 icon: Icons.settings_outlined,
                 title: 'Configurações',
-                subtitle: 'Aparência, notificações, bloqueio e privacidade',
+                subtitle: 'Aparência, notificações, bloqueio, privacidade e exportar dados',
                 onTap: () => onOpen(MoreDestination.settings),
               ),
             ],
