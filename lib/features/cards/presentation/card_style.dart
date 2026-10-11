@@ -55,3 +55,74 @@ IconData invoiceDisplayIcon(InvoiceEntity invoice, DateTime today) {
   if (invoice.isPartiallyPaid) return Icons.timelapse;
   return invoiceStatusIcon(invoice.statusOn(today));
 }
+
+const List<String> _monthNamesLower = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+];
+
+/// "Fatura de outubro"; the year is added when it is not the year of [today]
+/// ("Fatura de dezembro de 2025").
+String invoiceTitle(InvoiceEntity invoice, DateTime today) {
+  final month = invoice.referenceMonth;
+  final name = _monthNamesLower[month.month - 1];
+  return month.year == today.year ? 'Fatura de $name' : 'Fatura de $name de ${month.year}';
+}
+
+/// "Outubro" for a row of the list; the year is added when it is not the
+/// year of [today] ("Dezembro de 2025").
+String invoiceMonthLabel(InvoiceEntity invoice, DateTime today) {
+  final month = invoice.referenceMonth;
+  final name = _monthNamesLower[month.month - 1];
+  final capital = '${name[0].toUpperCase()}${name.substring(1)}';
+  return month.year == today.year ? capital : '$capital de ${month.year}';
+}
+
+/// The invoice to show first on a card: a closed one still to pay (the one
+/// due first), otherwise the open one, otherwise none.
+InvoiceEntity? currentInvoice(List<InvoiceEntity> invoices, DateTime today) {
+  InvoiceEntity? toPay;
+  for (final invoice in invoices) {
+    if (invoice.statusOn(today) == InvoiceStatus.closed && invoice.needsPayment) {
+      if (toPay == null || invoice.dueDate.isBefore(toPay.dueDate)) toPay = invoice;
+    }
+  }
+  if (toPay != null) return toPay;
+  for (final invoice in invoices) {
+    if (invoice.statusOn(today) == InvoiceStatus.open) return invoice;
+  }
+  return null;
+}
+
+/// How an invoice tag looks: blue while open, gold when it has to be paid
+/// (closed, or paid in part), green when paid.
+enum InvoiceTone { open, toPay, paid }
+
+InvoiceTone invoiceTone(InvoiceEntity invoice, DateTime today) {
+  if (invoice.isPaid) return InvoiceTone.paid;
+  if (invoice.isPartiallyPaid) return InvoiceTone.toPay;
+  return invoice.statusOn(today) == InvoiceStatus.open ? InvoiceTone.open : InvoiceTone.toPay;
+}
+
+/// Which card to show first when the person came to pay: the one with a
+/// closed invoice still to pay that is due first; otherwise the first card.
+/// [invoicesByCard] has the invoices of each card by its account id (a card
+/// whose invoices did not load is simply not considered).
+int cardIndexToPay(
+  List<CreditCardEntity> cards,
+  Map<String, List<InvoiceEntity>> invoicesByCard,
+  DateTime today,
+) {
+  var best = 0;
+  DateTime? bestDue;
+  for (var i = 0; i < cards.length; i++) {
+    final invoice = currentInvoice(invoicesByCard[cards[i].accountId] ?? const [], today);
+    if (invoice == null || !invoice.needsPayment) continue;
+    if (invoice.statusOn(today) != InvoiceStatus.closed && !invoice.isPartiallyPaid) continue;
+    if (bestDue == null || invoice.dueDate.isBefore(bestDue)) {
+      best = i;
+      bestDue = invoice.dueDate;
+    }
+  }
+  return best;
+}

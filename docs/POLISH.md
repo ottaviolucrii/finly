@@ -183,3 +183,5 @@ found; cosmetic items are done in batches.
 - [ ] Design: the bell of the mockup (a list of alerts) is not there yet; the alerts stay as a card on Inicio
 - [ ] Design: Extrato opens on the current month; the totals of the band count only what is confirmed (pending items are in the list, not in the totals)
 - [ ] Design: with more than one currency, the band of Extrato shows the totals of the first one
+- [x] Design step 4: cards drawn as cards (logo, chip, days, limit), the limit bar, the invoice that matters now highlighted (a closed one to pay first, otherwise the open one) with "Pagar fatura" opening the payment at once, the other invoices with colored tags, purchases in a white card
+- [ ] Design: a new single purchase on a card is still made from the "+" (choosing the card as the account); the card screen offers only installment purchases
