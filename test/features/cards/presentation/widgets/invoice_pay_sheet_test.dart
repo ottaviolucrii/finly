@@ -153,7 +153,7 @@ void main() {
   testWidgets('paying a part sends the amount', (tester) async {
     await open(tester);
 
-    await tester.enterText(find.byType(TextField), '100');
+    await tester.enterText(find.byType(TextField), '10000');
     await tester.tap(find.textContaining('Poupança'));
     await tester.pump();
 
@@ -185,7 +185,7 @@ void main() {
   testWidgets('an amount above what is owed is refused, with the reason', (tester) async {
     await open(tester);
 
-    await tester.enterText(find.byType(TextField), '500');
+    await tester.enterText(find.byType(TextField), '50000');
     await tester.tap(find.textContaining('Conta corrente'));
     await tester.pump();
 
@@ -193,26 +193,27 @@ void main() {
     expect(payEnabled(tester), isFalse);
   });
 
-  testWidgets('zero is refused, with the reason', (tester) async {
+  testWidgets('zero cannot be typed: the field stays empty and the button waits', (tester) async {
     await open(tester);
 
     await tester.enterText(find.byType(TextField), '0');
     await tester.tap(find.textContaining('Conta corrente'));
     await tester.pump();
 
-    expect(find.text('Informe um valor maior que zero.'), findsOneWidget);
+    expect(fieldText(tester), isEmpty);
     expect(payEnabled(tester), isFalse);
   });
 
-  testWidgets('something that is not an amount is refused, with the reason', (tester) async {
+  testWidgets('letters cannot be typed, only digits count', (tester) async {
     await open(tester);
 
     await tester.enterText(find.byType(TextField), 'abc');
-    await tester.tap(find.textContaining('Conta corrente'));
     await tester.pump();
+    expect(fieldText(tester), isEmpty);
 
-    expect(find.text('Valor inválido. Use o formato 1.234,56.'), findsOneWidget);
-    expect(payEnabled(tester), isFalse);
+    await tester.enterText(find.byType(TextField), '1a2b3');
+    await tester.pump();
+    expect(fieldText(tester), '1,23');
   });
 
   testWidgets('an empty field says nothing, and the button waits', (tester) async {
@@ -231,9 +232,9 @@ void main() {
   testWidgets('"Pagar tudo" puts everything that is owed back in the field', (tester) async {
     await open(tester, forInvoice: invoice(paid: 10000));
 
-    await tester.enterText(find.byType(TextField), '10');
+    await tester.enterText(find.byType(TextField), '1000');
     await tester.pump();
-    expect(fieldText(tester), '10');
+    expect(fieldText(tester), '10,00');
 
     await tester.tap(find.text('Pagar tudo'));
     await tester.pump();

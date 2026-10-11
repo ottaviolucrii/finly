@@ -1,4 +1,5 @@
 import 'package:finly/core/money/money.dart';
+import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/cards/domain/entities/invoice_entity.dart';
@@ -111,7 +112,8 @@ class _InvoicePaySheetState extends State<InvoicePaySheet> {
             const SizedBox(height: 16),
             TextField(
               controller: _amount,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: TextInputType.number,
+              inputFormatters: const [CentsInputFormatter()],
               decoration: InputDecoration(
                 labelText: 'Valor a pagar',
                 prefixText: '${Money.symbolFor(widget.currency)} ',

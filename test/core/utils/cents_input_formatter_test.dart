@@ -65,4 +65,27 @@ void main() {
       expect(type(full, '${full}9').text, full);
     });
   });
+
+  group('with a minus sign (opening balances)', () {
+    const signed = CentsInputFormatter(allowNegative: true);
+
+    TextEditingValue typeSigned(String before, String after) => signed.formatEditUpdate(
+          TextEditingValue(text: before),
+          TextEditingValue(text: after),
+        );
+
+    test('"-" makes it negative, wherever it is typed', () {
+      expect(typeSigned('', '-').text, '-');
+      expect(typeSigned('-', '-5').text, '-0,05');
+      expect(typeSigned('12,34', '12,34-').text, '-12,34');
+    });
+
+    test('a second "-" makes it positive again', () {
+      expect(typeSigned('-12,34', '-12,34-').text, '12,34');
+    });
+
+    test('without the option the sign is dropped', () {
+      expect(type('', '-5').text, '0,05');
+    });
+  });
 }

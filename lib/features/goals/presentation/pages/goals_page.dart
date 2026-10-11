@@ -1,5 +1,7 @@
 import 'package:finly/core/di/injection.dart';
+import 'package:finly/core/money/money.dart';
 import 'package:finly/core/theme/app_colors.dart';
+import 'package:finly/core/widgets/grouped_list.dart';
 import 'package:finly/core/widgets/workspace_title.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
@@ -121,21 +123,87 @@ class GoalsView extends StatelessWidget {
     }
 
     final now = (clock ?? DateTime.now)();
-    final text = Theme.of(context).textTheme;
+    final open = [for (final item in state.items) if (!item.achieved) item];
+    final reached = [for (final item in state.items) if (item.achieved) item];
 
     return RefreshIndicator(
       onRefresh: cubit.reload,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
         children: [
           if (state.status == GoalsStatus.loading) const LinearProgressIndicator(minHeight: 2),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-            child: Text(goalsSummaryLine(state.items), style: text.bodyMedium),
-          ),
-          for (final item in state.items)
-            _GoalCard(item: item, today: now, onTap: () => _open(context, item)),
+          _GoalsSummary(items: state.items),
+          if (open.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            const SectionLabel('Em andamento'),
+            for (final item in open) _GoalCard(item: item, today: now, onTap: () => _open(context, item)),
+          ],
+          if (reached.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            const SectionLabel('Alcançadas'),
+            for (final item in reached) _GoalCard(item: item, today: now, onTap: () => _open(context, item)),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// The top of the list: how much is saved in all the goals, how much is
+/// still missing, and how many goals were reached.
+class _GoalsSummary extends StatelessWidget {
+  final List<GoalProgress> items;
+
+  const _GoalsSummary({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    // Amounts in other currencies are not added to the first one.
+    final currency = items.first.goal.currency;
+    var saved = 0, missing = 0;
+    for (final item in items) {
+      if (item.goal.currency != currency) continue;
+      saved += item.savedCents;
+      missing += item.remainingCents;
+    }
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Guardado nas metas', style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                      Text(Money(saved, currency).format(), style: text.titleLarge),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('Falta', style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                    Text(
+                      Money(missing, currency).format(),
+                      style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(goalsSummaryLine(items), style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+          ],
+        ),
       ),
     );
   }
@@ -152,63 +220,70 @@ class _GoalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final achieved = item.achieved;
+    final overdue = item.statusAt(today) == GoalStatus.overdue;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Icon(
-                    achieved ? Icons.flag : Icons.flag_outlined,
-                    color: achieved ? scheme.secondary : null,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
+              SizedBox(
+                width: 60,
+                height: 60,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: item.percent / 100,
+                      strokeWidth: 7,
+                      color: achieved ? AppColors.positive : AppColors.gold,
+                      backgroundColor: dark ? AppColors.borderDark : AppColors.track,
+                      semanticsLabel: '${item.percent}% da meta',
+                    ),
+                    Center(
+                      child: Text(
+                        '${item.percent}%',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
                       item.goal.name,
-                      style: text.titleMedium,
+                      style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text('${item.percent}%', style: text.titleMedium),
-                ],
-              ),
-              if (item.accountName.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(left: 32, top: 2),
-                  child: Text(
-                    '${item.accountName} · ${item.goal.currency}',
-                    style: text.bodySmall,
-                  ),
-                ),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: item.percent / 100,
-                  minHeight: 8,
-                  color: achieved ? scheme.secondary : null,
-                  semanticsLabel: '${item.percent}% da meta',
+                    if (item.accountName.isNotEmpty)
+                      Text(
+                        '${item.accountName} · ${item.goal.currency}',
+                        style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    const SizedBox(height: 4),
+                    Text(goalAmountsLine(item), style: text.bodyMedium),
+                    Text(
+                      goalStatusLine(item, today),
+                      style: text.bodySmall?.copyWith(
+                        color: overdue ? scheme.error : scheme.onSurfaceVariant,
+                        fontWeight: overdue ? FontWeight.w600 : null,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(goalAmountsLine(item), style: text.bodyMedium),
-              const SizedBox(height: 2),
-              Text(
-                goalStatusLine(item, today),
-                style: text.bodySmall?.copyWith(
-                  color: item.statusAt(today) == GoalStatus.overdue ? scheme.error : null,
-                ),
-              ),
+              Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
             ],
           ),
         ),

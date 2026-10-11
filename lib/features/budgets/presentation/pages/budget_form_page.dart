@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
+import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/budgets/domain/entities/budget_progress.dart';
 import 'package:finly/features/budgets/presentation/budget_messages.dart';
@@ -8,7 +9,6 @@ import 'package:finly/features/budgets/presentation/cubit/budget_form_state.dart
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Sets the limit of a category from [month] on. When [editing] is given the
@@ -179,12 +179,9 @@ class _BudgetFormViewState extends State<_BudgetFormView> {
                         const SizedBox(height: 20),
                         TextFormField(
                           controller: _limit,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: const [CentsInputFormatter()],
                           enabled: !submitting,
-                          keyboardType:
-                              const TextInputType.numberWithOptions(decimal: true),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                          ],
                           textInputAction: TextInputAction.done,
                           decoration: InputDecoration(
                             labelText: 'Limite mensal',

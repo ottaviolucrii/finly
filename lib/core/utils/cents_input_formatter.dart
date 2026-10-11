@@ -20,15 +20,24 @@ String formatCentsInput(int cents) => Money(cents, 'BRL').format(withSymbol: fal
 /// itself, the last two digits being the cents. Typing 5, 3, 5, 0 shows
 /// "0,05", "0,53", "5,35", "53,50". A wrong format cannot be typed.
 class CentsInputFormatter extends TextInputFormatter {
-  const CentsInputFormatter();
+  /// Lets the amount be negative (an opening balance in overdraft): typing
+  /// "-" switches the sign, wherever it is typed.
+  final bool allowNegative;
+
+  const CentsInputFormatter({this.allowNegative = false});
 
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final negative = allowNegative && '-'.allMatches(newValue.text).length.isOdd;
     final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '').replaceFirst(RegExp(r'^0+'), '');
-    if (digits.isEmpty) return TextEditingValue.empty;
     if (digits.length > maxAmountDigits) return oldValue;
+    if (digits.isEmpty) {
+      return negative
+          ? const TextEditingValue(text: '-', selection: TextSelection.collapsed(offset: 1))
+          : TextEditingValue.empty;
+    }
 
-    final text = formatCentsInput(int.parse(digits));
+    final text = '${negative ? '-' : ''}${formatCentsInput(int.parse(digits))}';
     return TextEditingValue(text: text, selection: TextSelection.collapsed(offset: text.length));
   }
 }

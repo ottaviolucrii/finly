@@ -1,4 +1,5 @@
 import 'package:finly/core/money/money.dart';
+import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/features/yield_simulator/domain/yield_form.dart';
 import 'package:finly/features/yield_simulator/domain/yield_rules.dart';
 import 'package:flutter/material.dart';
@@ -64,13 +65,14 @@ class _YieldSimulatorPageState extends State<YieldSimulatorPage> {
     String? prefix,
     String? suffix,
     bool decimal = true,
+    bool money = false,
   }) {
     return TextField(
       controller: controller,
-      keyboardType: TextInputType.numberWithOptions(decimal: decimal),
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(decimal ? RegExp(r'[0-9.,%]') : RegExp(r'[0-9]')),
-      ],
+      keyboardType: money ? TextInputType.number : TextInputType.numberWithOptions(decimal: decimal),
+      inputFormatters: money
+          ? const [CentsInputFormatter()]
+          : [FilteringTextInputFormatter.allow(decimal ? RegExp(r'[0-9.,%]') : RegExp(r'[0-9]'))],
       textInputAction: TextInputAction.next,
       onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
@@ -97,9 +99,9 @@ class _YieldSimulatorPageState extends State<YieldSimulatorPage> {
         children: [
           Text('Quanto você investe', style: text.titleMedium),
           const SizedBox(height: 12),
-          _field(_initial, 'Valor inicial', errors[YieldField.initial], prefix: 'R\$ '),
+          _field(_initial, 'Valor inicial', errors[YieldField.initial], prefix: 'R\$ ', money: true),
           const SizedBox(height: 12),
-          _field(_monthly, 'Aporte mensal', errors[YieldField.monthly], prefix: 'R\$ '),
+          _field(_monthly, 'Aporte mensal', errors[YieldField.monthly], prefix: 'R\$ ', money: true),
           const SizedBox(height: 12),
           _field(
             _months,
