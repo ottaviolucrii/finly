@@ -12,6 +12,9 @@ import 'package:finly/features/data_export/presentation/widgets/data_export_card
 import 'package:finly/features/reminders/presentation/widgets/notifications_settings_card.dart';
 import 'package:finly/features/settings/presentation/pages/change_password_page.dart';
 import 'package:finly/features/settings/presentation/pages/delete_account_page.dart';
+import 'package:finly/core/theme/app_colors.dart';
+import 'package:finly/core/widgets/grouped_list.dart';
+import 'package:finly/features/shell/presentation/more_hub.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -116,27 +119,32 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Configurações')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
             Card(
+              margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
               child: ListTile(
-                leading: const Icon(Icons.person_outline),
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: AppColors.midnight,
+                  child: Text(
+                    initialOf(user.fullName),
+                    style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700),
+                  ),
+                ),
                 title: Text(user.fullName),
                 subtitle: Text(user.email),
               ),
             ),
             const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 8),
-              child: Text('Bloqueio do app', style: text.titleMedium),
-            ),
+            SectionLabel('Bloqueio do app'),
             BlocConsumer<AppLockCubit, AppLockState>(
               listenWhen: (previous, current) =>
                   previous.error != current.error &&
@@ -152,10 +160,12 @@ class SettingsPage extends StatelessWidget {
                 final cubit = context.read<AppLockCubit>();
 
                 return Card(
+                  margin: EdgeInsets.zero,
+                  clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.timer_outlined),
+                        leading: const IconBadge(icon: Icons.timer_outlined),
                         title: const Text('Bloquear o app'),
                         subtitle: Text(lockTimeoutLabel(lock.settings.timeoutSeconds)),
                         trailing: const Icon(Icons.chevron_right),
@@ -163,7 +173,7 @@ class SettingsPage extends StatelessWidget {
                       ),
                       const Divider(height: 1),
                       SwitchListTile(
-                        secondary: const Icon(Icons.fingerprint),
+                        secondary: const IconBadge(icon: Icons.fingerprint),
                         title: const Text('Desbloquear com biometria'),
                         subtitle: Text(
                           lock.deviceSupported
@@ -179,13 +189,13 @@ class SettingsPage extends StatelessWidget {
                       ),
                       const Divider(height: 1),
                       ListTile(
-                        leading: const Icon(Icons.lock_outline),
+                        leading: const IconBadge(icon: Icons.lock_outline),
                         title: const Text('Bloquear agora'),
                         onTap: cubit.lockNow,
                       ),
                       const Divider(height: 1),
                       ListTile(
-                        leading: const Icon(Icons.swap_horiz),
+                        leading: const IconBadge(icon: Icons.swap_horiz),
                         title: const Text('Prote\u00e7\u00e3o ao trocar de workspace'),
                         subtitle: Text(
                           switchProtectionLabel(lock.settings.switchProtection),
@@ -212,15 +222,14 @@ class SettingsPage extends StatelessWidget {
             const SizedBox(height: 16),
             const DataExportCard(),
             const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 8),
-              child: Text('Segurança', style: text.titleMedium),
-            ),
+            SectionLabel('Segurança'),
             Card(
+              margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.lock_outline),
+                    leading: const IconBadge(icon: Icons.lock_outline),
                     title: const Text('Alterar senha'),
                     subtitle: const Text('Os outros dispositivos serão desconectados.'),
                     trailing: const Icon(Icons.chevron_right),
@@ -232,7 +241,7 @@ class SettingsPage extends StatelessWidget {
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    leading: const Icon(Icons.devices_other),
+                    leading: const IconBadge(icon: Icons.devices_other),
                     title: const Text('Sair de todos os dispositivos'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _confirmSignOutEverywhere(context),
@@ -241,13 +250,12 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 8),
-              child: Text('Privacidade', style: text.titleMedium),
-            ),
+            SectionLabel('Privacidade'),
             Card(
+              margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
               child: ListTile(
-                leading: Icon(Icons.delete_forever_outlined, color: scheme.error),
+                leading: const IconBadge(icon: Icons.delete_forever_outlined, danger: true),
                 title: Text(
                   'Excluir minha conta',
                   style: TextStyle(color: scheme.error),

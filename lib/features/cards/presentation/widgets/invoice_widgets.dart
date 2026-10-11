@@ -7,6 +7,14 @@ import 'package:finly/features/transactions/domain/entities/transaction_entity.d
 import 'package:finly/features/transactions/presentation/transaction_style.dart';
 import 'package:flutter/material.dart';
 
+/// What an invoice total reads like: the amount, or "Crédito de R$ …" when
+/// it is below zero (a refund bigger than the purchases, which the next
+/// invoice uses).
+String invoiceTotalText(int totalCents, String currency) {
+  if (totalCents >= 0) return Money(totalCents, currency).format();
+  return 'Crédito de ${Money(-totalCents, currency).format()}';
+}
+
 /// "17/10" for the small tiles of an invoice.
 String dayMonth(DateTime date) => formatDateBr(date).substring(0, 5);
 
@@ -146,7 +154,7 @@ class InvoiceSummaryCard extends StatelessWidget {
             ],
             const SizedBox(height: 10),
             Text(
-              money(invoice.totalCents),
+              invoiceTotalText(invoice.totalCents, currency),
               style: const TextStyle(
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w600,
@@ -155,6 +163,11 @@ class InvoiceSummaryCard extends StatelessWidget {
                 fontFeatures: [FontFeature.tabularFigures()],
               ),
             ),
+            if (invoice.totalCents < 0)
+              Text(
+                'Fica a seu favor e abate a próxima fatura.',
+                style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
             if (invoice.isPartiallyPaid)
               Text(
                 'Falta ${money(invoice.remainingCents)}',
@@ -256,7 +269,7 @@ class InvoiceRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  Money(invoice.totalCents, currency).format(),
+                  invoiceTotalText(invoice.totalCents, currency),
                   style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),

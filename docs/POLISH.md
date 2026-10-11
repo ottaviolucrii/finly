@@ -197,3 +197,7 @@ found; cosmetic items are done in batches.
 - [x] "Sem orcamento" chips open the form with their category
 - [x] Group 2a: shared form parts (FormPage with the save bar at the bottom, ChoicePills, AmountCard, InfoBox); Conta (new and edit, sign as pills), Orcamento and Meta in the new style; a card in Contas shows what is in use like "Cartoes em uso"
 - [ ] Group 2b: Cartao (new and edit), Compra parcelada, Recorrencia (new and edit), editing a transaction and Transferencia in the new style
+- [x] Income fix: money coming in can only go to bank accounts (the "+" sheet, recurring items, moving a transaction); a negative invoice reads "Credito de R$ ..." and says the next invoice uses it
+- [ ] The database still accepts an income on a card (a refund is legitimate there); a dedicated "Estorno" action could make that explicit
+- [x] Group 3a: the highlighted invoice is the open one that closes first (installments create the next ones ahead of time); Configuracoes (labels, icon badges, avatar) and Categorias (pills, one card, archived folded) in the new style
+- [ ] Group 3b: Lixeira, Historico, Relatorio, Reserva de impostos and Simulador; the cards inside Configuracoes (Aparencia, Privacidade, Uso sem internet, Notificacoes, Dados)

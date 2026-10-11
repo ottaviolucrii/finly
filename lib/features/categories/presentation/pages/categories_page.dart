@@ -10,6 +10,8 @@ import 'package:finly/features/categories/presentation/category_style.dart';
 import 'package:finly/features/categories/presentation/cubit/categories_cubit.dart';
 import 'package:finly/features/categories/presentation/cubit/categories_state.dart';
 import 'package:finly/features/categories/presentation/pages/category_form_page.dart';
+import 'package:finly/core/widgets/form_parts.dart';
+import 'package:finly/core/widgets/grouped_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -111,23 +113,17 @@ class _CategoriesViewState extends State<_CategoriesView> {
           body: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: SegmentedButton<CategoryKind>(
-                  segments: const [
-                    ButtonSegment(
-                      value: CategoryKind.expense,
-                      label: Text('Despesas'),
-                      icon: Icon(Icons.arrow_upward),
-                    ),
-                    ButtonSegment(
-                      value: CategoryKind.income,
-                      label: Text('Receitas'),
-                      icon: Icon(Icons.arrow_downward),
-                    ),
-                  ],
-                  selected: {_kind},
-                  onSelectionChanged: (selection) =>
-                      setState(() => _kind = selection.first),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ChoicePills<CategoryKind>(
+                    options: const [
+                      PillOption(CategoryKind.expense, 'Despesas', icon: Icons.north_east),
+                      PillOption(CategoryKind.income, 'Receitas', icon: Icons.south_west),
+                    ],
+                    selected: _kind,
+                    onSelected: (kind) => setState(() => _kind = kind),
+                  ),
                 ),
               ),
               Expanded(child: _body(state)),
@@ -170,8 +166,23 @@ class _CategoriesViewState extends State<_CategoriesView> {
     final text = Theme.of(context).textTheme;
     final cubit = context.read<CategoriesCubit>();
 
+    Widget menu(CategoryEntity category) => PopupMenuButton<String>(
+          tooltip: 'Mais opções',
+          onSelected: (value) {
+            if (value == 'edit') {
+              _openForm(editing: category);
+            } else {
+              _confirmArchive(category);
+            }
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'edit', child: Text('Editar')),
+            PopupMenuItem(value: 'archive', child: Text('Arquivar')),
+          ],
+        );
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 96),
       children: [
         if (active.isEmpty)
           Padding(
@@ -181,30 +192,37 @@ class _CategoriesViewState extends State<_CategoriesView> {
               style: text.bodyMedium,
               textAlign: TextAlign.center,
             ),
-          ),
-        for (final category in active)
-          _CategoryTile(
-            category: category,
-            onTap: () => _openForm(editing: category),
-            trailing: PopupMenuButton<String>(
-              tooltip: 'Mais opções',
-              onSelected: (value) {
-                if (value == 'edit') {
-                  _openForm(editing: category);
-                } else {
-                  _confirmArchive(category);
-                }
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'edit', child: Text('Editar')),
-                PopupMenuItem(value: 'archive', child: Text('Arquivar')),
+          )
+        else ...[
+          SectionLabel('Ativas · ${active.length}'),
+          Card(
+            margin: EdgeInsets.zero,
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                for (var i = 0; i < active.length; i++) ...[
+                  if (i > 0) const Divider(indent: 68),
+                  _CategoryTile(
+                    category: active[i],
+                    onTap: () => _openForm(editing: active[i]),
+                    trailing: menu(active[i]),
+                  ),
+                ],
               ],
             ),
           ),
-        if (archived.isNotEmpty)
+        ],
+        if (archived.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          const SectionLabel('Arquivadas'),
           Card(
+            margin: EdgeInsets.zero,
+            clipBehavior: Clip.antiAlias,
             child: ExpansionTile(
-              title: Text('Arquivadas (${archived.length})'),
+              shape: const Border(),
+              collapsedShape: const Border(),
+              leading: const IconBadge(icon: Icons.inventory_2_outlined),
+              title: Text(archived.length == 1 ? '1 categoria arquivada' : '${archived.length} categorias arquivadas'),
               children: [
                 for (final category in archived)
                   _CategoryTile(
@@ -218,6 +236,7 @@ class _CategoriesViewState extends State<_CategoriesView> {
               ],
             ),
           ),
+        ],
       ],
     );
   }
@@ -239,22 +258,25 @@ class _CategoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tint = categoryColor(category.colorHex);
-    final foreground =
-        ThemeData.estimateBrightnessForColor(tint) == Brightness.dark
-            ? AppColors.white
-            : AppColors.midnight;
-
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final tile = ListTile(
       onTap: onTap,
-      leading: CircleAvatar(
-        backgroundColor: tint,
-        foregroundColor: foreground,
-        child: Icon(categoryIcon(category.icon)),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: tint.withValues(alpha: dark ? 0.22 : 0.14),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(categoryIcon(category.icon), color: tint, size: 20),
       ),
-      title: Text(category.name, overflow: TextOverflow.ellipsis),
+      title: Text(
+        category.name,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
       trailing: trailing,
     );
-
-    return dimmed ? Opacity(opacity: 0.6, child: tile) : Card(child: tile);
+    return dimmed ? Opacity(opacity: 0.6, child: tile) : tile;
   }
 }

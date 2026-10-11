@@ -169,6 +169,32 @@ void main() {
     expect(find.text('Salvar receita'), findsOneWidget);
   });
 
+  testWidgets('an income does not offer the credit card', (tester) async {
+    await open(tester);
+
+    expect(find.text('Nubank'), findsOneWidget);
+    await tester.tap(find.text('Receita'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Itaú'), findsOneWidget);
+    expect(find.text('Nubank'), findsNothing);
+  });
+
+  testWidgets('an income moves off a card chosen before', (tester) async {
+    await open(tester);
+
+    await tester.tap(find.text('Nubank'));
+    await tester.tap(find.text('Receita'));
+    await tester.pumpAndSettle();
+    await tester.enterText(amountField(), '300000');
+    await tester.tap(find.text('Salário'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar receita'));
+    await tester.pumpAndSettle();
+
+    expect(sent().accountId, 'a1');
+  });
+
   testWidgets('asks for an amount and a description before saving', (tester) async {
     await open(tester);
 

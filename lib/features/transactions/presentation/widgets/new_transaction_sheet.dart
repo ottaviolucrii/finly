@@ -10,6 +10,7 @@ import 'package:finly/features/categories/domain/entities/category_kind.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
+import 'package:finly/features/transactions/presentation/account_choice.dart';
 import 'package:finly/features/transactions/presentation/cubit/transaction_form_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transaction_form_state.dart';
 import 'package:finly/features/transactions/presentation/new_transaction_rules.dart';
@@ -93,6 +94,17 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
   DateTime get _now => (widget.clock ?? DateTime.now)();
 
   AccountEntity get _account => widget.accounts.firstWhere((account) => account.id == _accountId);
+
+  /// The accounts the current kind can use (no cards for money coming in).
+  List<AccountEntity> get _accountOptions => accountsForType(_type, widget.accounts);
+
+  /// Keeps the chosen account valid after the kind changed.
+  void _fitAccount() {
+    final options = _accountOptions;
+    if (options.isNotEmpty && !options.any((account) => account.id == _accountId)) {
+      _accountId = options.first.id;
+    }
+  }
 
   CategoryEntity? get _category {
     for (final category in widget.categories) {
@@ -218,6 +230,7 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
                     onIncome: () => setState(() {
                       _type = TransactionType.income;
                       _categoryId = null;
+                      _fitAccount();
                     }),
                     onTransfer: () => Navigator.of(context).pop(NewTransactionResult.transfer),
                   ),
@@ -291,9 +304,11 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
                     ),
                   const SizedBox(height: 20),
                   _Label(income ? 'Receber em' : 'Pagar com'),
+                  if (_accountOptions.isEmpty)
+                    Text(noAccountForIncome, style: text.bodyMedium?.copyWith(color: scheme.error)),
                   _ChipRow(
                     children: [
-                      for (final account in widget.accounts)
+                      for (final account in _accountOptions)
                         _Choice(
                           label: account.name,
                           icon: accountTypeIcon(account.type),
@@ -338,7 +353,7 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
                     const SizedBox(height: 12),
                   ],
                   FilledButton(
-                    onPressed: submitting ? null : _submit,
+                    onPressed: (submitting || _accountOptions.isEmpty) ? null : _submit,
                     child: submitting
                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                         : Text(income ? 'Salvar receita' : 'Salvar despesa'),

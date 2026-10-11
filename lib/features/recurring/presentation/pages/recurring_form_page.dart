@@ -12,6 +12,7 @@ import 'package:finly/features/recurring/presentation/cubit/recurring_form_state
 import 'package:finly/features/recurring/presentation/recurring_messages.dart';
 import 'package:finly/features/recurring/presentation/recurring_style.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
+import 'package:finly/features/transactions/presentation/account_choice.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -78,6 +79,9 @@ class _RecurringFormViewState extends State<_RecurringFormView> {
 
   AccountEntity get _account =>
       widget.accounts.firstWhere((account) => account.id == _accountId);
+
+  /// The accounts the current kind can use (no cards for money coming in).
+  List<AccountEntity> get _accountOptions => accountsForType(_type, widget.accounts);
 
   List<CategoryEntity> get _categoryOptions {
     final kind = _type == TransactionType.income
@@ -167,7 +171,7 @@ class _RecurringFormViewState extends State<_RecurringFormView> {
           title: 'Nova recorrência',
           saveLabel: income ? 'Salvar entrada' : 'Salvar saída',
           saving: submitting,
-          onSave: _submit,
+          onSave: _accountOptions.isEmpty ? null : _submit,
           form: Form(
             key: _formKey,
             autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -185,6 +189,10 @@ class _RecurringFormViewState extends State<_RecurringFormView> {
                       : (type) => setState(() {
                             _type = type;
                             _categoryId = null;
+                            final options = _accountOptions;
+                            if (options.isNotEmpty && !options.any((a) => a.id == _accountId)) {
+                              _accountId = options.first.id;
+                            }
                           }),
                 ),
                 formGap,
@@ -214,14 +222,17 @@ class _RecurringFormViewState extends State<_RecurringFormView> {
                 ),
                 formGap,
                 FieldLabel(income ? 'Receber em' : 'Pagar com'),
-                ChoicePills<String>(
-                  options: [
-                    for (final account in widget.accounts)
-                      PillOption(account.id, '${account.name} (${account.currency})'),
-                  ],
-                  selected: _accountId,
-                  onSelected: submitting ? null : (id) => setState(() => _accountId = id),
-                ),
+                if (_accountOptions.isEmpty)
+                  Text(noAccountForIncome, style: text.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error))
+                else
+                  ChoicePills<String>(
+                    options: [
+                      for (final account in _accountOptions)
+                        PillOption(account.id, '${account.name} (${account.currency})'),
+                    ],
+                    selected: _accountId,
+                    onSelected: submitting ? null : (id) => setState(() => _accountId = id),
+                  ),
                 formGap,
                 const FieldLabel('Categoria'),
                 if (options.isEmpty)

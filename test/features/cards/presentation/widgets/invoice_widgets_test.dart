@@ -264,4 +264,24 @@ void main() {
       expect(amount.style?.color, AppColors.positive);
     });
   });
+
+  group('a credit on an invoice', () {
+    test('reads as a credit, not a negative amount', () {
+      expect(invoiceTotalText(-300000, 'BRL'), 'Crédito de R\$ 3.000,00');
+      expect(invoiceTotalText(184335, 'BRL'), 'R\$ 1.843,35');
+    });
+
+    testWidgets('the summary card says it is in your favor', (tester) async {
+      await show(tester, InvoiceSummaryCard(invoice: invoice(total: -300000), currency: 'BRL', today: today));
+
+      expect(find.text('Crédito de R\$ 3.000,00'), findsOneWidget);
+      expect(find.text('Fica a seu favor e abate a próxima fatura.'), findsOneWidget);
+    });
+
+    testWidgets('a row says it too', (tester) async {
+      await show(tester, InvoiceRow(invoice: invoice(total: -300000), currency: 'BRL', today: today, onTap: () {}));
+
+      expect(find.text('Crédito de R\$ 3.000,00'), findsOneWidget);
+    });
+  });
 }

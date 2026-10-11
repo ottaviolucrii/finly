@@ -9,6 +9,7 @@ import 'package:finly/features/categories/presentation/category_style.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
+import 'package:finly/features/transactions/presentation/account_choice.dart';
 import 'package:finly/features/transactions/presentation/cubit/transaction_edit_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transaction_edit_state.dart';
 import 'package:finly/features/transactions/presentation/cubit/transaction_move_cubit.dart';
@@ -107,7 +108,7 @@ class _TransactionEditViewState extends State<_TransactionEditView> {
 
   Future<void> _pickAccount() async {
     final moveCubit = context.read<TransactionMoveCubit>();
-    final targets = moveCubit.state.targets;
+    final targets = accountsForType(widget.transaction.type, moveCubit.state.targets);
     final messenger = ScaffoldMessenger.of(context);
 
     if (targets.isEmpty) {
