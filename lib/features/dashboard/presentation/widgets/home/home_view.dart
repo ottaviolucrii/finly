@@ -145,7 +145,7 @@ class _HomeViewState extends State<HomeView> {
               child: HomeShortcuts(
                 onAdd: widget.onAdd,
                 onTransfer: widget.onTransfer,
-                onPayInvoice: () => open(CardsPage(workspace: workspace)),
+                onPayInvoice: () => open(CardsPage(workspace: workspace, preferDue: true)),
                 onForecast: () => open(ForecastPage(workspace: workspace)),
               ),
             ),
