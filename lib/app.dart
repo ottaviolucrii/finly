@@ -1,4 +1,5 @@
 import 'package:finly/core/theme/app_theme.dart';
+import 'package:finly/core/widgets/system_bars_frame.dart';
 import 'package:flutter/material.dart';
 
 class FinlyApp extends StatelessWidget {
@@ -27,7 +28,11 @@ class FinlyApp extends StatelessWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
-      builder: builder,
+      // Everything stays above the phone's navigation bar (see
+      // SystemBarsFrame); main.dart's own wrapping goes inside it.
+      builder: (context, child) => SystemBarsFrame(
+        child: builder?.call(context, child) ?? child ?? const SizedBox.shrink(),
+      ),
       home: home,
     );
   }

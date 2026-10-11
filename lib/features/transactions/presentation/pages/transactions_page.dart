@@ -32,7 +32,10 @@ class TransactionsPage extends StatelessWidget {
   /// "Now", to start on the current month; tests pass a fixed date.
   final DateTime Function()? clock;
 
-  const TransactionsPage({super.key, required this.workspace, this.clock});
+  /// Starts with only this account (a tap on an account card on Início).
+  final String? accountId;
+
+  const TransactionsPage({super.key, required this.workspace, this.clock, this.accountId});
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +44,7 @@ class TransactionsPage extends StatelessWidget {
       providers: [
         BlocProvider(
           create: (_) => sl<TransactionsCubit>()
-            ..load(workspace.id, filter: filterForMonth(const TransactionFilter(), now)),
+            ..load(workspace.id, filter: filterForMonth(TransactionFilter(accountId: accountId), now)),
         ),
         BlocProvider(create: (_) => sl<MonthTotalsCubit>()..load(workspace.id, now)),
       ],
