@@ -1,13 +1,13 @@
 import 'package:finly/core/di/injection.dart';
-import 'package:finly/core/money/money.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
-import 'package:finly/core/utils/date_format.dart';
+import 'package:finly/core/widgets/form_parts.dart';
 import 'package:finly/features/budgets/domain/entities/budget_progress.dart';
 import 'package:finly/features/budgets/presentation/budget_messages.dart';
 import 'package:finly/features/budgets/presentation/cubit/budget_form_cubit.dart';
 import 'package:finly/features/budgets/presentation/cubit/budget_form_state.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
+import 'package:finly/features/transactions/presentation/widgets/statement_band.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -20,12 +20,16 @@ class BudgetFormPage extends StatelessWidget {
   final List<CategoryEntity> categories;
   final BudgetProgress? editing;
 
+  /// The category already chosen (a tap on a category without a budget).
+  final String? initialCategoryId;
+
   const BudgetFormPage({
     super.key,
     required this.workspaceId,
     required this.month,
     required this.categories,
     this.editing,
+    this.initialCategoryId,
   });
 
   @override
@@ -37,6 +41,7 @@ class BudgetFormPage extends StatelessWidget {
         month: month,
         categories: categories,
         editing: editing,
+        initialCategoryId: initialCategoryId,
       ),
     );
   }
@@ -47,12 +52,14 @@ class _BudgetFormView extends StatefulWidget {
   final DateTime month;
   final List<CategoryEntity> categories;
   final BudgetProgress? editing;
+  final String? initialCategoryId;
 
   const _BudgetFormView({
     required this.workspaceId,
     required this.month,
     required this.categories,
     required this.editing,
+    required this.initialCategoryId,
   });
 
   @override
@@ -60,13 +67,11 @@ class _BudgetFormView extends StatefulWidget {
 }
 
 class _BudgetFormViewState extends State<_BudgetFormView> {
-  static const _currencies = ['BRL', 'USD', 'EUR'];
-
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _limit = TextEditingController(
     text: widget.editing?.limit.format(withSymbol: false) ?? '',
   );
-  late String? _categoryId = widget.editing?.category.id;
+  late String? _categoryId = widget.editing?.category.id ?? widget.initialCategoryId;
   late String _currency = widget.editing?.currency ?? 'BRL';
 
   @override
@@ -84,14 +89,14 @@ class _BudgetFormViewState extends State<_BudgetFormView> {
       return;
     }
     if (!_formKey.currentState!.validate()) return;
-    final limit = Money.tryParse(_limit.text, _currency);
-    if (limit == null || limit.cents <= 0) return;
+    final cents = centsFromInput(_limit.text);
+    if (cents <= 0) return;
 
     context.read<BudgetFormCubit>().submit(
           workspaceId: widget.workspaceId,
           categoryId: categoryId,
           month: widget.month,
-          limitCents: limit.cents,
+          limitCents: cents,
           currency: _currency,
         );
   }
@@ -99,7 +104,9 @@ class _BudgetFormViewState extends State<_BudgetFormView> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final editing = widget.editing != null;
+    final scheme = Theme.of(context).colorScheme;
+    final editing = widget.editing;
+    final monthName = monthTitle(widget.month).toLowerCase();
 
     return BlocConsumer<BudgetFormCubit, BudgetFormState>(
       listenWhen: (previous, current) => previous.status != current.status,
@@ -118,106 +125,67 @@ class _BudgetFormViewState extends State<_BudgetFormView> {
       builder: (context, state) {
         final submitting = state.status == BudgetFormStatus.submitting;
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(editing ? 'Editar orçamento' : 'Definir orçamento'),
-          ),
-          body: SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Form(
-                    key: _formKey,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text('Categoria', style: text.labelLarge),
-                        const SizedBox(height: 8),
-                        if (widget.categories.isEmpty)
-                          Text('Nenhuma categoria de despesa.', style: text.bodyMedium)
-                        else
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 4,
-                            children: [
-                              for (final category in widget.categories)
-                                ChoiceChip(
-                                  avatar: Icon(categoryIcon(category.icon), size: 18),
-                                  label: Text(category.name),
-                                  selected: _categoryId == category.id,
-                                  // The category of an existing budget is fixed.
-                                  onSelected: (submitting || editing)
-                                      ? null
-                                      : (selected) => setState(
-                                            () => _categoryId =
-                                                selected ? category.id : null,
-                                          ),
-                                ),
-                            ],
-                          ),
-                        const SizedBox(height: 20),
-                        Text('Moeda', style: text.labelLarge),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            for (final currency in _currencies)
-                              ChoiceChip(
-                                label: Text(currency),
-                                selected: _currency == currency,
-                                onSelected: submitting
-                                    ? null
-                                    : (_) => setState(() => _currency = currency),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _limit,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: const [CentsInputFormatter()],
-                          enabled: !submitting,
-                          textInputAction: TextInputAction.done,
-                          decoration: InputDecoration(
-                            labelText: 'Limite mensal',
-                            prefixText: '${Money.symbolFor(_currency)} ',
-                            border: const OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            final limit = Money.tryParse(value ?? '', _currency);
-                            return (limit == null || limit.cents <= 0)
-                                ? 'Informe um limite maior que zero (ex.: 800,00).'
-                                : null;
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Vale a partir de ${monthYearLabel(widget.month)} e nos '
-                          'meses seguintes, até você definir outro valor. Os meses '
-                          'anteriores não mudam.',
-                          style: text.bodySmall,
-                        ),
-                        const SizedBox(height: 24),
-                        FilledButton(
-                          onPressed: submitting ? null : _submit,
-                          child: submitting
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Salvar'),
-                        ),
-                      ],
-                    ),
+        return FormPage(
+          title: editing != null ? 'Editar orçamento' : 'Novo orçamento',
+          saveLabel: 'Salvar orçamento',
+          saving: submitting,
+          onSave: _submit,
+          form: Form(
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const FieldLabel('Categoria'),
+                if (widget.categories.isEmpty)
+                  Text('Nenhuma categoria de despesa.', style: text.bodyMedium)
+                else
+                  ChoicePills<String>(
+                    options: [
+                      // The category of an existing budget is fixed: only it is shown.
+                      for (final category in widget.categories)
+                        if (editing == null || category.id == editing.category.id)
+                          PillOption(category.id, category.name, icon: categoryIcon(category.icon)),
+                    ],
+                    selected: _categoryId,
+                    onSelected: (submitting || editing != null)
+                        ? null
+                        : (id) => setState(() => _categoryId = id),
                   ),
+                formGap,
+                AmountCard(
+                  label: 'Limite por mês',
+                  controller: _limit,
+                  currency: _currency,
+                  enabled: !submitting,
+                  validator: (value) => centsFromInput(value ?? '') <= 0
+                      ? 'Informe um limite maior que zero.'
+                      : null,
+                  footer: editing == null
+                      ? null
+                      : Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'Em $monthName você já gastou ${editing.spent.format()} em ${editing.category.name}.',
+                            textAlign: TextAlign.center,
+                            style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                        ),
                 ),
-              ),
+                formGap,
+                const FieldLabel('Moeda'),
+                ChoicePills<String>(
+                  options: currencyPills,
+                  selected: _currency,
+                  onSelected: submitting ? null : (currency) => setState(() => _currency = currency),
+                ),
+                formGap,
+                InfoBox(
+                  icon: Icons.calendar_today_outlined,
+                  text: 'Vale a partir de $monthName e nos meses seguintes, até você definir '
+                      'outro valor. Os meses anteriores não mudam.',
+                ),
+              ],
             ),
           ),
         );
