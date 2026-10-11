@@ -175,3 +175,7 @@ found; cosmetic items are done in batches.
 - Errors never leave a screen loading; wiring split by feature
 - Continuous integration on GitHub; documentation up to date
 - About 2190 automated tests
+- [x] Design step 1: the theme of the 2026 design and a tab bar (Inicio, Extrato, +, Planejar, Mais)
+- [ ] Design: Inicio still shows the old dashboard (step 2 brings the band, the balance and the shortcuts)
+- [ ] Design: Extrato shows its own "+" next to the one of the tab bar (step 3 removes it)
+- [ ] Design: a dark version of the mockups was not drawn; the dark theme follows the same tokens

@@ -149,3 +149,14 @@ abstract final class AppColors {
 ```
 
 Fonts: add Poppins and Inter files under `assets/fonts/`, declare them in `pubspec.yaml`, and set `ThemeData.textTheme` so titles use Poppins and everything else Inter. Widgets read colours from `Theme.of(context)`; no hard-coded colours in widget code (SRS FR-S01).
+
+## Design 2026 ("Clareza")
+
+The approved mockups live in the design canvas "Finly - Nova Home" (Home, Extrato, Cartao e fatura, Planejar, Mais, Novo lancamento).
+
+- **Navigation:** a bar at the bottom with four places (Inicio, Extrato, Planejar, Mais) and a round "+" in the middle that adds a transaction (`FinlyTabBar`). Back on another tab goes to Inicio first.
+- **Surfaces:** a light gray page (`AppColors.canvas`) with white cards of radius 20; in dark mode a near-black page (`canvasDark`) with deep blue cards (`cardDark`).
+- **Tops:** Inicio and Extrato have the deep blue band (the balance, the month); the other tabs have a light top: a small blue line in capitals over a big Poppins title (`TabHeader`).
+- **Lists:** grouped cards with an icon badge, a title, an optional subtitle and an arrow, thin lines between rows (`GroupedSection`); a small label in capitals above each group.
+- **Buttons:** pills (stadium shape); the main action is filled Tech Blue, the others outlined.
+- **Text colors:** captions `textMuted` (5.8:1 on white), money in `positive`, gold text on light backgrounds `goldOnLight`, secondary text on the band `onBand` (all at least 4.5:1).
