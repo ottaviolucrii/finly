@@ -1,6 +1,7 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/core/utils/date_format.dart';
+import 'package:finly/core/widgets/workspace_title.dart';
 import 'package:finly/features/audit/domain/audit_filter.dart';
 import 'package:finly/features/audit/domain/audit_rules.dart';
 import 'package:finly/features/audit/domain/entities/audit_item.dart';
@@ -41,7 +42,7 @@ class AuditHistoryView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Histórico de alterações'),
+        title: WorkspaceTitle('Histórico de alterações', isBusiness: isBusiness),
         backgroundColor: isBusiness ? AppColors.deepBlue : null,
         foregroundColor: isBusiness ? AppColors.white : null,
       ),

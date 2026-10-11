@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/theme/app_colors.dart';
+import 'package:finly/core/widgets/workspace_title.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
@@ -98,7 +99,7 @@ class _CategoriesViewState extends State<_CategoriesView> {
       builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Categorias'),
+            title: WorkspaceTitle('Categorias', isBusiness: isBusiness),
             backgroundColor: isBusiness ? AppColors.deepBlue : null,
             foregroundColor: isBusiness ? AppColors.white : null,
           ),
