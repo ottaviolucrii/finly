@@ -15,7 +15,13 @@ void main() {
 
     test('the app bar blends with the page', () {
       expect(theme.appBarTheme.backgroundColor, AppColors.canvas);
-      expect(theme.appBarTheme.titleTextStyle?.fontFamily, 'Poppins');
+      expect(theme.appBarTheme.foregroundColor, AppColors.midnight);
+    });
+
+    test('the app bar title has no fixed color, so it follows the bar', () {
+      // A fixed color here would win over a white foreground on a blue bar.
+      expect(theme.appBarTheme.titleTextStyle, isNull);
+      expect(theme.textTheme.titleLarge?.fontFamily, 'Poppins');
     });
 
     test('cards have round corners of 20', () {
@@ -87,5 +93,39 @@ void main() {
     test('dark captions on dark cards pass 4.5:1', () {
       expect(ratio(AppColors.textMutedDark, AppColors.cardDark), greaterThanOrEqualTo(4.5));
     });
+  });
+
+  testWidgets('a blue app bar with a white foreground has a white title', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          appBar: AppBar(
+            title: const Text('Reserva para impostos'),
+            backgroundColor: AppColors.deepBlue,
+            foregroundColor: AppColors.white,
+          ),
+        ),
+      ),
+    );
+
+    final title = tester.widget<RichText>(
+      find.descendant(of: find.byType(AppBar), matching: find.byType(RichText)).first,
+    );
+    expect(title.text.style?.color, AppColors.white);
+  });
+
+  testWidgets('a normal app bar has a dark title', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(appBar: AppBar(title: const Text('Cartões'))),
+      ),
+    );
+
+    final title = tester.widget<RichText>(
+      find.descendant(of: find.byType(AppBar), matching: find.byType(RichText)).first,
+    );
+    expect(title.text.style?.color, AppColors.midnight);
   });
 }
