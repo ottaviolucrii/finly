@@ -176,6 +176,8 @@ found; cosmetic items are done in batches.
 - Continuous integration on GitHub; documentation up to date
 - About 2190 automated tests
 - [x] Design step 1: the theme of the 2026 design and a tab bar (Inicio, Extrato, +, Planejar, Mais)
-- [ ] Design: Inicio still shows the old dashboard (step 2 brings the band, the balance and the shortcuts)
+- [x] Design step 2: Inicio with the band of the brand (logo, workspace, hide values, avatar), the balance, the shortcuts over the band, and cards for the month, the credit cards, the budgets, what is coming and a goal
 - [ ] Design: Extrato shows its own "+" next to the one of the tab bar (step 3 removes it)
 - [ ] Design: a dark version of the mockups was not drawn; the dark theme follows the same tokens
+- [ ] Design: "hide values" on Inicio lasts while the app is open; it is not saved
+- [ ] Design: the bell of the mockup (a list of alerts) is not there yet; the alerts stay as a card on Inicio

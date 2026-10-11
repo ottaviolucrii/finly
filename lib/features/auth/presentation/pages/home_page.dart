@@ -1,5 +1,4 @@
 import 'package:finly/core/di/injection.dart';
-import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/core/widgets/finly_tab_bar.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/accounts/domain/usecases/get_accounts_use_case.dart';
@@ -19,6 +18,7 @@ import 'package:finly/features/categories/domain/usecases/get_all_categories_use
 import 'package:finly/features/categories/presentation/pages/categories_page.dart';
 import 'package:finly/features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import 'package:finly/features/dashboard/presentation/widgets/dashboard_view.dart';
+import 'package:finly/features/dashboard/presentation/widgets/home/home_view.dart';
 import 'package:finly/features/forecast/presentation/pages/forecast_page.dart';
 import 'package:finly/features/goals/presentation/pages/goals_page.dart';
 import 'package:finly/features/lock/presentation/cubit/app_lock_cubit.dart';
@@ -30,12 +30,12 @@ import 'package:finly/features/shell/presentation/plan_hub.dart';
 import 'package:finly/features/tax_reserve/presentation/pages/tax_reserve_page.dart';
 import 'package:finly/features/transactions/presentation/pages/transaction_form_page.dart';
 import 'package:finly/features/transactions/presentation/pages/transactions_page.dart';
+import 'package:finly/features/transfers/presentation/pages/transfer_form_page.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_cubit.dart';
 import 'package:finly/features/workspaces/presentation/cubit/switch_workspace_state.dart';
 import 'package:finly/features/workspaces/presentation/pages/onboarding_page.dart';
 import 'package:finly/features/workspaces/presentation/widgets/workspace_switch_sheet.dart';
 import 'package:finly/features/workspaces/presentation/workspace_messages.dart';
-import 'package:finly/features/workspaces/presentation/workspace_style.dart';
 import 'package:finly/features/yield_simulator/presentation/pages/yield_simulator_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -161,6 +161,45 @@ class _HomeShellState extends State<_HomeShell> {
     }
   }
 
+  /// The "Transferir" shortcut: gets the accounts and opens the form.
+  Future<void> _openTransfer(
+    BuildContext context,
+    WorkspaceEntity workspace,
+    WorkspaceEntity? other,
+    DashboardCubit dashboard,
+  ) async {
+    if (_adding) return;
+    setState(() => _adding = true);
+
+    final navigator = Navigator.of(context);
+    final result = await sl<GetAccountsUseCase>()(workspace.id);
+    if (!mounted) return;
+    setState(() => _adding = false);
+
+    final accounts = result.fold<List<AccountEntity>?>((_) => null, (list) => list);
+    if (accounts == null) {
+      _showMessage('Não foi possível abrir a transferência. Tente de novo.');
+      return;
+    }
+    if (accounts.isEmpty) {
+      _showMessage('Crie uma conta antes de transferir.');
+      return;
+    }
+
+    await navigator.push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => TransferFormPage(
+          workspace: workspace,
+          accounts: accounts,
+          otherWorkspace: other,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _statementVersion++);
+    await dashboard.reload();
+  }
+
   Widget _pageForPlan(PlanDestination destination, WorkspaceEntity workspace) {
     return switch (destination) {
       PlanDestination.budgets => BudgetsPage(workspace: workspace),
@@ -271,14 +310,16 @@ class _HomeShellState extends State<_HomeShell> {
     Widget tab(FinlyTab which) {
       if (!_opened.contains(which)) return const SizedBox.shrink();
       return switch (which) {
-        FinlyTab.home => _HomeTab(
+        FinlyTab.home => HomeView(
             workspace: active,
-            onSwitch: (other == null || switching)
+            workspaceLabel: active.type == WorkspaceType.business ? 'Empresa' : 'Pessoal',
+            initial: initialOf(user.fullName),
+            onSwitchWorkspace: (other == null || switching)
                 ? null
                 : () => _openSwitchSheet(context, active, other!),
-            onSettings: () => Navigator.of(context).push<void>(
-              MaterialPageRoute<void>(builder: (_) => SettingsPage(user: user)),
-            ),
+            onProfile: () => _select(FinlyTab.more, dashboard),
+            onAdd: _adding ? null : () => _quickAdd(context, active, dashboard),
+            onTransfer: _adding ? null : () => _openTransfer(context, active, other, dashboard),
           ),
         FinlyTab.statement => KeyedSubtree(
             key: ValueKey('statement-$_statementVersion'),
@@ -317,54 +358,6 @@ class _HomeShellState extends State<_HomeShell> {
           current: _tab,
           onSelect: (which) => _select(which, dashboard),
           onAdd: _adding ? null : () => _quickAdd(context, active, dashboard),
-        ),
-      ),
-    );
-  }
-}
-
-/// Início, for now: the dashboard of the active workspace. Its new look (the
-/// brand band, the balance and the shortcuts) comes in the next step.
-class _HomeTab extends StatelessWidget {
-  final WorkspaceEntity workspace;
-  final VoidCallback? onSwitch;
-  final VoidCallback onSettings;
-
-  const _HomeTab({
-    required this.workspace,
-    required this.onSwitch,
-    required this.onSettings,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isBusiness = workspace.type == WorkspaceType.business;
-    final chipColor =
-        isBusiness ? AppColors.white : Theme.of(context).colorScheme.primary;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Finly'),
-        backgroundColor: isBusiness ? AppColors.deepBlue : null,
-        foregroundColor: isBusiness ? AppColors.white : null,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: _WorkspaceChip(workspace: workspace, color: chipColor, onTap: onSwitch),
-          ),
-          IconButton(
-            tooltip: 'Configurações',
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: onSettings,
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => context.read<DashboardCubit>().reload(),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          children: [DashboardView(workspace: workspace)],
         ),
       ),
     );
@@ -418,52 +411,6 @@ class _NoWorkspaceYet extends StatelessWidget {
             child: const Text('Sair'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Shows which workspace is active. Tappable only when there is another one.
-class _WorkspaceChip extends StatelessWidget {
-  final WorkspaceEntity workspace;
-  final Color color;
-  final VoidCallback? onTap;
-
-  const _WorkspaceChip({
-    required this.workspace,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      shape: StadiumBorder(side: BorderSide(color: color)),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 180),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(workspaceIcon(workspace.type), size: 16, color: color),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    workspace.name,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: color),
-                  ),
-                ),
-                if (onTap != null) Icon(Icons.arrow_drop_down, color: color),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
