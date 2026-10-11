@@ -134,11 +134,27 @@ void main() {
     expect(find.textContaining('Prazo vencido em 30/06/2026'), findsOneWidget);
   });
 
-  testWidgets('the progress bar follows the percentage', (tester) async {
+  testWidgets('the ring follows the percentage', (tester) async {
     await show(tester, loaded([progress('Reserva')]));
 
-    final bar = tester.widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator));
-    expect(bar.value, 0.25);
+    final ring = tester.widget<CircularProgressIndicator>(find.byType(CircularProgressIndicator));
+    expect(ring.value, 0.25);
+  });
+
+  testWidgets('the top says how much is saved and how much is missing', (tester) async {
+    await show(tester, loaded([progress('Reserva')]));
+
+    expect(find.text('Guardado nas metas'), findsOneWidget);
+    expect(find.text(money(125000)), findsOneWidget);
+    expect(find.text('Falta'), findsOneWidget);
+    expect(find.text(money(375000)), findsOneWidget);
+  });
+
+  testWidgets('goals in progress and goals reached are in their own sections', (tester) async {
+    await show(tester, loaded([progress('Reserva')]));
+
+    expect(find.text('EM ANDAMENTO'), findsOneWidget);
+    expect(find.text('ALCANÇADAS'), findsNothing);
   });
 
   testWidgets('says how many goals there are and how many were reached', (tester) async {
@@ -211,7 +227,7 @@ void main() {
     );
 
     expect(find.text('Reserva'), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsNWidgets(2));
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
   });
 
   testWidgets('a failure with nothing to show offers to try again', (tester) async {

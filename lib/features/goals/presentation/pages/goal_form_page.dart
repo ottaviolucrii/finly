@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
+import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
@@ -9,7 +10,6 @@ import 'package:finly/features/goals/presentation/cubit/goal_form_cubit.dart';
 import 'package:finly/features/goals/presentation/cubit/goal_form_state.dart';
 import 'package:finly/features/goals/presentation/goal_texts.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Creates a goal, or changes [editing]. Pops with `true` when the goal was
@@ -267,9 +267,9 @@ class _GoalFormViewState extends State<GoalFormView> {
                   const SizedBox(height: 20),
                   TextFormField(
                     controller: _target,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: const [CentsInputFormatter()],
                     enabled: !saving,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
                     textInputAction: TextInputAction.done,
                     decoration: InputDecoration(
                       labelText: 'Valor da meta',

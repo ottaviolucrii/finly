@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
+import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
@@ -16,7 +17,6 @@ import 'package:finly/features/transactions/presentation/move_messages.dart';
 import 'package:finly/features/transactions/presentation/transaction_messages.dart';
 import 'package:finly/features/transactions/presentation/widgets/move_account_sheet.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Edits an income or an expense. The type never changes; the account can be
@@ -244,12 +244,9 @@ class _TransactionEditViewState extends State<_TransactionEditView> {
                         const SizedBox(height: 20),
                         TextFormField(
                           controller: _amount,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: const [CentsInputFormatter()],
                           enabled: !submitting,
-                          keyboardType:
-                              const TextInputType.numberWithOptions(decimal: true),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                          ],
                           textInputAction: TextInputAction.next,
                           decoration: InputDecoration(
                             labelText: 'Valor',

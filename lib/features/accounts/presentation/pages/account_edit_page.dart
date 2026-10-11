@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
+import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/accounts/domain/entities/account_type.dart';
 import 'package:finly/features/accounts/presentation/account_messages.dart';
@@ -7,7 +8,6 @@ import 'package:finly/features/accounts/presentation/account_style.dart';
 import 'package:finly/features/accounts/presentation/cubit/account_edit_cubit.dart';
 import 'package:finly/features/accounts/presentation/cubit/account_edit_state.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Renames an account and corrects its opening balance. The type and the
@@ -143,14 +143,9 @@ class _AccountEditViewState extends State<_AccountEditView> {
                           const SizedBox(height: 20),
                           TextFormField(
                             controller: _opening,
+                            keyboardType: const TextInputType.numberWithOptions(signed: true),
+                            inputFormatters: const [CentsInputFormatter(allowNegative: true)],
                             enabled: !submitting,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                              signed: true,
-                            ),
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]')),
-                            ],
                             textInputAction: TextInputAction.done,
                             decoration: InputDecoration(
                               labelText: 'Saldo inicial',

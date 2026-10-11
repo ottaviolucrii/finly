@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
+import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
@@ -9,7 +10,6 @@ import 'package:finly/features/transfers/presentation/cubit/transfer_form_state.
 import 'package:finly/features/transfers/presentation/exchange_rate.dart';
 import 'package:finly/features/transfers/presentation/transfer_messages.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Moves money out of an account of the active [workspace]. Pops with `true`
@@ -330,12 +330,9 @@ class _TransferFormViewState extends State<_TransferFormView> {
                 const SizedBox(height: 20),
                 TextFormField(
                   controller: _amount,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: const [CentsInputFormatter()],
                   enabled: !submitting,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                  ],
                   textInputAction: TextInputAction.next,
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
@@ -354,12 +351,9 @@ class _TransferFormViewState extends State<_TransferFormView> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _received,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: const [CentsInputFormatter()],
                     enabled: !submitting,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                    ],
                     textInputAction: TextInputAction.next,
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(

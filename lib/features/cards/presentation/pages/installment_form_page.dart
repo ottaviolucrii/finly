@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
+import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/cards/domain/entities/credit_card_entity.dart';
 import 'package:finly/features/cards/domain/installment_split.dart';
@@ -187,12 +188,9 @@ class _InstallmentFormViewState extends State<_InstallmentFormView> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _total,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: const [CentsInputFormatter()],
                   enabled: !submitting,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                  ],
                   textInputAction: TextInputAction.next,
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(

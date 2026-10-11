@@ -192,3 +192,4 @@ found; cosmetic items are done in batches.
 - [ ] Design: "Repetir todo mes" of the mockup is not in the sheet; repeating items are created in Recorrencias
 - [ ] Design step 6 (Mais) folded into the polish round: only small touches left
 - [ ] Design: the inside of the Empresa screens (Metas, Orcamentos, Previsao, Recorrencias, Relatorio, Contas, Categorias, Historico, Lixeira, Reserva) still uses the older layout; restyle them one by one from screenshots
+- [x] Polish 3: all money fields typed like in bank apps (CentsInputFormatter; a minus sign only for opening balances); Metas with a summary card, sections and rings

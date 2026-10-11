@@ -1,12 +1,12 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
+import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/features/accounts/domain/entities/account_type.dart';
 import 'package:finly/features/accounts/presentation/account_messages.dart';
 import 'package:finly/features/accounts/presentation/account_style.dart';
 import 'package:finly/features/accounts/presentation/cubit/account_form_cubit.dart';
 import 'package:finly/features/accounts/presentation/cubit/account_form_state.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Creates an account in [workspaceId]. Pops with `true` when it was created.
@@ -158,16 +158,9 @@ class _AccountFormViewState extends State<_AccountFormView> {
                         const SizedBox(height: 20),
                         TextFormField(
                           controller: _balance,
+                          keyboardType: const TextInputType.numberWithOptions(signed: true),
+                          inputFormatters: const [CentsInputFormatter(allowNegative: true)],
                           enabled: !submitting,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                            signed: true,
-                          ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r'[0-9.,\-]'),
-                            ),
-                          ],
                           textInputAction: TextInputAction.done,
                           decoration: InputDecoration(
                             labelText: 'Saldo inicial',

@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
+import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/features/cards/domain/entities/credit_card_entity.dart';
 import 'package:finly/features/cards/presentation/card_messages.dart';
 import 'package:finly/features/cards/presentation/cubit/card_edit_cubit.dart';
@@ -150,12 +151,9 @@ class _CardEditViewState extends State<_CardEditView> {
                         const SizedBox(height: 20),
                         TextFormField(
                           controller: _limit,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: const [CentsInputFormatter()],
                           enabled: !submitting,
-                          keyboardType:
-                              const TextInputType.numberWithOptions(decimal: true),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                          ],
                           textInputAction: TextInputAction.next,
                           onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(

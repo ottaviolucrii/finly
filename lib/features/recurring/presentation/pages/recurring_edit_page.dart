@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
+import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
@@ -12,7 +13,6 @@ import 'package:finly/features/recurring/presentation/recurring_messages.dart';
 import 'package:finly/features/recurring/presentation/recurring_style.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Edits what a recurring item generates: description, amount, category and
@@ -175,12 +175,9 @@ class _RecurringEditViewState extends State<_RecurringEditView> {
                         const SizedBox(height: 20),
                         TextFormField(
                           controller: _amount,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: const [CentsInputFormatter()],
                           enabled: !submitting,
-                          keyboardType:
-                              const TextInputType.numberWithOptions(decimal: true),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                          ],
                           textInputAction: TextInputAction.next,
                           decoration: InputDecoration(
                             labelText: 'Valor de cada lançamento',
