@@ -76,6 +76,26 @@ void main() {
       expect(currentInvoice([november, october], today), october);
     });
 
+    test('with invoices open ahead of time, the current one (closing first)', () {
+      // An installment purchase made the next invoices exist already: all
+      // open. Newest first, like the list comes.
+      final february = invoice('feb', month: DateTime(2027, 2));
+      final january = invoice('jan', month: DateTime(2027, 1));
+      final december = invoice('dec', month: DateTime(2026, 12));
+      final november = invoice('nov', month: DateTime(2026, 11));
+
+      expect(currentInvoice([february, january, december, november], today), november);
+    });
+
+    test('once the current one is paid, the next one', () {
+      final january = invoice('jan', month: DateTime(2027, 1));
+      final december = invoice('dec', month: DateTime(2026, 12));
+      final november = invoice('nov', month: DateTime(2026, 11), status: InvoiceStatus.paid, paid: 100000);
+      final october = invoice('oct', month: DateTime(2026, 10), status: InvoiceStatus.paid, paid: 100000);
+
+      expect(currentInvoice([january, december, november, october], today), december);
+    });
+
     test('a closed one with nothing in it is not to pay', () {
       final october = invoice('oct', month: DateTime(2026, 10), status: InvoiceStatus.closed, total: 0);
 

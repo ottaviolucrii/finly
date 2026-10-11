@@ -199,3 +199,5 @@ found; cosmetic items are done in batches.
 - [ ] Group 2b: Cartao (new and edit), Compra parcelada, Recorrencia (new and edit), editing a transaction and Transferencia in the new style
 - [x] Income fix: money coming in can only go to bank accounts (the "+" sheet, recurring items, moving a transaction); a negative invoice reads "Credito de R$ ..." and says the next invoice uses it
 - [ ] The database still accepts an income on a card (a refund is legitimate there); a dedicated "Estorno" action could make that explicit
+- [x] Group 3a: the highlighted invoice is the open one that closes first (installments create the next ones ahead of time); Configuracoes (labels, icon badges, avatar) and Categorias (pills, one card, archived folded) in the new style
+- [ ] Group 3b: Lixeira, Historico, Relatorio, Reserva de impostos and Simulador; the cards inside Configuracoes (Aparencia, Privacidade, Uso sem internet, Notificacoes, Dados)

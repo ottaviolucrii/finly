@@ -79,7 +79,8 @@ String invoiceMonthLabel(InvoiceEntity invoice, DateTime today) {
 }
 
 /// The invoice to show first on a card: a closed one still to pay (the one
-/// due first), otherwise the open one, otherwise none.
+/// due first), otherwise the open one that closes first (the current one),
+/// otherwise none.
 InvoiceEntity? currentInvoice(List<InvoiceEntity> invoices, DateTime today) {
   InvoiceEntity? toPay;
   for (final invoice in invoices) {
@@ -88,10 +89,14 @@ InvoiceEntity? currentInvoice(List<InvoiceEntity> invoices, DateTime today) {
     }
   }
   if (toPay != null) return toPay;
+  // Several invoices can be open at once (installments create the next ones
+  // ahead of time): the current one is the one that closes first.
+  InvoiceEntity? current;
   for (final invoice in invoices) {
-    if (invoice.statusOn(today) == InvoiceStatus.open) return invoice;
+    if (invoice.statusOn(today) != InvoiceStatus.open) continue;
+    if (current == null || invoice.periodEnd.isBefore(current.periodEnd)) current = invoice;
   }
-  return null;
+  return current;
 }
 
 /// How an invoice tag looks: blue while open, gold when it has to be paid
