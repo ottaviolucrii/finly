@@ -66,12 +66,9 @@ abstract final class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(
-          fontFamily: _titleFont,
-          fontWeight: FontWeight.w600,
-          fontSize: 20,
-          color: scheme.onSurface,
-        ),
+        // No titleTextStyle here: the title then uses titleLarge (Poppins) in
+        // the bar's own foreground color, so a page with a blue bar and a
+        // white foreground gets a white title, not a dark one.
       ),
       cardTheme: CardThemeData(
         color: scheme.surface,

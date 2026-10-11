@@ -185,3 +185,6 @@ found; cosmetic items are done in batches.
 - [ ] Design: with more than one currency, the band of Extrato shows the totals of the first one
 - [x] Design step 4: cards drawn as cards (logo, chip, days, limit), the limit bar, the invoice that matters now highlighted (a closed one to pay first, otherwise the open one) with "Pagar fatura" opening the payment at once, the other invoices with colored tags, purchases in a white card
 - [ ] Design: a new single purchase on a card is still made from the "+" (choosing the card as the account); the card screen offers only installment purchases
+- [x] Design step 5: Planejar with the forecast (30-day line, end of the month, lowest day or the day it turns negative), the budgets of the month (a ring with the total and the three closest to the limit), up to four goals with rings, and the tools
+- [ ] Design: the bottom of some screens sits under the phone navigation bar (Android 15 draws apps edge to edge); fix it once for the whole app
+- [ ] Design: the text under "Adicionar cartao" in the carousel is too plain; give it a proper empty state

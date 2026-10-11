@@ -27,6 +27,7 @@ import 'package:finly/features/reports/presentation/pages/reports_page.dart';
 import 'package:finly/features/settings/presentation/pages/settings_page.dart';
 import 'package:finly/features/shell/presentation/more_hub.dart';
 import 'package:finly/features/shell/presentation/plan_hub.dart';
+import 'package:finly/features/shell/presentation/plan_tab.dart';
 import 'package:finly/features/tax_reserve/presentation/pages/tax_reserve_page.dart';
 import 'package:finly/features/transactions/presentation/pages/transaction_form_page.dart';
 import 'package:finly/features/transactions/presentation/pages/transactions_page.dart';
@@ -325,8 +326,8 @@ class _HomeShellState extends State<_HomeShell> {
             key: ValueKey('statement-$_statementVersion'),
             child: TransactionsPage(workspace: active),
           ),
-        FinlyTab.plan => PlanHub(
-            isBusiness: active.type == WorkspaceType.business,
+        FinlyTab.plan => PlanTab(
+            workspace: active,
             onOpen: (destination) =>
                 openAndRefresh(context, _pageForPlan(destination, active)),
           ),
