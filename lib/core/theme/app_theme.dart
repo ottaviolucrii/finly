@@ -1,6 +1,9 @@
 import 'package:finly/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
+/// The look of the whole app: the brand colors, Poppins for titles and Inter
+/// for everything else, and the surfaces of the 2026 design (a light gray page
+/// with white cards; in dark mode a near-black page with deep blue cards).
 abstract final class AppTheme {
   static const _titleFont = 'Poppins';
   static const _bodyFont = 'Inter';
@@ -19,8 +22,11 @@ abstract final class AppTheme {
           onError: AppColors.white,
           surface: AppColors.white,
           onSurface: AppColors.midnight,
-          outline: AppColors.structure,
+          onSurfaceVariant: AppColors.textMuted,
+          outline: AppColors.border,
+          outlineVariant: AppColors.hairline,
         ),
+        canvas: AppColors.canvas,
       );
 
   static ThemeData get dark => _build(
@@ -32,36 +38,95 @@ abstract final class AppTheme {
           onSecondary: AppColors.midnight,
           error: AppColors.dangerOnDark,
           onError: AppColors.midnight,
-          surface: AppColors.midnight,
+          surface: AppColors.cardDark,
           onSurface: AppColors.textOnDark,
-          outline: AppColors.structure,
+          onSurfaceVariant: AppColors.textMutedDark,
+          outline: AppColors.borderDark,
+          outlineVariant: AppColors.hairlineDark,
         ),
+        canvas: AppColors.canvasDark,
       );
 
-  static ThemeData _build(ColorScheme scheme) {
+  static ThemeData _build(ColorScheme scheme, {required Color canvas}) {
+    const buttonText = TextStyle(
+      fontFamily: _bodyFont,
+      fontWeight: FontWeight.w600,
+      fontSize: 15,
+    );
+
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       fontFamily: _bodyFont,
-      scaffoldBackgroundColor: scheme.surface,
+      scaffoldBackgroundColor: canvas,
       appBarTheme: AppBarTheme(
-        backgroundColor: scheme.surface,
+        backgroundColor: canvas,
         foregroundColor: scheme.onSurface,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
+        titleTextStyle: TextStyle(
+          fontFamily: _titleFont,
+          fontWeight: FontWeight.w600,
+          fontSize: 20,
+          color: scheme.onSurface,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 1,
+        shadowColor: AppColors.midnight.withValues(alpha: 0.12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      dividerTheme: DividerThemeData(
+        color: scheme.outlineVariant,
+        thickness: 1,
+        space: 1,
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          minimumSize: const Size.fromHeight(52),
+          shape: const StadiumBorder(),
+          textStyle: buttonText,
         ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          shape: const StadiumBorder(),
+          side: BorderSide(color: scheme.outline),
+          foregroundColor: scheme.onSurface,
+          textStyle: buttonText,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(textStyle: buttonText),
+      ),
+      chipTheme: ChipThemeData(
+        shape: const StadiumBorder(),
+        side: BorderSide(color: scheme.outline),
+      ),
+      listTileTheme: const ListTileThemeData(
+        contentPadding: EdgeInsets.symmetric(horizontal: 16),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
 
     // Titles use Poppins, everything else (body, numbers) uses Inter.
-    TextStyle? title(TextStyle? style) => style?.copyWith(fontFamily: _titleFont);
+    TextStyle? title(TextStyle? style) =>
+        style?.copyWith(fontFamily: _titleFont, fontWeight: FontWeight.w600);
     final t = base.textTheme;
     final titled = t.copyWith(
       headlineLarge: title(t.headlineLarge),
