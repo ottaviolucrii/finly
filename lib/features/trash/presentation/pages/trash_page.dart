@@ -15,6 +15,8 @@ import 'package:finly/features/trash/domain/trash_rules.dart';
 import 'package:finly/features/trash/presentation/cubit/trash_cubit.dart';
 import 'package:finly/features/trash/presentation/cubit/trash_state.dart';
 import 'package:finly/features/trash/presentation/trash_messages.dart';
+import 'package:finly/core/widgets/form_parts.dart';
+import 'package:finly/core/widgets/grouped_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -158,28 +160,13 @@ class _TrashView extends StatelessWidget {
     ]..sort((a, b) => b.$1.compareTo(a.$1));
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.info_outline),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Itens excluídos ficam aqui por $trashRetentionDays dias e '
-                    'depois são removidos de vez. Ao restaurar uma '
-                    'transferência, as duas pontas voltam. O pagamento de uma '
-                    'fatura não pode ser restaurado: pague a fatura de novo.',
-                    style: text.bodyMedium,
-                  ),
-                ),
-              ],
-            ),
-          ),
+        const InfoBox(
+          icon: Icons.info_outline,
+          text: 'Itens excluídos ficam aqui por $trashRetentionDays dias e depois são removidos de vez. '
+              'Ao restaurar uma transferência, as duas pontas voltam. O pagamento de uma fatura não pode '
+              'ser restaurado: pague a fatura de novo.',
         ),
         if (rows.isEmpty)
           Padding(
@@ -220,14 +207,17 @@ class _TrashTile extends StatelessWidget {
     final transaction = item.transaction;
 
     return Card(
+      margin: const EdgeInsets.only(top: 12),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const IconBadge(icon: Icons.receipt_long_outlined),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     transaction.description,
@@ -252,7 +242,7 @@ class _TrashTile extends StatelessWidget {
             ),
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton.icon(
+              child: OutlinedButton.icon(
                 icon: const Icon(Icons.restore),
                 label: const Text('Restaurar'),
                 onPressed: onRestore,
@@ -309,15 +299,16 @@ class _TransferTile extends StatelessWidget {
     );
 
     return Card(
+      margin: const EdgeInsets.only(top: 12),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.swap_horiz, size: 20),
-                const SizedBox(width: 8),
+                const IconBadge(icon: Icons.swap_horiz),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     item.description,
@@ -345,7 +336,7 @@ class _TransferTile extends StatelessWidget {
             else
               Align(
                 alignment: Alignment.centerRight,
-                child: TextButton.icon(
+                child: OutlinedButton.icon(
                   icon: const Icon(Icons.restore),
                   label: const Text('Restaurar'),
                   onPressed: onRestore,

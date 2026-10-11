@@ -131,7 +131,7 @@ class TaxReserveView extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
       children: [
         if (!data.hasPercent)
           _SetPercentCard(
@@ -246,17 +246,29 @@ class _SummaryCard extends StatelessWidget {
     required this.onChangePercent,
   });
 
-  Widget _row(BuildContext context, String label, int cents, {bool strong = false, Color? color}) {
-    final text = Theme.of(context).textTheme;
-
+  Widget _row(String label, int cents, {bool strong = false, Color color = AppColors.white}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: strong ? text.titleSmall : text.bodyLarge)),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: strong ? 15 : 14,
+                fontWeight: strong ? FontWeight.w600 : FontWeight.w400,
+                color: strong ? color : AppColors.onBand,
+              ),
+            ),
+          ),
           Text(
             Money(cents, data.currency).format(),
-            style: (strong ? text.titleMedium : text.bodyLarge)?.copyWith(color: color),
+            style: TextStyle(
+              fontSize: strong ? 16 : 15,
+              fontWeight: FontWeight.w600,
+              color: color,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ],
       ),
@@ -265,48 +277,111 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
     final exceeded = data.exceededCents > 0;
+    // How much of the reserve the taxes of the month already took.
+    final used = data.reserveCents <= 0 ? 0.0 : (data.taxCents / data.reserveCents).clamp(0.0, 1.0);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Reserva de ${percentText(data.percentBps)}',
-                    style: text.titleMedium,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 12, 18),
+      decoration: BoxDecoration(color: AppColors.deepBlue, borderRadius: BorderRadius.circular(22)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Reserva de ${percentText(data.percentBps)}',
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 17,
+                    color: AppColors.white,
                   ),
                 ),
-                TextButton(
-                  onPressed: saving ? null : onChangePercent,
-                  child: const Text('Alterar'),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: AppColors.goldOnBand),
+                onPressed: saving ? null : onChangePercent,
+                child: const Text('Alterar'),
+              ),
+            ],
+          ),
+          Text(
+            'Valores em ${data.currency}, a moeda do workspace',
+            style: const TextStyle(fontSize: 12, color: AppColors.onBand),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('A reservar', style: TextStyle(fontSize: 13, color: AppColors.onBand)),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          Money(data.reserveCents, data.currency).format(),
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w600,
+                            fontSize: 30,
+                            color: AppColors.white,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Semantics(
+                  label: 'Impostos do mês usaram ${(used * 100).round()}% da reserva',
+                  excludeSemantics: true,
+                  child: SizedBox(
+                    width: 64,
+                    height: 64,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CircularProgressIndicator(
+                          value: used,
+                          strokeWidth: 7,
+                          color: exceeded ? AppColors.dangerOnDark : AppColors.gold,
+                          backgroundColor: AppColors.white.withValues(alpha: 0.15),
+                        ),
+                        Center(
+                          child: Text(
+                            '${(used * 100).round()}%',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
-            Text('Valores em ${data.currency}, a moeda do workspace', style: text.bodySmall),
-            const SizedBox(height: 8),
-            _row(context, 'Entradas do mês', data.incomeCents),
-            _row(context, 'A reservar', data.reserveCents),
-            _row(context, 'Impostos do mês', data.taxCents),
-            const Divider(),
-            if (exceeded)
-              _row(
-                context,
-                'Impostos acima da reserva',
-                data.exceededCents,
-                strong: true,
-                color: scheme.error,
-              )
-            else
-              _row(context, 'Reserva disponível', data.remainingCents, strong: true),
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Column(
+              children: [
+                _row('Entradas do mês', data.incomeCents),
+                _row('Impostos do mês', data.taxCents),
+                Divider(color: AppColors.white.withValues(alpha: 0.15)),
+                if (exceeded)
+                  _row('Impostos acima da reserva', data.exceededCents, strong: true, color: AppColors.dangerOnDark)
+                else
+                  _row('Reserva disponível', data.remainingCents, strong: true, color: AppColors.goldOnBand),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
