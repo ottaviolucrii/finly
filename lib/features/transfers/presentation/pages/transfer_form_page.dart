@@ -1,6 +1,6 @@
 import 'package:finly/core/di/injection.dart';
-import 'package:finly/core/money/money.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
+import 'package:finly/core/widgets/form_parts.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
@@ -119,20 +119,20 @@ class _TransferFormViewState extends State<_TransferFormView> {
     if (!_formKey.currentState!.validate()) return;
 
     final from = _from;
-    final amount = Money.tryParse(_amount.text, from.currency);
-    if (amount == null || amount.cents <= 0) return;
+    final amount = centsFromInput(_amount.text);
+    if (amount <= 0) return;
 
     final crossCurrency = from.currency != to.currency;
     final received =
-        crossCurrency ? Money.tryParse(_received.text, to.currency) : null;
+        crossCurrency ? centsFromInput(_received.text) : null;
 
     cubit.submit(
       fromAccountId: from.id,
       toAccountId: to.id,
       fromCurrency: from.currency,
       toCurrency: to.currency,
-      amountCents: amount.cents,
-      toAmountCents: received?.cents,
+      amountCents: amount,
+      toAmountCents: received,
       description: _description.text,
       occurredAt: DateTime.now(),
       kind: _kind,
@@ -141,8 +141,6 @@ class _TransferFormViewState extends State<_TransferFormView> {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-
     return BlocConsumer<TransferFormCubit, TransferFormState>(
       listenWhen: (previous, current) => previous.status != current.status,
       listener: (context, state) {
@@ -160,60 +158,64 @@ class _TransferFormViewState extends State<_TransferFormView> {
       builder: (context, state) {
         final submitting = state.status == TransferFormStatus.submitting;
 
-        Widget body;
+        Widget plain(Widget body) => Scaffold(
+              appBar: AppBar(title: const Text('Nova transferência')),
+              body: SafeArea(child: body),
+            );
+
         if (state.status == TransferFormStatus.loading) {
-          body = const Center(child: CircularProgressIndicator());
-        } else if (state.status == TransferFormStatus.loadFailed) {
-          body = Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    transferFailureMessage(state.failure!),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: () => context
-                        .read<TransferFormCubit>()
-                        .loadOtherAccounts(widget.otherWorkspace?.id),
-                    child: const Text('Tentar de novo'),
-                  ),
-                ],
+          return plain(const Center(child: CircularProgressIndicator()));
+        }
+        if (state.status == TransferFormStatus.loadFailed) {
+          return plain(
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(transferFailureMessage(state.failure!), textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => context
+                          .read<TransferFormCubit>()
+                          .loadOtherAccounts(widget.otherWorkspace?.id),
+                      child: const Text('Tentar de novo'),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
-        } else if (!_canInternal && !(_canOwner && state.otherAccounts.isNotEmpty)) {
-          body = const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Text(
-                'Para transferir você precisa de duas contas: no mesmo '
-                'workspace ou uma em cada workspace.',
-                textAlign: TextAlign.center,
+        }
+        if (!_canInternal && !(_canOwner && state.otherAccounts.isNotEmpty)) {
+          return plain(
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Para transferir você precisa de duas contas: no mesmo workspace ou uma em cada workspace.',
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
           );
-        } else {
-          body = _form(context, state, submitting, text);
         }
 
-        return Scaffold(
-          appBar: AppBar(title: const Text('Nova transferência')),
-          body: SafeArea(child: body),
+        return FormPage(
+          title: 'Nova transferência',
+          saveLabel: 'Transferir',
+          saving: submitting,
+          onSave: _submit,
+          form: _form(context, state, submitting),
         );
       },
     );
   }
 
-  Widget _form(
-    BuildContext context,
-    TransferFormState state,
-    bool submitting,
-    TextTheme text,
-  ) {
+  Widget _form(BuildContext context, TransferFormState state, bool submitting) {
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
     final from = _from;
     final to = _to(state);
     final destinations = _destinations(state);
@@ -224,192 +226,122 @@ class _TransferFormViewState extends State<_TransferFormView> {
     // The exchange rate the two typed amounts imply, to catch a typo.
     String? rate;
     if (crossCurrency) {
-      final sent = Money.tryParse(_amount.text, from.currency);
-      final got = Money.tryParse(_received.text, to.currency);
-      if (sent != null && got != null) {
+      final sent = centsFromInput(_amount.text);
+      final got = centsFromInput(_received.text);
+      if (sent > 0 && got > 0) {
         rate = exchangeRateLabel(
           fromCurrency: from.currency,
           toCurrency: to.currency,
-          fromCents: sent.cents,
-          toCents: got.cents,
+          fromCents: sent,
+          toCents: got,
         );
       }
     }
 
-    return Align(
-      alignment: Alignment.topCenter,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Form(
-            key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_canInternal && ownerAvailable)
-                  SegmentedButton<_Mode>(
-                    segments: [
-                      const ButtonSegment(
-                        value: _Mode.internal,
-                        label: Text('Mesmo workspace'),
-                      ),
-                      ButtonSegment(value: _Mode.owner, label: Text(ownerLabel)),
-                    ],
-                    selected: {_mode},
-                    onSelectionChanged: submitting
-                        ? null
-                        : (selection) => setState(() {
-                              _mode = selection.first;
-                              _toId = null;
-                            }),
-                  )
-                else if (_mode == _Mode.owner)
-                  Text(
-                    '$ownerLabel para ${widget.otherWorkspace?.name ?? ''}',
-                    style: text.titleMedium,
-                  )
-                else
-                  Text('Entre contas deste workspace', style: text.titleMedium),
-                if (_mode == _Mode.owner) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    _isBusiness
-                        ? 'Retirada: o dinheiro sai da empresa e entra no seu '
-                            'workspace pessoal.'
-                        : 'Aporte: o dinheiro sai do seu workspace pessoal e '
-                            'entra na empresa.',
-                    style: text.bodySmall,
-                  ),
-                ],
-                const SizedBox(height: 20),
-                Text('De', style: text.labelLarge),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    for (final account in widget.accounts)
-                      ChoiceChip(
-                        label: Text('${account.name} (${account.currency})'),
-                        selected: _fromId == account.id,
-                        onSelected: submitting
-                            ? null
-                            : (_) => setState(() {
-                                  _fromId = account.id;
-                                  if (_toId == account.id) _toId = null;
-                                }),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  _mode == _Mode.owner
-                      ? 'Para (${widget.otherWorkspace?.name ?? ''})'
-                      : 'Para',
-                  style: text.labelLarge,
-                ),
-                const SizedBox(height: 8),
-                if (destinations.isEmpty)
-                  Text('Nenhuma conta disponível.', style: text.bodyMedium)
-                else
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      for (final account in destinations)
-                        ChoiceChip(
-                          label: Text('${account.name} (${account.currency})'),
-                          selected: _toId == account.id,
-                          onSelected: submitting
-                              ? null
-                              : (_) => setState(() => _toId = account.id),
-                        ),
-                    ],
-                  ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _amount,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: const [CentsInputFormatter()],
-                  enabled: !submitting,
-                  textInputAction: TextInputAction.next,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    labelText: 'Valor que sai (${from.currency})',
-                    prefixText: '${Money.symbolFor(from.currency)} ',
-                    border: const OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    final amount = Money.tryParse(value ?? '', from.currency);
-                    return (amount == null || amount.cents <= 0)
-                        ? 'Informe um valor maior que zero (ex.: 150,00).'
-                        : null;
-                  },
-                ),
-                if (crossCurrency) ...[
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _received,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: const [CentsInputFormatter()],
-                    enabled: !submitting,
-                    textInputAction: TextInputAction.next,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      labelText: 'Valor que chega (${to.currency})',
-                      prefixText: '${Money.symbolFor(to.currency)} ',
-                      helperText:
-                          'As moedas são diferentes: informe os dois valores.',
-                      helperMaxLines: 2,
-                      border: const OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      final amount = Money.tryParse(value ?? '', to.currency);
-                      return (amount == null || amount.cents <= 0)
-                          ? 'Informe o valor recebido.'
-                          : null;
-                    },
-                  ),
-                  if (rate != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(rate, style: text.titleSmall),
-                    ),
-                ],
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _description,
-                  enabled: !submitting,
-                  textCapitalization: TextCapitalization.sentences,
-                  textInputAction: TextInputAction.done,
-                  decoration: const InputDecoration(
-                    labelText: 'Descrição',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    final description = (value ?? '').trim();
-                    if (description.isEmpty || description.length > 200) {
-                      return 'Informe uma descrição (até 200 caracteres).';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: submitting ? null : _submit,
-                  child: submitting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Transferir'),
-                ),
+    PillOption<String> account(AccountEntity a) => PillOption(a.id, '${a.name} (${a.currency})');
+
+    return Form(
+      key: _formKey,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_canInternal && ownerAvailable) ...[
+            ChoicePills<_Mode>(
+              options: [
+                const PillOption(_Mode.internal, 'Entre minhas contas', icon: Icons.swap_horiz),
+                PillOption(_Mode.owner, ownerLabel, icon: Icons.business_center_outlined),
               ],
+              selected: _mode,
+              onSelected: submitting
+                  ? null
+                  : (mode) => setState(() {
+                        _mode = mode;
+                        _toId = null;
+                      }),
             ),
+            formGap,
+          ],
+          if (_mode == _Mode.owner) ...[
+            InfoBox(
+              icon: Icons.business_center_outlined,
+              text: _isBusiness
+                  ? 'Retirada para ${widget.otherWorkspace?.name ?? ''}: o dinheiro sai da empresa e entra '
+                      'no seu workspace pessoal.'
+                  : 'Aporte para ${widget.otherWorkspace?.name ?? ''}: o dinheiro sai do seu workspace '
+                      'pessoal e entra na empresa.',
+            ),
+            formGap,
+          ],
+          AmountCard(
+            label: 'Valor que sai (${from.currency})',
+            controller: _amount,
+            currency: from.currency,
+            enabled: !submitting,
+            onChanged: (_) => setState(() {}),
+            validator: (value) => centsFromInput(value ?? '') <= 0
+                ? 'Informe um valor maior que zero.'
+                : null,
           ),
-        ),
+          formGap,
+          const FieldLabel('De'),
+          ChoicePills<String>(
+            options: [for (final a in widget.accounts) account(a)],
+            selected: _fromId,
+            onSelected: submitting
+                ? null
+                : (id) => setState(() {
+                      _fromId = id;
+                      if (_toId == id) _toId = null;
+                    }),
+          ),
+          formGap,
+          FieldLabel(_mode == _Mode.owner ? 'Para (${widget.otherWorkspace?.name ?? ''})' : 'Para'),
+          if (destinations.isEmpty)
+            Text('Nenhuma conta disponível.', style: text.bodyMedium)
+          else
+            ChoicePills<String>(
+              options: [for (final a in destinations) account(a)],
+              selected: _toId,
+              onSelected: submitting ? null : (id) => setState(() => _toId = id),
+            ),
+          if (crossCurrency) ...[
+            formGap,
+            AmountCard(
+              label: 'Valor que chega (${to.currency})',
+              controller: _received,
+              currency: to.currency,
+              enabled: !submitting,
+              onChanged: (_) => setState(() {}),
+              validator: (value) => centsFromInput(value ?? '') <= 0 ? 'Informe o valor recebido.' : null,
+              footer: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  rate ?? 'As moedas são diferentes: informe os dois valores.',
+                  textAlign: TextAlign.center,
+                  style: rate == null
+                      ? text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)
+                      : text.titleSmall,
+                ),
+              ),
+            ),
+          ],
+          formGap,
+          const FieldLabel('Descrição'),
+          TextFormField(
+            controller: _description,
+            enabled: !submitting,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: formFieldDecoration(context),
+            validator: (value) {
+              final description = (value ?? '').trim();
+              if (description.isEmpty || description.length > 200) {
+                return 'Informe uma descrição (até 200 caracteres).';
+              }
+              return null;
+            },
+          ),
+        ],
       ),
     );
   }

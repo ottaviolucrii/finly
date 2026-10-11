@@ -320,13 +320,17 @@ class _AccountRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final balance = account.postedBalance;
     final card = account.type == AccountType.creditCard;
+    final owed = card && account.projectedBalanceCents < 0 ? -account.projectedBalanceCents : 0;
 
-    final String amount;
-    if (card) {
-      amount = cardUseLabel(account);
-    } else {
-      amount = balance.format();
-    }
+    // A card shows what is in use, with a small label above it; an account
+    // shows its balance and, below it, what is expected.
+    final String? label = card ? (owed > 0 ? 'Em uso' : null) : null;
+    final String amount = card
+        ? (owed > 0 ? Money(owed, account.currency).format() : 'Sem uso')
+        : balance.format();
+    final String? below = !card && account.hasPendingEffect
+        ? 'Previsto ${account.projectedBalance.format()}'
+        : null;
 
     return InkWell(
       onTap: onTap,
@@ -336,7 +340,9 @@ class _AccountRow extends StatelessWidget {
           children: [
             IconBadge(icon: accountTypeIcon(account.type)),
             const SizedBox(width: 12),
+            // The name and the type come first: the amount gives way.
             Expanded(
+              flex: 3,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -348,28 +354,45 @@ class _AccountRow extends StatelessWidget {
                   ),
                   Text(
                     accountTypeLabel(account.type),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  amount,
-                  style: text.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: !card && balance.isNegative ? scheme.error : null,
+            Flexible(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (label != null)
+                    Text(label, style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      amount,
+                      maxLines: 1,
+                      style: text.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: !card && balance.isNegative ? scheme.error : null,
+                      ),
+                    ),
                   ),
-                ),
-                if (!card && account.hasPendingEffect)
-                  Text(
-                    'Previsto ${account.projectedBalance.format()}',
-                    style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                  ),
-              ],
+                  if (below != null)
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        below,
+                        maxLines: 1,
+                        style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                ],
+              ),
             ),
             PopupMenuButton<String>(
               tooltip: 'Mais opções',

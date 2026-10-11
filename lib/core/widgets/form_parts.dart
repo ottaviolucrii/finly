@@ -304,6 +304,44 @@ class InfoBox extends StatelessWidget {
   }
 }
 
+/// A date to tap, in a white card: what it is, the date (or what having no
+/// date means), and an ✕ to remove it when it is optional.
+class DateCard extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final VoidCallback? onTap;
+
+  /// Removes the date; null when the date cannot be removed.
+  final VoidCallback? onClear;
+  final String clearTooltip;
+
+  const DateCard({
+    super.key,
+    this.icon = Icons.event,
+    required this.value,
+    required this.onTap,
+    this.onClear,
+    this.clearTooltip = 'Remover a data',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(value),
+        subtitle: const Text('Toque para mudar'),
+        trailing: onClear == null
+            ? null
+            : IconButton(tooltip: clearTooltip, icon: const Icon(Icons.close), onPressed: onClear),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
 /// The currencies the app works with, as pills.
 const currencyPills = [
   PillOption('BRL', 'Real (R\$)'),
