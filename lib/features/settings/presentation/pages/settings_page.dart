@@ -1,3 +1,6 @@
+import 'package:finly/core/di/injection.dart';
+import 'package:finly/features/ai/domain/repositories/ai_repository.dart';
+import 'package:finly/features/ai/presentation/widgets/ai_settings_card.dart';
 import 'package:finly/features/appearance/presentation/widgets/appearance_settings_card.dart';
 import 'package:finly/features/screen_protection/presentation/widgets/screen_protection_card.dart';
 import 'package:finly/features/offline_cache/presentation/widgets/offline_cache_card.dart';
@@ -213,6 +216,8 @@ class SettingsPage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const AppearanceSettingsCard(),
+            const SizedBox(height: 16),
+            AiSettingsCard(repository: sl<AiRepository>()),
             const SizedBox(height: 16),
             const ScreenProtectionCard(),
             const SizedBox(height: 16),

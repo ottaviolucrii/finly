@@ -5,6 +5,9 @@ import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/accounts/presentation/account_style.dart';
+import 'package:finly/features/ai/domain/entities/ai_draft.dart';
+import 'package:finly/features/ai/domain/repositories/ai_repository.dart';
+import 'package:finly/features/ai/presentation/ai_messages.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_kind.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
@@ -47,6 +50,7 @@ Future<NewTransactionResult?> showNewTransactionSheet(
         workspaceId: workspaceId,
         accounts: accounts,
         categories: categories,
+        ai: sl.isRegistered<AiRepository>() ? sl<AiRepository>() : null,
       ),
     ),
   );
@@ -63,12 +67,17 @@ class NewTransactionForm extends StatefulWidget {
   /// "Now"; tests pass a fixed date.
   final DateTime Function()? clock;
 
+  /// Reads a sentence into the sheet ("gastei 50 no mercado ontem"); null
+  /// hides the field.
+  final AiRepository? ai;
+
   const NewTransactionForm({
     super.key,
     required this.workspaceId,
     required this.accounts,
     required this.categories,
     this.clock,
+    this.ai,
   });
 
   @override
@@ -90,6 +99,12 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
   /// Why the last save failed, shown above the button (a message at the
   /// bottom of the screen would be hidden behind the sheet).
   String? _error;
+
+  /// The sentence for the AI, while it is being read, and what to say after.
+  final _sentence = TextEditingController();
+  bool _reading = false;
+  String? _aiNote;
+  bool _aiNoteIsError = false;
 
   DateTime get _now => (widget.clock ?? DateTime.now)();
 
@@ -118,8 +133,65 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
     return widget.categories.where((c) => c.kind == kind && !c.isArchived).toList();
   }
 
+  /// Sends the sentence to the AI and fills in the sheet with what it read.
+  /// Nothing is saved: the person checks and taps Salvar.
+  Future<void> _readSentence() async {
+    final ai = widget.ai;
+    final text = _sentence.text.trim();
+    if (ai == null || text.isEmpty || _reading) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _reading = true;
+      _aiNote = null;
+    });
+    final result = await ai.readSentence(
+      text: text,
+      today: _now,
+      categories: widget.categories,
+      accounts: widget.accounts,
+    );
+    if (!mounted) return;
+    result.fold(
+      (failure) => setState(() {
+        _reading = false;
+        _aiNote = aiFailureMessage(failure);
+        _aiNoteIsError = true;
+      }),
+      (draft) => setState(() {
+        _reading = false;
+        _apply(draft);
+        _sentence.clear();
+        _aiNote = 'Preenchido pela IA. Confira e toque em Salvar.';
+        _aiNoteIsError = false;
+      }),
+    );
+  }
+
+  /// Puts [draft] into the fields. What the AI did not find stays as it was.
+  void _apply(AiDraft draft) {
+    _type = draft.type;
+    _fitAccount();
+    if (draft.amountCents != null) _amount.text = formatCentsInput(draft.amountCents!);
+    if (draft.description.isNotEmpty) _description.text = draft.description;
+    _categoryId = _categoryOptions.any((c) => c.id == draft.categoryId) ? draft.categoryId : null;
+    if (_accountOptions.any((a) => a.id == draft.accountId)) _accountId = draft.accountId!;
+
+    final today = DateTime(_now.year, _now.month, _now.day);
+    final day = DateTime(draft.date.year, draft.date.month, draft.date.day);
+    if (day == today) {
+      _quickDay = QuickDay.today;
+    } else if (day == today.subtract(const Duration(days: 1))) {
+      _quickDay = QuickDay.yesterday;
+    } else {
+      _picked = day;
+      _quickDay = QuickDay.other;
+    }
+    _pending = draft.pending || isFutureDay(day, _now);
+  }
+
   @override
   void dispose() {
+    _sentence.dispose();
     _amount.dispose();
     _description.dispose();
     super.dispose();
@@ -219,6 +291,29 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
                       ),
                     ],
                   ),
+                  if (widget.ai != null) ...[
+                    const SizedBox(height: 8),
+                    _SentenceField(
+                      controller: _sentence,
+                      reading: _reading,
+                      enabled: !submitting,
+                      onRead: _readSentence,
+                    ),
+                    if (_aiNote != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6, left: 4),
+                        child: Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            _aiNote!,
+                            style: text.bodySmall?.copyWith(
+                              color: _aiNoteIsError ? scheme.error : scheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                   const SizedBox(height: 12),
                   _KindSwitch(
                     income: income,
@@ -575,6 +670,56 @@ class _ErrorBox extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// "Escreva como você falaria": a sentence for the AI, with a button to read
+/// it. The keyboard's microphone works here too.
+class _SentenceField extends StatelessWidget {
+  final TextEditingController controller;
+  final bool reading;
+  final bool enabled;
+  final VoidCallback onRead;
+
+  const _SentenceField({
+    required this.controller,
+    required this.reading,
+    required this.enabled,
+    required this.onRead,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return TextField(
+      controller: controller,
+      enabled: enabled && !reading,
+      maxLength: 300,
+      minLines: 1,
+      maxLines: 3,
+      textCapitalization: TextCapitalization.sentences,
+      textInputAction: TextInputAction.send,
+      onSubmitted: (_) => onRead(),
+      decoration: InputDecoration(
+        counterText: '',
+        hintText: 'Escreva como você falaria: "gastei 50 no mercado ontem"',
+        prefixIcon: Icon(Icons.auto_awesome, color: scheme.primary),
+        suffixIcon: reading
+            ? const Padding(
+                padding: EdgeInsets.all(14),
+                child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+              )
+            : IconButton(
+                tooltip: 'Preencher com a IA',
+                icon: const Icon(Icons.arrow_upward),
+                onPressed: enabled ? onRead : null,
+              ),
+        filled: true,
+        fillColor: scheme.primary.withValues(alpha: 0.06),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:finly/features/ai/di/ai_di.dart';
 import 'package:finly/features/accounts/di/accounts_di.dart';
 import 'package:finly/features/auth/di/auth_di.dart';
 import 'package:finly/features/budgets/di/budgets_di.dart';
@@ -65,4 +66,5 @@ void registerFeatureModules(GetIt sl) {
   registerScreenProtectionModule(sl);
   registerOfflineCacheModule(sl);
   registerTaxReserveModule(sl);
+  registerAiModule(sl);
 }

@@ -208,3 +208,5 @@ found; cosmetic items are done in batches.
 - [ ] The logo shapes were traced by eye: replace with the exact vector when available
 - [x] Details sheet: a tap in Extrato shows the transaction in full (description, amount, category, account, date and time, status) with Editar, Excluir and Confirmar
 - [x] The fingerprint is asked only after the splash has fully faded out
+- [x] AI quick add: "Escreva como voce falaria" in the "+" sheet fills in the fields (nothing saved by the AI); switch with consent in Configuracoes; Edge Function ai-parse-transaction with Claude Haiku 5.5; 60 uses a day
+- [ ] AI: category suggestions for the OFX import; a monthly summary in words
