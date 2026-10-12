@@ -103,7 +103,7 @@ void main() {
 
   /// Opens the form in its own route, like the sheet does, so it can close
   /// with a result.
-  Future<void> open(WidgetTester tester) async {
+  Future<void> open(WidgetTester tester, {Future<String?> Function(String, TransactionType)? suggest}) async {
     tester.view.physicalSize = const Size(800, 2000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -120,6 +120,7 @@ void main() {
                     value: cubit,
                     child: Scaffold(
                       body: NewTransactionForm(
+                        suggestCategory: suggest,
                         workspaceId: 'w1',
                         accounts: const [itau, nubank],
                         categories: const [market, salary],
@@ -332,5 +333,53 @@ void main() {
 
     expect(result, isNull);
     verifyNever(() => create(any()));
+  });
+
+  group('the category from the history', () {
+    testWidgets('typing a description picks the usual category, and says so', (tester) async {
+      final asked = <String>[];
+      await open(tester, suggest: (description, type) async {
+        asked.add(description);
+        return description.toLowerCase().contains('mercado') ? 'c1' : null;
+      });
+
+      await tester.enterText(descriptionField(), 'Mercado do bairro');
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pumpAndSettle();
+
+      expect(asked, ['Mercado do bairro']);
+      expect(find.textContaining('Sugerida pelo seu histórico'), findsOneWidget);
+    });
+
+    testWidgets('a category picked by the person is never replaced', (tester) async {
+      var calls = 0;
+      await open(tester, suggest: (description, type) async {
+        calls++;
+        return 'c1';
+      });
+
+      await tester.tap(find.text('Mercado'));
+      await tester.pump();
+      await tester.enterText(descriptionField(), 'Feira livre');
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pumpAndSettle();
+
+      expect(calls, 0);
+      expect(find.textContaining('Sugerida pelo seu histórico'), findsNothing);
+    });
+
+    testWidgets('tapping another category makes it the person\'s choice', (tester) async {
+      await open(tester, suggest: (description, type) async => 'c1');
+
+      await tester.enterText(descriptionField(), 'Feira livre');
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Sugerida pelo seu histórico'), findsOneWidget);
+      // a tap on the suggested one takes it off: now it is the person's choice
+      await tester.tap(find.text('Mercado'));
+      await tester.pump();
+
+      expect(find.textContaining('Sugerida pelo seu histórico'), findsNothing);
+    });
   });
 }

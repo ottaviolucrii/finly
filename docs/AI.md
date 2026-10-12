@@ -65,3 +65,20 @@ from the totals of their Finly.
 
 Deploy: run `sql/20_ai_ask.sql`, then `supabase functions deploy ai-ask`.
 Tests: `python sql/tests/run_db_tests.py`; `deno test supabase/functions/ai-ask/logic_test.ts`.
+
+## More questions and follow-ups (sql/21)
+
+- Four more tools: where the money goes (`ai_top_spending`), the budgets of a
+  month (`ai_budget_status`: the version in force, 0 = stopped), invoices to
+  pay (`ai_invoices_to_pay`), goals (`ai_goals`). Comparing periods uses
+  `entradas_e_saidas` twice.
+- The app sends the last 3 questions and answers of the open conversation, so
+  "e no mês passado?" makes sense. Nothing is kept after the sheet closes.
+
+# Category suggestion (no AI)
+
+`suggest_category(workspace, description, type)` returns the category the
+person usually picks for that description in the last year (the same words
+first, then the same first word). The "+" sheet asks a moment after the
+description changes, only while no category was picked by the person, and
+says "Sugerida pelo seu histórico". It runs as the person (RLS applies).

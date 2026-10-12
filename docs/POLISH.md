@@ -215,3 +215,6 @@ found; cosmetic items are done in batches.
 - [x] Group 3c (part): Relatorio (round month arrows, deep blue summary with three tiles) and Simulador (section labels, deep blue result); the "x" of Primeiros passos asks first
 - [x] Amora answers questions about money: own consent, 4 safe queries run as the person (sql/20), only totals go to the AI (ai-ask), second switch in Configuracoes
 - [ ] Last design round: Historico and the cards inside Configuracoes
+- [x] Amora understands more: where the money goes, budgets of a month, invoices to pay, goals, comparing periods, follow-up questions (a conversation while the sheet is open)
+- [x] Category suggested in the "+" sheet from the person's own history (sql/21 suggest_category, no AI)
+- [ ] A microphone button (speech to text) in the "+" sheet and in Amora's questions

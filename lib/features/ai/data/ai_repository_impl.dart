@@ -4,6 +4,7 @@ import 'package:finly/core/error/failure.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/ai/data/ai_remote_data_source.dart';
 import 'package:finly/features/ai/domain/entities/ai_draft.dart';
+import 'package:finly/features/ai/domain/entities/ask_turn.dart';
 import 'package:finly/features/ai/domain/repositories/ai_repository.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 
@@ -33,8 +34,9 @@ class AiRepositoryImpl implements AiRepository {
     required String question,
     required String workspaceId,
     required DateTime today,
+    List<AskTurn> history = const [],
   }) {
-    return _guard(() => _remote.ask(question: question, workspaceId: workspaceId, today: today));
+    return _guard(() => _remote.ask(question: question, workspaceId: workspaceId, today: today, history: history));
   }
 
   @override

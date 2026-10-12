@@ -1,6 +1,7 @@
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/accounts/domain/entities/account_type.dart';
 import 'package:finly/features/ai/domain/entities/ai_draft.dart';
+import 'package:finly/features/ai/domain/entities/ask_turn.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_kind.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -59,7 +60,12 @@ abstract class AiRemoteDataSource {
 
   Future<void> setEnabled(bool enabled);
 
-  Future<String> ask({required String question, required String workspaceId, required DateTime today});
+  Future<String> ask({
+    required String question,
+    required String workspaceId,
+    required DateTime today,
+    List<AskTurn> history = const [],
+  });
 
   Future<bool> isAskEnabled();
 
@@ -121,11 +127,22 @@ class AiRemoteDataSourceImpl implements AiRemoteDataSource {
   static const askFunctionName = 'ai-ask';
 
   @override
-  Future<String> ask({required String question, required String workspaceId, required DateTime today}) async {
+  Future<String> ask({
+    required String question,
+    required String workspaceId,
+    required DateTime today,
+    List<AskTurn> history = const [],
+  }) async {
     try {
       final response = await _client.functions.invoke(
         askFunctionName,
-        body: {'question': question.trim(), 'workspaceId': workspaceId, 'today': dayText(today)},
+        body: {
+          'question': question.trim(),
+          'workspaceId': workspaceId,
+          'today': dayText(today),
+          // the last 3, for a follow-up question
+          'history': [for (final turn in history.reversed.take(3).toList().reversed) turn.toJson()],
+        },
       );
       final data = response.data;
       if (data is Map && data['answer'] is String && (data['answer'] as String).trim().isNotEmpty) {

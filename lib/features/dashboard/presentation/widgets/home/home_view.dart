@@ -164,10 +164,11 @@ class _HomeViewState extends State<HomeView> {
     final ai = sl<AiRepository>();
     final workspace = widget.workspace;
     return AmoraAsk(
-      ask: (question) => ai.ask(
+      ask: (question, history) => ai.ask(
         question: question,
         workspaceId: workspace.id,
         today: (widget.clock ?? DateTime.now)(),
+        history: history,
       ),
       isEnabled: ai.isAskEnabled,
       enable: () => ai.setAskEnabled(true),
