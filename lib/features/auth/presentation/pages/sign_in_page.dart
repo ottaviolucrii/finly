@@ -5,6 +5,7 @@ import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_state.dart';
 import 'package:finly/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:finly/features/auth/presentation/pages/sign_up_page.dart';
+import 'package:finly/features/auth/presentation/widgets/auth_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -37,7 +38,6 @@ class _SignInPageState extends State<SignInPage> {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
 
     return BlocConsumer<AuthBloc, AuthState>(
       listenWhen: (previous, current) =>
@@ -56,31 +56,15 @@ class _SignInPageState extends State<SignInPage> {
       builder: (context, state) {
         final loading = state.isLoading;
 
-        return Scaffold(
-          body: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Form(
+        return AuthScaffold(
+          title: 'Entrar',
+          subtitle: 'Que bom ver você de novo.',
+          child: Form(
                     key: _formKey,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          'Finly',
-                          style: text.headlineLarge,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Inteligência Financeira',
-                          style: text.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 32),
                         TextFormField(
                           controller: _email,
                           keyboardType: TextInputType.emailAddress,
@@ -88,7 +72,7 @@ class _SignInPageState extends State<SignInPage> {
                           textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
                             labelText: 'E-mail',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(14))),
                           ),
                           validator: (value) =>
                               Validators.isValidEmail(value ?? '')
@@ -104,7 +88,7 @@ class _SignInPageState extends State<SignInPage> {
                           onFieldSubmitted: (_) => loading ? null : _submit(),
                           decoration: InputDecoration(
                             labelText: 'Senha',
-                            border: const OutlineInputBorder(),
+                            border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(14))),
                             suffixIcon: IconButton(
                               tooltip: _obscure
                                   ? 'Mostrar senha'
@@ -163,10 +147,6 @@ class _SignInPageState extends State<SignInPage> {
                       ],
                     ),
                   ),
-                ),
-              ),
-            ),
-          ),
         );
       },
     );

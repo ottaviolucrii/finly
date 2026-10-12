@@ -162,26 +162,20 @@ void main() {
       expect(calls, ['open']);
     });
 
-    testWidgets('the menu deletes it', (tester) async {
+    testWidgets('there is no menu on each row (the row gives the text its room)', (tester) async {
       await show(tester, row(transaction()));
 
-      await tester.tap(find.byTooltip('Mais opções'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Excluir'));
-      await tester.pumpAndSettle();
-
-      expect(calls, ['delete']);
+      expect(find.byTooltip('Mais opções'), findsNothing);
     });
 
-    testWidgets('the menu asks first when asked to, and stops on no', (tester) async {
-      await show(tester, row(transaction(transferId: 'tr1'), ask: () async => false));
+    testWidgets('a swipe asks first when asked to, and stops on no', (tester) async {
+      await show(tester, ListView(children: [row(transaction(transferId: 'tr1'), ask: () async => false)]));
 
-      await tester.tap(find.byTooltip('Mais opções'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Excluir'));
+      await tester.drag(find.text('Supermercado Dia'), const Offset(-800, 0));
       await tester.pumpAndSettle();
 
       expect(calls, isEmpty);
+      expect(find.text('Supermercado Dia'), findsOneWidget);
     });
 
     testWidgets('a swipe to the left deletes it', (tester) async {

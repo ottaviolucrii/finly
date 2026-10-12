@@ -201,3 +201,5 @@ found; cosmetic items are done in batches.
 - [ ] The database still accepts an income on a card (a refund is legitimate there); a dedicated "Estorno" action could make that explicit
 - [x] Group 3a: the highlighted invoice is the open one that closes first (installments create the next ones ahead of time); Configuracoes (labels, icon badges, avatar) and Categorias (pills, one card, archived folded) in the new style
 - [ ] Group 3b: Lixeira, Historico, Relatorio, Reserva de impostos and Simulador; the cards inside Configuracoes (Aparencia, Privacidade, Uso sem internet, Notificacoes, Dados)
+- [x] Group 4 (part 1): Entrar, Criar conta, Esqueci minha senha and Nova senha with the brand top (AuthScaffold); Extrato rows: description on two lines, the amount shrinks, no menu (tap edits, swipe deletes)
+- [ ] Group 4 (part 2): onboarding, the lock screen and the e-mail check screen

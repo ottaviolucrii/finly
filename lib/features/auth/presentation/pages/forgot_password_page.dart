@@ -4,6 +4,7 @@ import 'package:finly/features/auth/presentation/auth_messages.dart';
 import 'package:finly/features/auth/presentation/cubit/password_recovery_cubit.dart';
 import 'package:finly/features/auth/presentation/cubit/password_recovery_state.dart';
 import 'package:finly/features/auth/presentation/pages/reset_password_page.dart';
+import 'package:finly/features/auth/presentation/widgets/auth_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -75,16 +76,9 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
       builder: (context, state) {
         final sending = state.status == PasswordRecoveryStatus.sendingCode;
 
-        return Scaffold(
-          appBar: AppBar(title: const Text('Esqueci minha senha')),
-          body: SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Form(
+        return AuthScaffold(
+          title: 'Esqueci minha senha',
+          child: Form(
                     key: _formKey,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     child: Column(
@@ -106,7 +100,7 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                           onFieldSubmitted: (_) => sending ? null : _submit(),
                           decoration: const InputDecoration(
                             labelText: 'E-mail',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(14))),
                           ),
                           validator: (value) =>
                               Validators.isValidEmail((value ?? '').trim())
@@ -137,10 +131,6 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                       ],
                     ),
                   ),
-                ),
-              ),
-            ),
-          ),
         );
       },
     );

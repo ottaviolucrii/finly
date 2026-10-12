@@ -181,6 +181,7 @@ class StatementRow extends StatelessWidget {
                     Text(
                       transaction.description,
                       style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
@@ -195,9 +196,17 @@ class StatementRow extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    transactionAmountText(transaction),
-                    style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600, color: amountColor),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 132),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        transactionAmountText(transaction),
+                        maxLines: 1,
+                        style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600, color: amountColor),
+                      ),
+                    ),
                   ),
                   if (transaction.isPending) ...[
                     const SizedBox(height: 4),
@@ -229,17 +238,7 @@ class StatementRow extends StatelessWidget {
                   ],
                 ],
               ),
-              PopupMenuButton<String>(
-                tooltip: 'Mais opções',
-                onSelected: (_) async {
-                  final ask = confirmDelete;
-                  if (ask != null && !await ask()) return;
-                  onDelete();
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'delete', child: Text('Excluir')),
-                ],
-              ),
+              const SizedBox(width: 12),
             ],
           ),
         ),
