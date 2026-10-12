@@ -1,9 +1,12 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/utils/tax_id_formatter.dart';
 import 'package:finly/core/utils/validators.dart';
+import 'package:finly/core/widgets/grouped_list.dart';
+import 'package:finly/features/assistant/presentation/amora.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
+import 'package:finly/features/auth/presentation/widgets/auth_scaffold.dart';
 import 'package:finly/features/workspaces/presentation/cubit/onboarding_cubit.dart';
 import 'package:finly/features/workspaces/presentation/cubit/onboarding_state.dart';
 import 'package:finly/features/workspaces/presentation/workspace_messages.dart';
@@ -63,38 +66,47 @@ class _OnboardingView extends StatelessWidget {
         final submitting = state.status == OnboardingStatus.submitting;
         final type = state.type;
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(addingAnother ? 'Novo workspace' : 'Primeiros passos'),
-            actions: [
-              if (!addingAnother)
+        final content = type == null
+            ? const _TypeChooser()
+            : _WorkspaceForm(
+                key: ValueKey(type),
+                type: type,
+                submitting: submitting,
+                onBack: addingAnother
+                    ? () => Navigator.of(context).pop()
+                    : () => context.read<OnboardingCubit>().backToTypes(),
+              );
+
+        // The first workspace: the brand top, like the screens before it.
+        if (!addingAnother) {
+          return AuthScaffold(
+            title: 'Primeiros passos',
+            subtitle: 'Leva menos de um minuto.',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                content,
+                const SizedBox(height: 8),
                 TextButton(
                   onPressed: submitting
                       ? null
-                      : () => context
-                          .read<AuthBloc>()
-                          .add(const SignOutRequested()),
+                      : () => context.read<AuthBloc>().add(const SignOutRequested()),
                   child: const Text('Sair'),
                 ),
-            ],
-          ),
+              ],
+            ),
+          );
+        }
+
+        return Scaffold(
+          appBar: AppBar(title: const Text('Novo workspace')),
           body: SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(20),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: type == null
-                      ? const _TypeChooser()
-                      : _WorkspaceForm(
-                          key: ValueKey(type),
-                          type: type,
-                          submitting: submitting,
-                          onBack: addingAnother
-                              ? () => Navigator.of(context).pop()
-                              : () =>
-                                  context.read<OnboardingCubit>().backToTypes(),
-                        ),
+                  constraints: const BoxConstraints(maxWidth: 460),
+                  child: content,
                 ),
               ),
             ),
@@ -117,19 +129,26 @@ class _TypeChooser extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Como você quer começar?',
-          style: text.headlineSmall,
-          textAlign: TextAlign.center,
+        Row(
+          children: [
+            const AmoraAvatar(size: 52),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Oi! Eu sou a Amora. Vou te ajudar a organizar seu dinheiro.',
+                style: text.bodyMedium?.copyWith(height: 1.4),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 20),
+        Text('Como você quer começar?', style: text.titleMedium),
+        const SizedBox(height: 4),
         Text(
-          'Escolha o tipo do seu primeiro workspace. '
-          'Cada tipo guarda seus dados separados.',
-          style: text.bodyMedium,
-          textAlign: TextAlign.center,
+          'Cada tipo guarda seus dados separados. Você pode criar o outro depois.',
+          style: text.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         _TypeCard(
           icon: Icons.person_outline,
           title: 'Pessoal (CPF)',
@@ -166,7 +185,12 @@ class _TypeCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
-    return Card(
+    return Material(
+      color: scheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -174,19 +198,19 @@ class _TypeCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              Icon(icon, size: 32, color: scheme.primary),
-              const SizedBox(width: 16),
+              IconBadge(icon: icon),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: text.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(description, style: text.bodyMedium),
+                    Text(title, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(description, style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right),
+              Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
             ],
           ),
         ),

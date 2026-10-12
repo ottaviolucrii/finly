@@ -6,8 +6,10 @@ import 'package:finly/features/accounts/presentation/pages/accounts_page.dart';
 import 'package:finly/features/alerts/presentation/widgets/dashboard_alerts_card.dart';
 import 'package:finly/features/assistant/presentation/amora_shortcuts.dart';
 import 'package:finly/features/assistant/presentation/amora_tips.dart';
+import 'package:finly/features/assistant/presentation/getting_started.dart';
 import 'package:finly/features/assistant/presentation/widgets/amora_helper.dart';
 import 'package:finly/features/assistant/presentation/widgets/amora_sheet.dart';
+import 'package:finly/features/assistant/presentation/widgets/getting_started_card.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/budgets/presentation/pages/budgets_page.dart';
 import 'package:finly/features/cards/presentation/cubit/cards_cubit.dart';
@@ -61,6 +63,9 @@ class HomeView extends StatefulWidget {
   /// "Now"; tests pass a fixed date.
   final DateTime Function()? clock;
 
+  /// Where the choices about "Primeiros passos" are kept.
+  final GettingStartedStore gettingStarted;
+
   const HomeView({
     super.key,
     required this.workspace,
@@ -71,6 +76,7 @@ class HomeView extends StatefulWidget {
     required this.onAdd,
     required this.onTransfer,
     this.clock,
+    this.gettingStarted = const PrefsGettingStartedStore(),
   });
 
   @override
@@ -235,6 +241,13 @@ class _HomeViewState extends State<HomeView> {
         onOpen: () => open(RecurringPage(workspace: workspace)),
       ),
       AmoraShortcut(
+        title: 'Primeiros passos',
+        hint: 'O guia da Amora para começar',
+        icon: Icons.checklist,
+        keywords: const ['guia', 'comecar', 'tutorial', 'ajuda', 'primeiros passos', 'inicio'],
+        onOpen: () => widget.gettingStarted.setHidden(workspace.id, false),
+      ),
+      AmoraShortcut(
         title: 'Relatório',
         hint: 'Gráficos e exportar em PDF ou CSV',
         icon: Icons.bar_chart,
@@ -294,6 +307,46 @@ class _HomeViewState extends State<HomeView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // "Primeiros passos": Amora's guide for a new workspace.
+              Builder(builder: (context) {
+                final accounts = context.watch<AccountsCubit>().state;
+                final cards = context.watch<CardsCubit>().state;
+                final goals = context.watch<GoalsCubit>().state;
+                final flows = data?.flows ?? const [];
+                final ready = data != null &&
+                    accounts.status == AccountsStatus.loaded &&
+                    cards.status == CardsStatus.loaded &&
+                    goals.status == GoalsStatus.loaded;
+                return GettingStartedCard(
+                  workspaceId: workspace.id,
+                  ready: ready,
+                  store: widget.gettingStarted,
+                  done: startStepsDone(
+                    hasAccount: homeAccounts(accounts.accounts).isNotEmpty,
+                    hasTransaction: (data?.upcoming.isNotEmpty ?? false) ||
+                        flows.any((f) =>
+                            f.incomePostedCents + f.incomePendingCents + f.expensePostedCents + f.expensePendingCents > 0),
+                    hasCard: cards.cards.isNotEmpty,
+                    hasBudget: data?.budgets.isNotEmpty ?? false,
+                    hasGoal: goals.items.isNotEmpty,
+                  ),
+                  onOpen: (step) {
+                    switch (step) {
+                      case StartStep.account:
+                        open(AccountFormPage(workspaceId: workspace.id));
+                      case StartStep.transaction:
+                        widget.onAdd?.call();
+                      case StartStep.card:
+                        open(CardsPage(workspace: workspace));
+                      case StartStep.budget:
+                        open(BudgetsPage(workspace: workspace));
+                      case StartStep.goal:
+                        open(GoalsPage(workspace: workspace));
+                    }
+                  },
+                );
+              }),
+              const SizedBox(height: 20),
               BlocBuilder<AccountsCubit, AccountsState>(
                 // When the accounts cannot be read, the row steps aside (the
                 // balance above still opens Contas).

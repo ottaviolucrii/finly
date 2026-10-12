@@ -1,11 +1,12 @@
 import 'dart:async';
 
+import 'package:finly/core/widgets/animated_splash.dart';
+import 'package:finly/core/widgets/finly_logo.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
 import 'package:finly/features/lock/presentation/cubit/app_lock_cubit.dart';
 import 'package:finly/features/lock/presentation/cubit/app_lock_state.dart';
 import 'package:finly/features/lock/presentation/lock_texts.dart';
-import 'package:finly/core/widgets/animated_splash.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -126,7 +127,32 @@ class _LockScreenState extends State<LockScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.lock_outline, size: 56),
+                  // The brand with a small lock: it is Finly asking, not the phone.
+                  Center(
+                    child: SizedBox(
+                      width: 84,
+                      height: 88,
+                      child: Stack(
+                        children: [
+                          const Positioned.fill(child: CustomPaint(painter: FinlyLogoPainter.done)),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: scheme.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: scheme.surface, width: 3),
+                              ),
+                              child: Icon(Icons.lock, size: 16, color: scheme.onPrimary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Finly bloqueado',
