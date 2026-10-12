@@ -28,6 +28,21 @@ class AiRepositoryImpl implements AiRepository {
   @override
   Future<Either<Failure, void>> setEnabled(bool enabled) => _guard(() => _remote.setEnabled(enabled));
 
+  @override
+  Future<Either<Failure, String>> ask({
+    required String question,
+    required String workspaceId,
+    required DateTime today,
+  }) {
+    return _guard(() => _remote.ask(question: question, workspaceId: workspaceId, today: today));
+  }
+
+  @override
+  Future<Either<Failure, bool>> isAskEnabled() => _guard(_remote.isAskEnabled);
+
+  @override
+  Future<Either<Failure, void>> setAskEnabled(bool enabled) => _guard(() => _remote.setAskEnabled(enabled));
+
   /// Runs [action]; an answer of the AI that is not a draft becomes a
   /// RuleFailure with its code, anything else goes through the ErrorMapper.
   Future<Either<Failure, T>> _guard<T>(Future<T> Function() action) async {

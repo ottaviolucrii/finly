@@ -16,6 +16,7 @@ class AiSettingsCard extends StatefulWidget {
 
 class _AiSettingsCardState extends State<AiSettingsCard> {
   bool? _enabled;
+  bool? _askEnabled;
   bool _busy = false;
 
   @override
@@ -26,8 +27,12 @@ class _AiSettingsCardState extends State<AiSettingsCard> {
 
   Future<void> _load() async {
     final result = await widget.repository.isEnabled();
+    final ask = await widget.repository.isAskEnabled();
     if (!mounted) return;
-    setState(() => _enabled = result.getOrElse(() => false));
+    setState(() {
+      _enabled = result.getOrElse(() => false);
+      _askEnabled = ask.getOrElse(() => false);
+    });
   }
 
   Future<bool> _askConsent() async {
@@ -67,7 +72,43 @@ class _AiSettingsCardState extends State<AiSettingsCard> {
     result.fold(
       (failure) => ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(aiFailureMessage(failure)))),
+        ..showSnackBar(SnackBar(content: Text(aiSaveFailureMessage(failure)))),
+      (_) {},
+    );
+  }
+
+  Future<void> _changeAsk(bool value) async {
+    if (value) {
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Permitir perguntas sobre seu dinheiro?'),
+          content: const SingleChildScrollView(
+            child: Text(
+              'Você pergunta à Amora, por exemplo "quanto gastei com Uber esse ano?". Para responder, ela busca '
+              'totais no seu Finly, como "R\$ 812,40 em 31 lançamentos", e só esses totais vão para a IA '
+              '(Claude, da Anthropic). Ela nunca vê seus lançamentos um a um, e nada fica guardado.',
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Agora não')),
+            FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Permitir')),
+          ],
+        ),
+      );
+      if (accepted != true || !mounted) return;
+    }
+    setState(() => _busy = true);
+    final result = await widget.repository.setAskEnabled(value);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      if (result.isRight()) _askEnabled = value;
+    });
+    result.fold(
+      (failure) => ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(aiSaveFailureMessage(failure)))),
       (_) {},
     );
   }
@@ -75,6 +116,7 @@ class _AiSettingsCardState extends State<AiSettingsCard> {
   @override
   Widget build(BuildContext context) {
     final enabled = _enabled;
+    final askEnabled = _askEnabled;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -83,7 +125,9 @@ class _AiSettingsCardState extends State<AiSettingsCard> {
         Card(
           margin: EdgeInsets.zero,
           clipBehavior: Clip.antiAlias,
-          child: SwitchListTile(
+          child: Column(
+            children: [
+              SwitchListTile(
             secondary: const IconBadge(icon: Icons.auto_awesome),
             title: const Text('Lançar escrevendo'),
             subtitle: const Text(
@@ -92,6 +136,19 @@ class _AiSettingsCardState extends State<AiSettingsCard> {
             ),
             value: enabled ?? false,
             onChanged: (enabled == null || _busy) ? null : _change,
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
+                secondary: const IconBadge(icon: Icons.insights_outlined),
+                title: const Text('Perguntas sobre meu dinheiro'),
+                subtitle: const Text(
+                  'A Amora responde "quanto gastei com Uber esse ano?". Só totais vão para a IA, nunca seus '
+                  'lançamentos um a um.',
+                ),
+                value: askEnabled ?? false,
+                onChanged: (askEnabled == null || _busy) ? null : _changeAsk,
+              ),
+            ],
           ),
         ),
       ],

@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/theme/app_colors.dart';
+import 'package:finly/core/widgets/form_validation.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_kind.dart';
 import 'package:finly/features/categories/presentation/category_messages.dart';
@@ -68,7 +69,7 @@ class _CategoryFormViewState extends State<_CategoryFormView> {
   }
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!validateOnSave(_formKey)) return;
     final cubit = context.read<CategoryFormCubit>();
     final editing = widget.editing;
 
@@ -130,7 +131,8 @@ class _CategoryFormViewState extends State<_CategoryFormView> {
                   constraints: const BoxConstraints(maxWidth: 420),
                   child: Form(
                     key: _formKey,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    autovalidateMode: AutovalidateMode.disabled,
+                    onChanged: () => revalidateIfTried(_formKey),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,

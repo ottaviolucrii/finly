@@ -1,5 +1,7 @@
 import 'package:finly/core/money/money.dart';
+import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
+import 'package:finly/core/widgets/grouped_list.dart';
 import 'package:finly/features/yield_simulator/domain/yield_form.dart';
 import 'package:finly/features/yield_simulator/domain/yield_rules.dart';
 import 'package:flutter/material.dart';
@@ -95,9 +97,9 @@ class _YieldSimulatorPageState extends State<YieldSimulatorPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Simulador de rendimento')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          Text('Quanto você investe', style: text.titleMedium),
+          const SectionLabel('Quanto você investe'),
           const SizedBox(height: 12),
           _field(_initial, 'Valor inicial', errors[YieldField.initial], prefix: 'R\$ ', money: true),
           const SizedBox(height: 12),
@@ -122,7 +124,7 @@ class _YieldSimulatorPageState extends State<YieldSimulatorPage> {
             ],
           ),
           const SizedBox(height: 20),
-          Text('Quanto rende', style: text.titleMedium),
+          const SectionLabel('Quanto rende'),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
@@ -209,8 +211,9 @@ class _MessageCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Text(message, style: Theme.of(context).textTheme.bodyMedium),
       ),
     );
@@ -222,15 +225,30 @@ class _ResultCard extends StatelessWidget {
 
   const _ResultCard({required this.result});
 
-  Widget _row(BuildContext context, String label, String value, {bool strong = false}) {
-    final text = Theme.of(context).textTheme;
-
+  Widget _row(String label, String value, {bool strong = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: strong ? text.titleSmall : text.bodyLarge)),
-          Text(value, style: strong ? text.titleMedium : text.bodyLarge),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: strong ? 15 : 14,
+                fontWeight: strong ? FontWeight.w600 : FontWeight.w400,
+                color: strong ? AppColors.white : AppColors.onBand,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: strong ? 16 : 15,
+              fontWeight: FontWeight.w600,
+              color: strong ? AppColors.goldOnBand : AppColors.white,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
         ],
       ),
     );
@@ -238,33 +256,44 @@ class _ResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
     final exempt = result.input.taxMode == TaxMode.exempt;
     String money(int cents) => Money(cents, 'BRL').format();
+    final divider = Divider(color: AppColors.white.withValues(alpha: 0.15));
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Resultado em ${termLabel(result.input.months)}', style: text.titleMedium),
-            const SizedBox(height: 8),
-            Text('Total líquido', style: text.bodySmall),
-            Text(money(result.netCents), style: text.headlineSmall),
-            const SizedBox(height: 8),
-            const Divider(),
-            _row(context, 'Total investido', money(result.investedCents)),
-            _row(context, 'Rendimento bruto', money(result.grossProfitCents)),
-            _row(
-              context,
-              'Imposto de renda',
-              exempt ? 'Isento' : money(result.taxCents),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(color: AppColors.deepBlue, borderRadius: BorderRadius.circular(22)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Resultado em ${termLabel(result.input.months)}',
+            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17, color: AppColors.white),
+          ),
+          const SizedBox(height: 10),
+          const Text('Total líquido', style: TextStyle(fontSize: 12, color: AppColors.onBand)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              money(result.netCents),
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+                fontSize: 32,
+                color: AppColors.white,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
             ),
-            const Divider(),
-            _row(context, 'Rendimento líquido', money(result.netProfitCents), strong: true),
-          ],
-        ),
+          ),
+          const SizedBox(height: 6),
+          divider,
+          _row('Total investido', money(result.investedCents)),
+          _row('Rendimento bruto', money(result.grossProfitCents)),
+          _row('Imposto de renda', exempt ? 'Isento' : money(result.taxCents)),
+          divider,
+          _row('Rendimento líquido', money(result.netProfitCents), strong: true),
+        ],
       ),
     );
   }
@@ -290,8 +319,9 @@ class _YearsCard extends StatelessWidget {
     String money(int cents) => Money(cents, 'BRL').format();
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

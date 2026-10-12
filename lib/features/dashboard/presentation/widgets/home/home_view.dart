@@ -3,6 +3,7 @@ import 'package:finly/features/accounts/presentation/cubit/accounts_cubit.dart';
 import 'package:finly/features/accounts/presentation/cubit/accounts_state.dart';
 import 'package:finly/features/accounts/presentation/pages/account_form_page.dart';
 import 'package:finly/features/accounts/presentation/pages/accounts_page.dart';
+import 'package:finly/features/ai/domain/repositories/ai_repository.dart';
 import 'package:finly/features/alerts/presentation/widgets/dashboard_alerts_card.dart';
 import 'package:finly/features/assistant/presentation/amora_shortcuts.dart';
 import 'package:finly/features/assistant/presentation/amora_tips.dart';
@@ -143,6 +144,7 @@ class _HomeViewState extends State<HomeView> {
                           tip: tip,
                           onWrite: () => widget.onAdd?.call(),
                           shortcuts: _amoraShortcuts(context),
+                          ask: _amoraAsk(),
                         ),
                       );
                     },
@@ -153,6 +155,22 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Questions about the money of this workspace, when the app has the AI.
+  AmoraAsk? _amoraAsk() {
+    if (!sl.isRegistered<AiRepository>()) return null;
+    final ai = sl<AiRepository>();
+    final workspace = widget.workspace;
+    return AmoraAsk(
+      ask: (question) => ai.ask(
+        question: question,
+        workspaceId: workspace.id,
+        today: (widget.clock ?? DateTime.now)(),
+      ),
+      isEnabled: ai.isAskEnabled,
+      enable: () => ai.setAskEnabled(true),
     );
   }
 

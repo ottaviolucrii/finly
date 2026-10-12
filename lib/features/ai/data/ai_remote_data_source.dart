@@ -58,6 +58,12 @@ abstract class AiRemoteDataSource {
   Future<bool> isEnabled();
 
   Future<void> setEnabled(bool enabled);
+
+  Future<String> ask({required String question, required String workspaceId, required DateTime today});
+
+  Future<bool> isAskEnabled();
+
+  Future<void> setAskEnabled(bool enabled);
 }
 
 class AiRemoteDataSourceImpl implements AiRemoteDataSource {
@@ -108,6 +114,48 @@ class AiRemoteDataSourceImpl implements AiRemoteDataSource {
       'user_id': uid,
       'enabled': enabled,
       if (enabled) 'consented_at': now,
+      'updated_at': now,
+    });
+  }
+
+  static const askFunctionName = 'ai-ask';
+
+  @override
+  Future<String> ask({required String question, required String workspaceId, required DateTime today}) async {
+    try {
+      final response = await _client.functions.invoke(
+        askFunctionName,
+        body: {'question': question.trim(), 'workspaceId': workspaceId, 'today': dayText(today)},
+      );
+      final data = response.data;
+      if (data is Map && data['answer'] is String && (data['answer'] as String).trim().isNotEmpty) {
+        return (data['answer'] as String).trim();
+      }
+      throw const AiException('ai_not_understood');
+    } on FunctionException catch (e) {
+      final details = e.details;
+      final code = details is Map && details['error'] is String ? details['error'] as String : 'ai_unavailable';
+      throw AiException(code);
+    }
+  }
+
+  @override
+  Future<bool> isAskEnabled() async {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) return false;
+    final row = await _client.from('ai_settings').select('ask_enabled').eq('user_id', uid).maybeSingle();
+    return row?['ask_enabled'] == true;
+  }
+
+  @override
+  Future<void> setAskEnabled(bool enabled) async {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw const AiException('not_authenticated');
+    final now = DateTime.now().toUtc().toIso8601String();
+    await _client.from('ai_settings').upsert({
+      'user_id': uid,
+      'ask_enabled': enabled,
+      if (enabled) 'ask_consented_at': now,
       'updated_at': now,
     });
   }

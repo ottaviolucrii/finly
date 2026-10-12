@@ -2,6 +2,7 @@ import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/core/widgets/form_parts.dart';
+import 'package:finly/core/widgets/form_validation.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_kind.dart';
@@ -100,7 +101,7 @@ class _RecurringEditViewState extends State<_RecurringEditView> {
   }
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!validateOnSave(_formKey)) return;
     final amount = centsFromInput(_amount.text);
     if (amount <= 0) return;
 
@@ -144,7 +145,8 @@ class _RecurringEditViewState extends State<_RecurringEditView> {
           onSave: _submit,
           form: Form(
             key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
+            autovalidateMode: AutovalidateMode.disabled,
+            onChanged: () => revalidateIfTried(_formKey),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

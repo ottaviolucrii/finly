@@ -14,6 +14,7 @@ import 'package:finly/features/reports/presentation/cubit/reports_cubit.dart';
 import 'package:finly/features/reports/presentation/cubit/reports_state.dart';
 import 'package:finly/features/reports/presentation/reports_messages.dart';
 import 'package:finly/features/reports/presentation/widgets/pdf_export_button.dart';
+import 'package:finly/features/transactions/presentation/widgets/statement_band.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -172,7 +173,7 @@ class _ReportsViewState extends State<_ReportsView> {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
       children: [
         if (report.byCurrency.length > 1)
           Padding(
@@ -216,27 +217,21 @@ class _MonthHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
 
+    Widget arrow(IconData icon, String tooltip, VoidCallback? onPressed) => Material(
+          color: Theme.of(context).colorScheme.surface,
+          shape: const CircleBorder(),
+          elevation: 1,
+          child: IconButton(tooltip: tooltip, icon: Icon(icon), onPressed: onPressed),
+        );
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            tooltip: 'Mês anterior',
-            icon: const Icon(Icons.chevron_left),
-            onPressed: onPrevious,
-          ),
-          Expanded(
-            child: Text(
-              monthYearLabel(month),
-              style: text.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-          ),
-          IconButton(
-            tooltip: 'Próximo mês',
-            icon: const Icon(Icons.chevron_right),
-            onPressed: canGoNext ? onNext : null,
-          ),
+          arrow(Icons.chevron_left, 'Mês anterior', onPrevious),
+          Text(monthTitle(month), style: text.titleLarge?.copyWith(fontSize: 17)),
+          arrow(Icons.chevron_right, 'Próximo mês', canGoNext ? onNext : null),
         ],
       ),
     );
@@ -258,67 +253,79 @@ class _SummaryCard extends StatelessWidget {
 
   const _SummaryCard({required this.report});
 
-  Widget _row(
-    BuildContext context,
-    String label,
-    int cents,
-    int previousCents, {
-    bool signed = false,
-  }) {
-    final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
+  Widget _tile(String label, int cents, int previousCents, {Color valueColor = AppColors.white, bool signed = false}) {
     final money = Money(cents, report.currency);
     final value = signed && cents > 0 ? '+ ${money.format()}' : money.format();
+    final comparison = comparisonText(cents, previousCents);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: Text(label, style: text.bodyLarge)),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+        decoration: BoxDecoration(
+          color: AppColors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 12, color: AppColors.onBand)),
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
                 value,
-                style: text.titleMedium?.copyWith(
-                  color: signed && cents < 0 ? scheme.error : null,
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: valueColor),
+              ),
+            ),
+            if (comparison.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  comparison,
+                  maxLines: 2,
+                  style: const TextStyle(fontSize: 11, color: AppColors.onBand),
                 ),
               ),
-              if (comparisonText(cents, previousCents).isNotEmpty)
-                Text(comparisonText(cents, previousCents), style: text.bodySmall),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
+    final net = report.netCents;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Resumo do mês', style: text.titleMedium),
-            Text('Só o que já aconteceu', style: text.bodySmall),
-            const SizedBox(height: 8),
-            _row(context, 'Entradas', report.incomeCents, report.previousIncomeCents),
-            _row(context, 'Saídas', report.expenseCents, report.previousExpenseCents),
-            const Divider(),
-            _row(
-              context,
-              'Resultado',
-              report.netCents,
-              report.previousNetCents,
-              signed: true,
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: AppColors.deepBlue, borderRadius: BorderRadius.circular(22)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Resumo do mês',
+            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17, color: AppColors.white),
+          ),
+          const Text('Só o que já aconteceu', style: TextStyle(fontSize: 12, color: AppColors.onBand)),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _tile('Entradas', report.incomeCents, report.previousIncomeCents),
+              const SizedBox(width: 8),
+              _tile('Saídas', report.expenseCents, report.previousExpenseCents, valueColor: AppColors.goldOnBand),
+              const SizedBox(width: 8),
+              _tile(
+                net >= 0 ? 'Sobrou' : 'Faltou',
+                net,
+                report.previousNetCents,
+                signed: true,
+                valueColor: net < 0 ? AppColors.dangerOnDark : AppColors.white,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -335,8 +342,9 @@ class _CategoriesCard extends StatelessWidget {
     final total = report.categoryTotalCents;
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -413,8 +421,9 @@ class _TopExpensesCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

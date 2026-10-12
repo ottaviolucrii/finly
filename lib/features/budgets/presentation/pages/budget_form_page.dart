@@ -1,6 +1,7 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/widgets/form_parts.dart';
+import 'package:finly/core/widgets/form_validation.dart';
 import 'package:finly/features/budgets/domain/entities/budget_progress.dart';
 import 'package:finly/features/budgets/presentation/budget_messages.dart';
 import 'package:finly/features/budgets/presentation/cubit/budget_form_cubit.dart';
@@ -88,7 +89,7 @@ class _BudgetFormViewState extends State<_BudgetFormView> {
         ..showSnackBar(const SnackBar(content: Text('Escolha uma categoria.')));
       return;
     }
-    if (!_formKey.currentState!.validate()) return;
+    if (!validateOnSave(_formKey)) return;
     final cents = centsFromInput(_limit.text);
     if (cents <= 0) return;
 
@@ -132,7 +133,8 @@ class _BudgetFormViewState extends State<_BudgetFormView> {
           onSave: _submit,
           form: Form(
             key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
+            autovalidateMode: AutovalidateMode.disabled,
+            onChanged: () => revalidateIfTried(_formKey),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

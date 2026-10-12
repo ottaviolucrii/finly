@@ -1,4 +1,5 @@
 import 'package:finly/core/di/injection.dart';
+import 'package:finly/core/widgets/form_validation.dart';
 import 'package:finly/features/auth/domain/usecases/delete_account_use_case.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
@@ -43,7 +44,7 @@ class _DeleteAccountViewState extends State<_DeleteAccountView> {
   }
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!validateOnSave(_formKey)) return;
     context.read<DeleteAccountCubit>().submit(
           password: _password.text,
           confirmation: _confirmation.text,
@@ -91,7 +92,8 @@ class _DeleteAccountViewState extends State<_DeleteAccountView> {
                   constraints: const BoxConstraints(maxWidth: 420),
                   child: Form(
                     key: _formKey,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    autovalidateMode: AutovalidateMode.disabled,
+                    onChanged: () => revalidateIfTried(_formKey),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,

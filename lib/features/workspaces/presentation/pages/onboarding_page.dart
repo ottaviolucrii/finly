@@ -1,6 +1,7 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/utils/tax_id_formatter.dart';
 import 'package:finly/core/utils/validators.dart';
+import 'package:finly/core/widgets/form_validation.dart';
 import 'package:finly/core/widgets/grouped_list.dart';
 import 'package:finly/features/assistant/presentation/amora.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
@@ -252,7 +253,7 @@ class _WorkspaceFormState extends State<_WorkspaceForm> {
   }
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!validateOnSave(_formKey)) return;
     context
         .read<OnboardingCubit>()
         .submit(name: _name.text, taxId: _taxId.text);
@@ -264,7 +265,8 @@ class _WorkspaceFormState extends State<_WorkspaceForm> {
 
     return Form(
       key: _formKey,
-      autovalidateMode: AutovalidateMode.onUserInteraction,
+      autovalidateMode: AutovalidateMode.disabled,
+      onChanged: () => revalidateIfTried(_formKey),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

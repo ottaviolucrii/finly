@@ -3,6 +3,7 @@ import 'package:finly/core/money/money.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/core/widgets/form_parts.dart';
+import 'package:finly/core/widgets/form_validation.dart';
 import 'package:finly/features/cards/domain/entities/credit_card_entity.dart';
 import 'package:finly/features/cards/domain/installment_split.dart';
 import 'package:finly/features/cards/presentation/card_messages.dart';
@@ -95,7 +96,7 @@ class _InstallmentFormViewState extends State<_InstallmentFormView> {
   }
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!validateOnSave(_formKey)) return;
     final total = centsFromInput(_total.text);
     final count = _parsedCount();
     if (total <= 0 || count == null) return;
@@ -178,7 +179,8 @@ class _InstallmentFormViewState extends State<_InstallmentFormView> {
 
     return Form(
       key: _formKey,
-      autovalidateMode: AutovalidateMode.onUserInteraction,
+      autovalidateMode: AutovalidateMode.disabled,
+      onChanged: () => revalidateIfTried(_formKey),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/utils/validators.dart';
+import 'package:finly/core/widgets/form_validation.dart';
 import 'package:finly/features/settings/presentation/cubit/change_password_cubit.dart';
 import 'package:finly/features/settings/presentation/cubit/change_password_state.dart';
 import 'package:finly/features/settings/presentation/settings_messages.dart';
@@ -43,7 +44,7 @@ class _ChangePasswordViewState extends State<_ChangePasswordView> {
   }
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!validateOnSave(_formKey)) return;
     context.read<ChangePasswordCubit>().submit(
           currentPassword: _current.text,
           newPassword: _new.text,
@@ -101,7 +102,8 @@ class _ChangePasswordViewState extends State<_ChangePasswordView> {
                   constraints: const BoxConstraints(maxWidth: 420),
                   child: Form(
                     key: _formKey,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    autovalidateMode: AutovalidateMode.disabled,
+                    onChanged: () => revalidateIfTried(_formKey),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,

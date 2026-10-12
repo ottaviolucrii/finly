@@ -15,7 +15,7 @@ import pgserver, psycopg
 SQL = pathlib.Path(__file__).resolve().parent.parent
 FILES = ["tests/00_mock_supabase.sql", "00_types.sql", "01_helpers.sql",
          "02_tables.sql", "03_logic.sql", "04_security.sql", "07_hardening.sql", "08_credit_card.sql", "09_budget_end_marker.sql",
-         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql", "18_invoice_partial_payment.sql", "19_ai_quick_add.sql"]
+         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql", "18_invoice_partial_payment.sql", "19_ai_quick_add.sql", "20_ai_ask.sql"]
 
 passed = failed = 0
 def check(name, cond, extra=""):
@@ -496,6 +496,36 @@ def main():
     check("B cannot see A's AI settings or usage", one(conn, "select count(*) from public.ai_settings") == 0
           and one(conn, "select count(*) from public.ai_usage") == 0)
     check("B cannot turn on the AI for A", raises(conn, "insert into public.ai_settings (user_id, enabled) values (%s, true)", (A,)))
+    as_user(conn, A)
+
+    # ---- AI questions: consent and the safe queries ---------------------------
+    print("ai questions")
+    as_user(conn, A)
+    check("questions need their own consent", one(conn, "select public.ai_take_ask_quota()") == "disabled")
+    conn.execute("update public.ai_settings set ask_enabled = true, ask_consented_at = now() where user_id = %s", (A,))
+    conn.execute("reset role"); conn.execute("update public.ai_usage set uses = 0 where user_id=%s", (A,)); as_user(conn, A)
+    check("with consent a question takes one use", one(conn, "select public.ai_take_ask_quota()") == "ok")
+    one(conn, ins, (ws_p, chk, cat_food, 'expense', 'posted', 3500, 'Uber Centro'))
+    one(conn, ins, (ws_p, chk, cat_food, 'expense', 'pending', 1500, 'UBER aeroporto'))
+    one(conn, ins, (ws_p, chk, cat_food, 'expense', 'failed', 9999, 'Uber que falhou'))
+    period = "current_date - 30, current_date + 1"
+    row = conn.execute(f"select total_cents, transactions from public.ai_spending_matching(%s, {period}, 'uber')", (ws_p,)).fetchone()
+    check("spending matching a word: confirmed and pending, not failed", row == (5000, 2), row)
+    check("% and _ are plain characters, not wildcards",
+          conn.execute(f"select count(*) from public.ai_spending_matching(%s, {period}, '%%%%')", (ws_p,)).fetchone()[0] == 0)
+    check("a one-letter word is refused", raises(conn, f"select * from public.ai_spending_matching(%s, {period}, 'u')", (ws_p,), contains="invalid_text"))
+    food = conn.execute(f"select total_cents from public.ai_spending_by_category(%s, {period}) where category = 'Alimentação'", (ws_p,)).fetchone()[0]
+    check("spending by category leaves failed and deleted out", 13000 <= food < 99999, food)
+    flow = conn.execute(f"select income_cents, expense_cents from public.ai_income_expense(%s, {period})", (ws_p,)).fetchone()
+    check("money in and out in a period", flow[0] >= 300000 and flow[1] >= 13000, flow)
+    check("a period backwards is refused", raises(conn, "select * from public.ai_income_expense(%s, current_date, current_date - 1)", (ws_p,), contains="invalid_period"))
+    check("a period over 3 years is refused", raises(conn, "select * from public.ai_income_expense(%s, current_date - 1200, current_date)", (ws_p,), contains="invalid_period"))
+    check("balances list the accounts by name",
+          'Nubank' in [r[0] for r in conn.execute("select account from public.ai_account_balances(%s)", (ws_p,)).fetchall()])
+    as_user(conn, B)
+    check("B asking about A's workspace gets nothing",
+          conn.execute(f"select count(*) from public.ai_spending_matching(%s, {period}, 'uber')", (ws_p,)).fetchone()[0] == 0
+          and conn.execute("select count(*) from public.ai_account_balances(%s)", (ws_p,)).fetchone()[0] == 0)
     as_user(conn, A)
 
     # ---- account deletion -------------------------------------------------

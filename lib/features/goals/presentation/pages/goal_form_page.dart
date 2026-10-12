@@ -3,6 +3,7 @@ import 'package:finly/core/money/money.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/core/widgets/form_parts.dart';
+import 'package:finly/core/widgets/form_validation.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/goals/domain/entities/goal_progress.dart';
@@ -103,7 +104,7 @@ class _GoalFormViewState extends State<GoalFormView> {
         ..showSnackBar(const SnackBar(content: Text('Escolha uma conta.')));
       return;
     }
-    if (!_formKey.currentState!.validate()) return;
+    if (!validateOnSave(_formKey)) return;
 
     final cents = centsFromInput(_target.text);
     if (cents <= 0) return;
@@ -214,7 +215,8 @@ class _GoalFormViewState extends State<GoalFormView> {
 
     return Form(
       key: _formKey,
-      autovalidateMode: AutovalidateMode.onUserInteraction,
+      autovalidateMode: AutovalidateMode.disabled,
+      onChanged: () => revalidateIfTried(_formKey),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

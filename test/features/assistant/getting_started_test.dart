@@ -99,15 +99,31 @@ void main() {
     expect(find.textContaining('2 de 5'), findsOneWidget);
   });
 
-  testWidgets('the whole guide can be skipped, and it says how to bring it back', (tester) async {
+  testWidgets('the whole guide can be skipped, after a question that says how to bring it back', (tester) async {
     await show(tester, const {});
 
     await tester.tap(find.byTooltip('Pular o guia'));
     await tester.pumpAndSettle();
+    expect(find.text('Pular o guia?'), findsOneWidget);
+    expect(find.textContaining('Encontrar uma função'), findsOneWidget);
+
+    await tester.tap(find.text('Pular'));
+    await tester.pumpAndSettle();
 
     expect(store.hidden['w1'], isTrue);
     expect(find.text('Primeiros passos'), findsNothing);
-    expect(find.textContaining('Encontrar uma função'), findsOneWidget);
+  });
+
+  testWidgets('"Continuar" keeps the guide', (tester) async {
+    await show(tester, const {});
+
+    await tester.tap(find.byTooltip('Pular o guia'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+
+    expect(store.hidden['w1'], isNot(isTrue));
+    expect(find.text('Primeiros passos'), findsOneWidget);
   });
 
   testWidgets('a workspace already set up never shows it', (tester) async {
