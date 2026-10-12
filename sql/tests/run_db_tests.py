@@ -15,7 +15,7 @@ import pgserver, psycopg
 SQL = pathlib.Path(__file__).resolve().parent.parent
 FILES = ["tests/00_mock_supabase.sql", "00_types.sql", "01_helpers.sql",
          "02_tables.sql", "03_logic.sql", "04_security.sql", "07_hardening.sql", "08_credit_card.sql", "09_budget_end_marker.sql",
-         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql", "18_invoice_partial_payment.sql"]
+         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql", "18_invoice_partial_payment.sql", "19_ai_quick_add.sql"]
 
 passed = failed = 0
 def check(name, cond, extra=""):
@@ -478,6 +478,26 @@ def main():
     check("anon cannot read monthly_flow", raises(conn, "select count(*) from public.monthly_flow"))
     as_user(conn, A)
 
+    # ---- AI quick add: consent and daily limit --------------------------------
+    print("ai quick add")
+    as_user(conn, A)
+    check("without consent the AI refuses", one(conn, "select public.ai_take_quota()") == "disabled")
+    conn.execute("insert into public.ai_settings (user_id, enabled, consented_at) values (%s, true, now())", (A,))
+    check("with consent a use is counted", one(conn, "select public.ai_take_quota()") == "ok"
+          and one(conn, "select uses from public.ai_usage where user_id=%s", (A,)) == 1)
+    check("the daily limit cannot be changed by the app", raises(conn, "create or replace function public.ai_daily_limit() returns integer language sql as $$ select 100000 $$"))
+    check("usage cannot be written by the app", raises(conn, "update public.ai_usage set uses = 0 where user_id=%s", (A,)))
+    conn.execute("reset role")
+    conn.execute("update public.ai_usage set uses = public.ai_daily_limit() where user_id=%s", (A,))
+    as_user(conn, A)
+    check("past the limit it refuses and counts nothing", one(conn, "select public.ai_take_quota()") == "limit"
+          and one(conn, "select uses from public.ai_usage where user_id=%s", (A,)) == one(conn, "select public.ai_daily_limit()"))
+    as_user(conn, B)
+    check("B cannot see A's AI settings or usage", one(conn, "select count(*) from public.ai_settings") == 0
+          and one(conn, "select count(*) from public.ai_usage") == 0)
+    check("B cannot turn on the AI for A", raises(conn, "insert into public.ai_settings (user_id, enabled) values (%s, true)", (A,)))
+    as_user(conn, A)
+
     # ---- account deletion -------------------------------------------------
     print("account deletion")
     as_user(conn, A)
@@ -485,6 +505,8 @@ def main():
     conn.execute("reset role")
     left = [one(conn, f"select count(*) from public.{t}") for t in ("transactions", "accounts", "workspaces", "transfers", "audit_logs", "categories", "profiles")]
     check("everything of user A erased (incl. audit); user B untouched", left == [0, 0, 0, 0, 0, 0, 1], left)
+    check("A's AI settings and usage erased too", one(conn, "select count(*) from public.ai_settings") == 0
+          and one(conn, "select count(*) from public.ai_usage") == 0)
 
     print(f"\n{passed} passed, {failed} failed")
     sys.exit(1 if failed else 0)
