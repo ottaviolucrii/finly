@@ -5,6 +5,7 @@ import 'package:finly/core/utils/validators.dart';
 import 'package:finly/features/auth/presentation/auth_messages.dart';
 import 'package:finly/features/auth/presentation/cubit/password_recovery_cubit.dart';
 import 'package:finly/features/auth/presentation/cubit/password_recovery_state.dart';
+import 'package:finly/features/auth/presentation/widgets/auth_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -115,16 +116,9 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
         final resetting = state.status == PasswordRecoveryStatus.resetting;
         final canResend = !busy && _cooldown <= 0;
 
-        return Scaffold(
-          appBar: AppBar(title: const Text('Nova senha')),
-          body: SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Form(
+        return AuthScaffold(
+          title: 'Nova senha',
+          child: Form(
                     key: _formKey,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     child: Column(
@@ -150,7 +144,7 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
                           textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
                             labelText: 'Código do e-mail',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(14))),
                           ),
                           validator: (value) =>
                               RegExp(
@@ -171,7 +165,7 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
                             helperText:
                                 'Mínimo de 8 caracteres, com letras e números.',
                             helperMaxLines: 2,
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(14))),
                           ),
                           validator: (value) =>
                               Validators.isValidPassword(value ?? '')
@@ -187,7 +181,7 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
                           textInputAction: TextInputAction.done,
                           decoration: const InputDecoration(
                             labelText: 'Confirmar a nova senha',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(14))),
                           ),
                           validator: (value) => value != _password.text
                               ? 'As senhas não são iguais.'
@@ -233,10 +227,6 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
                       ],
                     ),
                   ),
-                ),
-              ),
-            ),
-          ),
         );
       },
     );

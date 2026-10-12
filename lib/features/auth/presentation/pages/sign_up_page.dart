@@ -3,6 +3,7 @@ import 'package:finly/features/auth/presentation/auth_messages.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_state.dart';
+import 'package:finly/features/auth/presentation/widgets/auth_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -62,15 +63,10 @@ class _SignUpPageState extends State<SignUpPage> {
       builder: (context, state) {
         final loading = state.isLoading;
 
-        return Scaffold(
-          appBar: AppBar(title: const Text('Criar conta')),
-          body: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Form(
+        return AuthScaffold(
+          title: 'Criar conta',
+          subtitle: 'Leva menos de um minuto.',
+          child: Form(
                     key: _formKey,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -83,7 +79,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
                             labelText: 'Nome completo',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(14))),
                           ),
                           validator: (value) =>
                               Validators.isValidFullName(value ?? '')
@@ -98,7 +94,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
                             labelText: 'E-mail',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(14))),
                           ),
                           validator: (value) =>
                               Validators.isValidEmail(value ?? '')
@@ -115,7 +111,7 @@ class _SignUpPageState extends State<SignUpPage> {
                             labelText: 'Senha',
                             helperText:
                                 'Mínimo de 8 caracteres, com letras e números.',
-                            border: const OutlineInputBorder(),
+                            border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(14))),
                             suffixIcon: IconButton(
                               tooltip:
                                   _obscure ? 'Mostrar senha' : 'Ocultar senha',
@@ -162,10 +158,6 @@ class _SignUpPageState extends State<SignUpPage> {
                       ],
                     ),
                   ),
-                ),
-              ),
-            ),
-          ),
         );
       },
     );
