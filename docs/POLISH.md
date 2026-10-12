@@ -203,3 +203,8 @@ found; cosmetic items are done in batches.
 - [ ] Group 3b: Lixeira, Historico, Relatorio, Reserva de impostos and Simulador; the cards inside Configuracoes (Aparencia, Privacidade, Uso sem internet, Notificacoes, Dados)
 - [x] Group 4 (part 1): Entrar, Criar conta, Esqueci minha senha and Nova senha with the brand top (AuthScaffold); Extrato rows: description on two lines, the amount shrinks, no menu (tap edits, swipe deletes)
 - [ ] Group 4 (part 2): onboarding, the lock screen and the e-mail check screen
+- [x] Splash: the shield drawn line by line, filled, a pulse and FINLY with a shine (AnimatedSplash, StartupSplash over the auth gate; plays once, never makes opening slower; off with "remove animations"); the logo as vector shapes (FinlyLogoPainter)
+- [x] Extrato rows in two lines: description and amount, then category and account across the full width
+- [ ] The logo shapes were traced by eye: replace with the exact vector when available
+- [x] Details sheet: a tap in Extrato shows the transaction in full (description, amount, category, account, date and time, status) with Editar, Excluir and Confirmar
+- [x] The fingerprint is asked only after the splash has fully faded out

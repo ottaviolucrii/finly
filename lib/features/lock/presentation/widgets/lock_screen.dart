@@ -5,6 +5,7 @@ import 'package:finly/features/auth/presentation/bloc/auth_event.dart';
 import 'package:finly/features/lock/presentation/cubit/app_lock_cubit.dart';
 import 'package:finly/features/lock/presentation/cubit/app_lock_state.dart';
 import 'package:finly/features/lock/presentation/lock_texts.dart';
+import 'package:finly/core/widgets/animated_splash.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -74,6 +75,18 @@ class _LockScreenState extends State<LockScreen> {
     _prompted = true;
 
     if (state.settings.biometricEnabled && state.deviceSupported) {
+      // While the opening animation plays, wait for it: the fingerprint
+      // prompt comes right after, never on top of it.
+      if (splashShowing.value) {
+        void whenDone() {
+          if (splashShowing.value) return;
+          splashShowing.removeListener(whenDone);
+          if (mounted) context.read<AppLockCubit>().unlockWithDevice();
+        }
+
+        splashShowing.addListener(whenDone);
+        return;
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) context.read<AppLockCubit>().unlockWithDevice();
       });

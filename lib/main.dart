@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:finly/app.dart';
 import 'package:finly/core/config/app_config.dart';
 import 'package:finly/core/di/injection.dart';
+import 'package:finly/core/widgets/animated_splash.dart';
 import 'package:finly/core/offline/cache_store.dart';
 import 'package:finly/core/offline/caching_http_client.dart';
 import 'package:finly/core/offline/offline_banner.dart';
@@ -110,11 +111,15 @@ Future<void> main() async {
             child: FinlyApp(
               themeMode: mode.themeMode,
               home: const AuthGate(),
-              builder: (context, child) => AppLockGate(
-                child: RemindersGate(
-                  child: OfflineBanner(
-                    status: offlineStatus,
-                    child: child ?? const SizedBox.shrink(),
+              // The opening animation covers everything, the lock screen
+              // included; the lock asks for the fingerprint when it ends.
+              builder: (context, child) => StartupSplash(
+                child: AppLockGate(
+                  child: RemindersGate(
+                    child: OfflineBanner(
+                      status: offlineStatus,
+                      child: child ?? const SizedBox.shrink(),
+                    ),
                   ),
                 ),
               ),
