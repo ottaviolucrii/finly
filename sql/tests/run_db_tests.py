@@ -15,7 +15,7 @@ import pgserver, psycopg
 SQL = pathlib.Path(__file__).resolve().parent.parent
 FILES = ["tests/00_mock_supabase.sql", "00_types.sql", "01_helpers.sql",
          "02_tables.sql", "03_logic.sql", "04_security.sql", "07_hardening.sql", "08_credit_card.sql", "09_budget_end_marker.sql",
-         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql", "18_invoice_partial_payment.sql", "19_ai_quick_add.sql", "20_ai_ask.sql"]
+         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql", "18_invoice_partial_payment.sql", "19_ai_quick_add.sql", "20_ai_ask.sql", "21_ai_more.sql"]
 
 passed = failed = 0
 def check(name, cond, extra=""):
@@ -522,7 +522,28 @@ def main():
     check("a period over 3 years is refused", raises(conn, "select * from public.ai_income_expense(%s, current_date - 1200, current_date)", (ws_p,), contains="invalid_period"))
     check("balances list the accounts by name",
           'Nubank' in [r[0] for r in conn.execute("select account from public.ai_account_balances(%s)", (ws_p,)).fetchall()])
+    top = conn.execute(f"select description, total_cents, transactions from public.ai_top_spending(%s, {period})", (ws_p,)).fetchall()
+    check("where the money goes: same words grouped, failed left out",
+          any(r[0].lower().startswith('uber') and r[2] == 1 for r in top) and all('falhou' not in r[0].lower() for r in top), top)
+    # an older version, to check the one in force (this month's) is the one used
+    one(conn, "insert into public.budgets(workspace_id, category_id, effective_from, limit_cents) values (%s, %s, date_trunc('month', current_date - 400)::date, 50000) returning id", (ws_p, cat_food))
+    in_force = one(conn, "select limit_cents from public.budgets where workspace_id=%s and category_id=%s and effective_from <= current_date order by effective_from desc limit 1", (ws_p, cat_food))
+    bud = conn.execute("select category, limit_cents, spent_cents, left_cents from public.ai_budget_status(%s, current_date)", (ws_p,)).fetchall()
+    check("budgets of the month: the limit in force, spent and left",
+          len(bud) == 1 and bud[0][1] == in_force and bud[0][1] != 50000 and bud[0][3] == bud[0][1] - bud[0][2] and bud[0][2] >= 13000, bud)
+    conn.execute("update public.budgets set limit_cents = 0 where workspace_id=%s and category_id=%s and effective_from = date_trunc('month', current_date)::date", (ws_p, cat_food))
+    check("a budget stopped this month is not listed",
+          conn.execute("select count(*) from public.ai_budget_status(%s, current_date)", (ws_p,)).fetchone()[0] == 0)
+    check("invoices to pay and goals can be read",
+          raises(conn, "select * from public.ai_invoices_to_pay(%s)", (ws_p,)) is False and raises(conn, "select * from public.ai_goals(%s)", (ws_p,)) is False)
+    sug = one(conn, "select public.suggest_category(%s, 'uber centro', 'expense')", (ws_p,))
+    check("the usual category for a description is suggested", sug == cat_food, sug)
+    check("nothing to suggest for a new description",
+          one(conn, "select public.suggest_category(%s, 'padaria nova', 'expense')", (ws_p,)) is None)
+    check("too short to suggest", one(conn, "select public.suggest_category(%s, 'ub', 'expense')", (ws_p,)) is None)
     as_user(conn, B)
+    check("B gets no suggestion from A's history",
+          one(conn, "select public.suggest_category(%s, 'uber centro', 'expense')", (ws_p,)) is None)
     check("B asking about A's workspace gets nothing",
           conn.execute(f"select count(*) from public.ai_spending_matching(%s, {period}, 'uber')", (ws_p,)).fetchone()[0] == 0
           and conn.execute("select count(*) from public.ai_account_balances(%s)", (ws_p,)).fetchone()[0] == 0)

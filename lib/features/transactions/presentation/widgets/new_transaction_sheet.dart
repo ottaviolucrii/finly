@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
 import 'package:finly/core/theme/app_colors.dart';
@@ -12,6 +14,7 @@ import 'package:finly/features/assistant/presentation/amora.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_kind.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
+import 'package:finly/features/transactions/data/category_suggestion.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
 import 'package:finly/features/transactions/presentation/account_choice.dart';
@@ -22,6 +25,7 @@ import 'package:finly/features/transactions/presentation/transaction_messages.da
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 
 /// How the sheet closed.
 enum NewTransactionResult {
@@ -52,6 +56,10 @@ Future<NewTransactionResult?> showNewTransactionSheet(
         accounts: accounts,
         categories: categories,
         ai: sl.isRegistered<AiRepository>() ? sl<AiRepository>() : null,
+        suggestCategory: sl.isRegistered<SupabaseClient>()
+            ? (description, type) => CategorySuggestionSource(sl<SupabaseClient>())
+                .suggest(workspaceId: workspaceId, description: description, type: type)
+            : null,
       ),
     ),
   );
@@ -72,6 +80,10 @@ class NewTransactionForm extends StatefulWidget {
   /// hides the field.
   final AiRepository? ai;
 
+  /// The category the person usually picks for a description (their own
+  /// history); null turns the suggestion off.
+  final Future<String?> Function(String description, TransactionType type)? suggestCategory;
+
   const NewTransactionForm({
     super.key,
     required this.workspaceId,
@@ -79,6 +91,7 @@ class NewTransactionForm extends StatefulWidget {
     required this.categories,
     this.clock,
     this.ai,
+    this.suggestCategory,
   });
 
   @override
@@ -100,6 +113,29 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
   /// Why the last save failed, shown above the button (a message at the
   /// bottom of the screen would be hidden behind the sheet).
   String? _error;
+
+  /// The category was suggested from the person's history (not picked).
+  bool _suggested = false;
+  Timer? _suggestTimer;
+
+  /// A moment after the description changes, the usual category for it, when
+  /// none was picked yet.
+  void _descriptionChanged(String text) {
+    _suggestTimer?.cancel();
+    final suggest = widget.suggestCategory;
+    if (suggest == null || (_categoryId != null && !_suggested)) return;
+    _suggestTimer = Timer(const Duration(milliseconds: 600), () async {
+      final type = _type;
+      final id = await suggest(text, type);
+      if (!mounted || type != _type || (_categoryId != null && !_suggested)) return;
+      if (id != null && _categoryOptions.any((c) => c.id == id)) {
+        setState(() {
+          _categoryId = id;
+          _suggested = true;
+        });
+      }
+    });
+  }
 
   /// The sentence for the AI, while it is being read, and what to say after.
   final _sentence = TextEditingController();
@@ -192,6 +228,7 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
 
   @override
   void dispose() {
+    _suggestTimer?.cancel();
     _sentence.dispose();
     _amount.dispose();
     _description.dispose();
@@ -363,6 +400,7 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
                   TextFormField(
                     controller: _description,
                     enabled: !submitting,
+                    onChanged: _descriptionChanged,
                     textCapitalization: TextCapitalization.sentences,
                     maxLength: maxDescriptionLength,
                     decoration: InputDecoration(
@@ -382,6 +420,14 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
                   ),
                   const SizedBox(height: 20),
                   _Label('Categoria'),
+                  if (_suggested && _categoryId != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        'Sugerida pelo seu histórico. Toque para trocar.',
+                        style: text.bodySmall?.copyWith(color: scheme.primary, fontWeight: FontWeight.w600),
+                      ),
+                    ),
                   if (options.isEmpty)
                     Text('Nenhuma categoria disponível.', style: text.bodyMedium)
                   else
@@ -394,7 +440,10 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
                             selected: _categoryId == category.id,
                             onTap: submitting
                                 ? null
-                                : () => setState(() => _categoryId = _categoryId == category.id ? null : category.id),
+                                : () => setState(() {
+                                      _categoryId = _categoryId == category.id ? null : category.id;
+                                      _suggested = false;
+                                    }),
                           ),
                       ],
                     ),

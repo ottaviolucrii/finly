@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:finly/core/error/failure.dart';
 import 'package:finly/core/theme/app_theme.dart';
+import 'package:finly/features/ai/domain/entities/ask_turn.dart';
 import 'package:finly/features/assistant/presentation/amora.dart';
 import 'package:finly/features/assistant/presentation/amora_tips.dart';
 import 'package:finly/features/assistant/presentation/widgets/amora_sheet.dart';
@@ -13,11 +14,13 @@ void main() {
   late bool allowed;
   late Either<Failure, String> answer;
   late List<String> asked;
+  late List<List<AskTurn>> histories;
 
   setUp(() {
     allowed = false;
     answer = const Right('Você gastou R\$ 812,40 com Uber em 2026, em 31 lançamentos.');
     asked = [];
+    histories = [];
   });
 
   Future<void> open(WidgetTester tester, {bool withAsk = true}) async {
@@ -37,8 +40,9 @@ void main() {
               ask: !withAsk
                   ? null
                   : AmoraAsk(
-                      ask: (question) async {
+                      ask: (question, history) async {
                         asked.add(question);
+                        histories.add(history);
                         return answer;
                       },
                       isEnabled: () async => Right(allowed),
@@ -110,10 +114,10 @@ void main() {
     await open(tester);
     await openQuestions(tester);
 
-    await tester.tap(find.text('Qual o saldo das minhas contas?'));
+    await tester.tap(find.text('Onde mais gastei este mês?'));
     await tester.pumpAndSettle();
 
-    expect(asked, ['Qual o saldo das minhas contas?']);
+    expect(asked, ['Onde mais gastei este mês?']);
   });
 
   testWidgets('when it cannot answer, it says why', (tester) async {
@@ -122,9 +126,31 @@ void main() {
     await open(tester);
     await openQuestions(tester);
 
-    await tester.tap(find.text('Qual o saldo das minhas contas?'));
+    await tester.tap(find.text('Onde mais gastei este mês?'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Amanhã ela volta'), findsOneWidget);
+  });
+
+  testWidgets('a follow-up goes with the conversation, and both stay on screen', (tester) async {
+    allowed = true;
+    await open(tester);
+    await openQuestions(tester);
+
+    await tester.enterText(find.byType(TextField), 'quanto gastei com uber esse ano?');
+    await tester.tap(find.byTooltip('Perguntar'));
+    await tester.pumpAndSettle();
+    answer = const Right('Em setembro foram R\$ 95,00.');
+    await tester.enterText(find.byType(TextField), 'e no mês passado?');
+    await tester.tap(find.byTooltip('Perguntar'));
+    await tester.pumpAndSettle();
+
+    expect(histories.first, isEmpty);
+    expect(histories.last, [
+      const AskTurn(question: 'quanto gastei com uber esse ano?', answer: 'Você gastou R\$ 812,40 com Uber em 2026, em 31 lançamentos.'),
+    ]);
+    expect(find.text('quanto gastei com uber esse ano?'), findsOneWidget);
+    expect(find.text('e no mês passado?'), findsOneWidget);
+    expect(find.text('Em setembro foram R\$ 95,00.'), findsOneWidget);
   });
 }

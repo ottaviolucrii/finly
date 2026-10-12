@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart' show Either;
 import 'package:finly/core/error/failure.dart';
+import 'package:finly/features/ai/domain/entities/ask_turn.dart';
 import 'package:finly/features/ai/presentation/ai_messages.dart';
 import 'package:finly/features/assistant/presentation/amora.dart';
 import 'package:finly/features/assistant/presentation/amora_shortcuts.dart';
@@ -8,7 +9,9 @@ import 'package:flutter/material.dart';
 
 /// What Amora needs to answer questions about the person's money.
 class AmoraAsk {
-  final Future<Either<Failure, String>> Function(String question) ask;
+  /// The answer to [question]; [history] has the earlier questions of this
+  /// conversation, for follow-ups.
+  final Future<Either<Failure, String>> Function(String question, List<AskTurn> history) ask;
   final Future<Either<Failure, bool>> Function() isEnabled;
   final Future<Either<Failure, void>> Function() enable;
 
@@ -17,10 +20,12 @@ class AmoraAsk {
 
 /// Questions to tap, for whoever does not know what to ask.
 const amoraExampleQuestions = [
+  'Onde mais gastei este mês?',
+  'Gastei mais que no mês passado?',
+  'Quanto falta nos meus orçamentos?',
+  'Quanto vem nas próximas faturas?',
+  'Quanto falta para minhas metas?',
   'Quanto gastei com Uber esse ano?',
-  'Quanto gastei em cada categoria este mês?',
-  'Quanto entrou e saiu no mês passado?',
-  'Qual o saldo das minhas contas?',
 ];
 
 /// Opens Amora's help: the tip of the day, writing a transaction in your own
@@ -64,8 +69,11 @@ class _AmoraSheetState extends State<AmoraSheet> {
   bool? _askAllowed;
   bool _thinking = false;
   final _question = TextEditingController();
-  String? _answer;
   String? _askError;
+
+  /// The conversation so far, and the question being answered now.
+  final _turns = <AskTurn>[];
+  String? _pending;
 
   @override
   void dispose() {
@@ -103,14 +111,21 @@ class _AmoraSheetState extends State<AmoraSheet> {
     FocusScope.of(context).unfocus();
     setState(() {
       _thinking = true;
-      _answer = null;
+      _pending = question;
       _askError = null;
     });
-    final result = await widget.ask!.ask(question);
+    final result = await widget.ask!.ask(question, List.unmodifiable(_turns));
     if (!mounted) return;
     setState(() {
       _thinking = false;
-      result.fold((failure) => _askError = aiFailureMessage(failure), (answer) => _answer = answer);
+      _pending = null;
+      result.fold(
+        (failure) => _askError = aiFailureMessage(failure),
+        (answer) {
+          _turns.add(AskTurn(question: question, answer: answer));
+          _question.clear();
+        },
+      );
     });
   }
 
@@ -284,7 +299,47 @@ class _AmoraSheetState extends State<AmoraSheet> {
       ];
     }
 
+    Widget bubble(String message, {required bool mine}) => Align(
+          alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 320),
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: mine ? scheme.primary : scheme.surface,
+              border: mine ? null : Border.all(color: scheme.outlineVariant),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(mine ? 16 : 4),
+                topRight: Radius.circular(mine ? 4 : 16),
+                bottomLeft: const Radius.circular(16),
+                bottomRight: const Radius.circular(16),
+              ),
+            ),
+            child: Text(
+              message,
+              style: text.bodyMedium?.copyWith(height: 1.45, color: mine ? scheme.onPrimary : null),
+            ),
+          ),
+        );
+
     return [
+      // the conversation: your questions on the right, her answers on the left
+      for (final turn in _turns) ...[
+        bubble(turn.question, mine: true),
+        Semantics(liveRegion: turn == _turns.last, child: bubble(turn.answer, mine: false)),
+      ],
+      if (_pending != null) ...[
+        bubble(_pending!, mine: true),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text('Amora está pensando…', style: text.bodySmall?.copyWith(color: scheme.primary, fontWeight: FontWeight.w600)),
+        ),
+      ],
+      if (_askError != null)
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(_askError!, style: text.bodySmall?.copyWith(color: scheme.error, fontWeight: FontWeight.w600)),
+        ),
       TextField(
         controller: _question,
         enabled: !_thinking,
@@ -296,7 +351,7 @@ class _AmoraSheetState extends State<AmoraSheet> {
         onSubmitted: (_) => _send(),
         decoration: InputDecoration(
           counterText: '',
-          hintText: 'Ex.: quanto gastei com Uber esse ano?',
+          hintText: _turns.isEmpty ? 'Ex.: onde mais gastei este mês?' : 'Pergunte mais, ex.: e no mês passado?',
           filled: true,
           fillColor: tint,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -308,46 +363,19 @@ class _AmoraSheetState extends State<AmoraSheet> {
               : IconButton(tooltip: 'Perguntar', icon: const Icon(Icons.arrow_upward), onPressed: () => _send()),
         ),
       ),
-      if (_thinking)
-        Padding(
-          padding: const EdgeInsets.only(top: 10, left: 4),
-          child: Text('Amora está pensando…', style: text.bodySmall?.copyWith(color: scheme.primary, fontWeight: FontWeight.w600)),
+      if (_turns.isEmpty && !_thinking) ...[
+        const SizedBox(height: 14),
+        Text('Experimente', style: text.labelLarge?.copyWith(color: scheme.onSurfaceVariant)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final example in amoraExampleQuestions)
+              ActionChip(label: Text(example), onPressed: () => _send(example)),
+          ],
         ),
-      if (_answer != null)
-        Semantics(
-          liveRegion: true,
-          child: Container(
-            margin: const EdgeInsets.only(top: 12),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: scheme.surface,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4),
-                topRight: Radius.circular(16),
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-              ),
-              border: Border.all(color: scheme.outlineVariant),
-            ),
-            child: Text(_answer!, style: text.bodyMedium?.copyWith(height: 1.45)),
-          ),
-        ),
-      if (_askError != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 10, left: 4),
-          child: Text(_askError!, style: text.bodySmall?.copyWith(color: scheme.error, fontWeight: FontWeight.w600)),
-        ),
-      const SizedBox(height: 14),
-      Text('Experimente', style: text.labelLarge?.copyWith(color: scheme.onSurfaceVariant)),
-      const SizedBox(height: 8),
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (final example in amoraExampleQuestions)
-            ActionChip(label: Text(example), onPressed: _thinking ? null : () => _send(example)),
-        ],
-      ),
+      ],
       const SizedBox(height: 10),
       Text(
         'As despesas incluem pendentes, como compras no cartão ainda não pagas.',

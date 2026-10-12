@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:finly/core/error/failure.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/ai/domain/entities/ai_draft.dart';
+import 'package:finly/features/ai/domain/entities/ask_turn.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 
 /// The AI quick add: reading a sentence, and the person's consent.
@@ -26,6 +27,7 @@ abstract class AiRepository {
     required String question,
     required String workspaceId,
     required DateTime today,
+    List<AskTurn> history = const [],
   });
 
   /// True when the person allowed questions about their money.

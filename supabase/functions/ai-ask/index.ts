@@ -9,7 +9,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { describeRows, readAsk, systemPrompt, toolCall, tools } from "./logic.ts";
 
 const model = Deno.env.get("AI_MODEL") ?? "claude-haiku-5-5";
-const maxRounds = 4;
+const maxRounds = 5;
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -57,7 +57,14 @@ Deno.serve(async (req) => {
   }
 
   // deno-lint-ignore no-explicit-any
-  const messages: any[] = [{ role: "user", content: input.question }];
+  // The last questions and answers first, so a follow-up makes sense.
+  const messages: any[] = [
+    ...input.history.flatMap((turn) => [
+      { role: "user", content: turn.question },
+      { role: "assistant", content: turn.answer },
+    ]),
+    { role: "user", content: input.question },
+  ];
 
   for (let round = 0; round < maxRounds; round++) {
     // deno-lint-ignore no-explicit-any
