@@ -161,8 +161,9 @@ class StatementRow extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 44,
@@ -174,71 +175,83 @@ class StatementRow extends StatelessWidget {
                 child: Icon(icon, color: tone, size: 20),
               ),
               const SizedBox(width: 12),
+              // First line: the description and the amount. Second line, the
+              // whole width: the category and the account (no amount beside
+              // it any more, so it is not cut).
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      transaction.description,
-                      style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            transaction.description,
+                            style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 140),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              transactionAmountText(transaction),
+                              maxLines: 1,
+                              style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600, color: amountColor),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       statementSubtitle(transaction, category, account),
                       style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (transaction.isPending)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          children: [
+                            Container(
+                              height: 22,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: dark ? AppColors.gold.withValues(alpha: 0.18) : AppColors.goldTint,
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Pendente',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: dark ? AppColors.goldOnBand : AppColors.goldOnLight,
+                                ),
+                              ),
+                            ),
+                            const Spacer(),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                minimumSize: const Size(0, 36),
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                              onPressed: onConfirm,
+                              child: const Text('Confirmar'),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 132),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        transactionAmountText(transaction),
-                        maxLines: 1,
-                        style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600, color: amountColor),
-                      ),
-                    ),
-                  ),
-                  if (transaction.isPending) ...[
-                    const SizedBox(height: 4),
-                    Container(
-                      height: 22,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: dark ? AppColors.gold.withValues(alpha: 0.18) : AppColors.goldTint,
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Pendente',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: dark ? AppColors.goldOnBand : AppColors.goldOnLight,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(0, 36),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                      ),
-                      onPressed: onConfirm,
-                      child: const Text('Confirmar'),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(width: 12),
             ],
           ),
         ),

@@ -20,6 +20,8 @@ import 'package:finly/features/transactions/presentation/widgets/statement_list.
 import 'package:finly/features/transactions/presentation/widgets/new_transaction_sheet.dart';
 import 'package:finly/features/transactions/presentation/widgets/transaction_filter_sheet.dart';
 import 'package:finly/features/transfers/presentation/pages/transfer_form_page.dart';
+import 'package:finly/features/transactions/presentation/widgets/transaction_details_sheet.dart';
+import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -264,6 +266,37 @@ class _TransactionsViewState extends State<_TransactionsView> {
     if (created == true) await cubit.reload();
   }
 
+  /// The details of a transaction in a sheet (everything in full), and what
+  /// the person chose there.
+  Future<void> _openDetails(
+    TransactionsState state,
+    TransactionEntity transaction, {
+    AccountEntity? account,
+    CategoryEntity? category,
+  }) async {
+    final cubit = context.read<TransactionsCubit>();
+    final action = await showTransactionDetails(
+      context,
+      transaction: transaction,
+      account: account,
+      category: category,
+    );
+    if (!mounted || action == null) return;
+
+    switch (action) {
+      case TransactionAction.edit:
+        await _openEdit(state, transaction);
+      case TransactionAction.confirm:
+        _confirm(transaction.id);
+      case TransactionAction.delete:
+        if (transaction.isTransferLeg) {
+          if (await _confirmTransferDelete()) await cubit.deleteTransfer(transaction);
+        } else {
+          await cubit.delete(transaction);
+        }
+    }
+  }
+
   Future<bool> _confirmTransferDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -474,7 +507,12 @@ class _TransactionsViewState extends State<_TransactionsView> {
                 transaction: transaction,
                 account: accountById[transaction.accountId],
                 category: categoryById[transaction.categoryId],
-                onTap: () => _openEdit(state, transaction),
+                onTap: () => _openDetails(
+                  state,
+                  transaction,
+                  account: accountById[transaction.accountId],
+                  category: categoryById[transaction.categoryId],
+                ),
                 onConfirm: () => _confirm(transaction.id),
                 onDelete: () => transaction.isTransferLeg
                     ? cubit.deleteTransfer(transaction)
