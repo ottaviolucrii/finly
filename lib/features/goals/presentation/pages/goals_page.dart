@@ -3,6 +3,7 @@ import 'package:finly/core/money/money.dart';
 import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/core/widgets/grouped_list.dart';
 import 'package:finly/core/widgets/workspace_title.dart';
+import 'package:finly/features/assistant/presentation/amora.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/goals/domain/entities/goal_progress.dart';
@@ -201,7 +202,21 @@ class _GoalsSummary extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(goalsSummaryLine(items), style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+            if (items.any((item) => item.achieved))
+              Row(
+                children: [
+                  const AmoraAvatar(mood: AmoraMood.celebrating, size: 36),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      goalsSummaryLine(items),
+                      style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Text(goalsSummaryLine(items), style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
           ],
         ),
       ),

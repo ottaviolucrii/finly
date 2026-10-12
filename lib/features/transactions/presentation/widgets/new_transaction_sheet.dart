@@ -8,6 +8,7 @@ import 'package:finly/features/accounts/presentation/account_style.dart';
 import 'package:finly/features/ai/domain/entities/ai_draft.dart';
 import 'package:finly/features/ai/domain/repositories/ai_repository.dart';
 import 'package:finly/features/ai/presentation/ai_messages.dart';
+import 'package:finly/features/assistant/presentation/amora.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_kind.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
@@ -705,8 +706,12 @@ class _SentenceField extends StatelessWidget {
       onSubmitted: (_) => onRead(),
       decoration: InputDecoration(
         counterText: '',
-        hintText: 'Escreva como você falaria: "gastei 50 no mercado ontem"',
-        prefixIcon: Icon(Icons.auto_awesome, color: scheme.primary),
+        hintText: reading ? 'Amora está lendo…' : 'Escreva como você falaria: "gastei 50 no mercado ontem"',
+        // Amora, thinking while she reads the sentence.
+        prefixIcon: Padding(
+          padding: const EdgeInsets.all(8),
+          child: AmoraAvatar(mood: reading ? AmoraMood.thinking : AmoraMood.happy, size: 32),
+        ),
         suffixIcon: reading
             ? const Padding(
                 padding: EdgeInsets.all(14),
