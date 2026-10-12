@@ -212,3 +212,6 @@ found; cosmetic items are done in batches.
 - [ ] AI: category suggestions for the OFX import; a monthly summary in words
 - [x] Amora: the helper floating on Inicio (round head, 4 moods), the tip of the day worked out in the app (budget over limit, something to pay in 3 days, budget close to limit, else a tip about the app), a bubble once per session, the help sheet (Lancar escrevendo, Encontrar uma funcao with 12 places, Perguntar sobre meu dinheiro: soon)
 - [ ] Amora: the thinking face while the AI reads; celebrating a goal reached; asking about your money
+- [x] Group 3c (part): Relatorio (round month arrows, deep blue summary with three tiles) and Simulador (section labels, deep blue result); the "x" of Primeiros passos asks first
+- [x] Amora answers questions about money: own consent, 4 safe queries run as the person (sql/20), only totals go to the AI (ai-ask), second switch in Configuracoes
+- [ ] Last design round: Historico and the cards inside Configuracoes

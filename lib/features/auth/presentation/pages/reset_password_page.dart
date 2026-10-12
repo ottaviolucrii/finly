@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/utils/validators.dart';
+import 'package:finly/core/widgets/form_validation.dart';
 import 'package:finly/features/auth/presentation/auth_messages.dart';
 import 'package:finly/features/auth/presentation/cubit/password_recovery_cubit.dart';
 import 'package:finly/features/auth/presentation/cubit/password_recovery_state.dart';
@@ -68,7 +69,7 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
   }
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!validateOnSave(_formKey)) return;
     context.read<PasswordRecoveryCubit>().reset(
       email: widget.email,
       code: _code.text,
@@ -120,7 +121,8 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
           title: 'Nova senha',
           child: Form(
                     key: _formKey,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    autovalidateMode: AutovalidateMode.disabled,
+                    onChanged: () => revalidateIfTried(_formKey),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,

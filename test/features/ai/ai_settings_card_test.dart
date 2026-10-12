@@ -22,7 +22,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  bool switchOn(WidgetTester tester) => tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value;
+  bool switchOn(WidgetTester tester) => tester.widget<SwitchListTile>(find.byType(SwitchListTile).first).value;
 
   testWidgets('starts as it is saved', (tester) async {
     ai.enabled = true;
@@ -34,7 +34,7 @@ void main() {
   testWidgets('turning it on asks first, and says what goes to the AI', (tester) async {
     await show(tester);
 
-    await tester.tap(find.byType(SwitchListTile));
+    await tester.tap(find.byType(SwitchListTile).first);
     await tester.pumpAndSettle();
 
     expect(find.text('Ligar a inteligência artificial?'), findsOneWidget);
@@ -50,7 +50,7 @@ void main() {
   testWidgets('"Agora não" changes nothing', (tester) async {
     await show(tester);
 
-    await tester.tap(find.byType(SwitchListTile));
+    await tester.tap(find.byType(SwitchListTile).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Agora não'));
     await tester.pumpAndSettle();
@@ -63,7 +63,7 @@ void main() {
     ai.enabled = true;
     await show(tester);
 
-    await tester.tap(find.byType(SwitchListTile));
+    await tester.tap(find.byType(SwitchListTile).first);
     await tester.pumpAndSettle();
 
     expect(ai.changes, [false]);
@@ -75,10 +75,41 @@ void main() {
     ai.enabled = true;
     await show(tester);
 
-    await tester.tap(find.byType(SwitchListTile));
+    await tester.tap(find.byType(SwitchListTile).first);
     await tester.pumpAndSettle();
 
     expect(switchOn(tester), isTrue);
     expect(find.textContaining('internet'), findsOneWidget);
+  });
+
+  group('questions about money', () {
+    Finder askSwitch() => find.byType(SwitchListTile).last;
+    bool askOn(WidgetTester tester) => tester.widget<SwitchListTile>(askSwitch()).value;
+
+    testWidgets('allowing asks first, saying only totals go to the AI', (tester) async {
+      await show(tester);
+
+      await tester.tap(askSwitch());
+      await tester.pumpAndSettle();
+      expect(find.text('Permitir perguntas sobre seu dinheiro?'), findsOneWidget);
+      expect(find.textContaining('nunca vê seus lançamentos'), findsOneWidget);
+
+      await tester.tap(find.text('Permitir'));
+      await tester.pumpAndSettle();
+
+      expect(ai.askEnabled, isTrue);
+      expect(askOn(tester), isTrue);
+    });
+
+    testWidgets('turning them off needs no question', (tester) async {
+      ai.askEnabled = true;
+      await show(tester);
+
+      await tester.tap(askSwitch());
+      await tester.pumpAndSettle();
+
+      expect(ai.askEnabled, isFalse);
+      expect(askOn(tester), isFalse);
+    });
   });
 }

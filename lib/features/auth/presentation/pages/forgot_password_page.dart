@@ -1,5 +1,6 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/utils/validators.dart';
+import 'package:finly/core/widgets/form_validation.dart';
 import 'package:finly/features/auth/presentation/auth_messages.dart';
 import 'package:finly/features/auth/presentation/cubit/password_recovery_cubit.dart';
 import 'package:finly/features/auth/presentation/cubit/password_recovery_state.dart';
@@ -45,7 +46,7 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
   }
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!validateOnSave(_formKey)) return;
     context.read<PasswordRecoveryCubit>().requestCode(_email.text);
   }
 
@@ -80,7 +81,8 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
           title: 'Esqueci minha senha',
           child: Form(
                     key: _formKey,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    autovalidateMode: AutovalidateMode.disabled,
+                    onChanged: () => revalidateIfTried(_formKey),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -123,7 +125,7 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                           onPressed: sending
                               ? null
                               : () {
-                                  if (!_formKey.currentState!.validate()) return;
+                                  if (!validateOnSave(_formKey)) return;
                                   _goToCodeStep();
                                 },
                           child: const Text('Já tenho um código'),

@@ -13,6 +13,11 @@ class FakeAiRepository implements AiRepository {
   final sentences = <String>[];
   final changes = <bool>[];
 
+  /// Questions about money.
+  Either<Failure, String> answerToQuestion = const Right('Você gastou R\$ 812,40 com Uber em 2026.');
+  bool askEnabled = false;
+  final questions = <String>[];
+
   FakeAiRepository({this.answer, this.enabled = false});
 
   @override
@@ -34,5 +39,24 @@ class FakeAiRepository implements AiRepository {
     changes.add(value);
     if (saveResult.isRight()) enabled = value;
     return saveResult;
+  }
+
+  @override
+  Future<Either<Failure, String>> ask({
+    required String question,
+    required String workspaceId,
+    required DateTime today,
+  }) async {
+    questions.add(question);
+    return answerToQuestion;
+  }
+
+  @override
+  Future<Either<Failure, bool>> isAskEnabled() async => Right(askEnabled);
+
+  @override
+  Future<Either<Failure, void>> setAskEnabled(bool value) async {
+    askEnabled = value;
+    return const Right(null);
   }
 }

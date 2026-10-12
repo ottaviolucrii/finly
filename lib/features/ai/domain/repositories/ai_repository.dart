@@ -19,4 +19,18 @@ abstract class AiRepository {
 
   /// Turns the AI on or off (on records the moment of the consent).
   Future<Either<Failure, void>> setEnabled(bool enabled);
+
+  /// Amora's answer to a question about the money of [workspaceId]. Only
+  /// totals go to the AI (see docs/AI.md).
+  Future<Either<Failure, String>> ask({
+    required String question,
+    required String workspaceId,
+    required DateTime today,
+  });
+
+  /// True when the person allowed questions about their money.
+  Future<Either<Failure, bool>> isAskEnabled();
+
+  /// Allows (or stops) questions about the person's money.
+  Future<Either<Failure, void>> setAskEnabled(bool enabled);
 }

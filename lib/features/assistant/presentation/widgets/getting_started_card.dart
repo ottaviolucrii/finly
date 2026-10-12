@@ -75,6 +75,22 @@ class _GettingStartedCardState extends State<GettingStartedCard> {
       ));
   }
 
+  /// The ✕ of a guide still in progress asks first.
+  Future<void> _confirmHide() async {
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Pular o guia?'),
+        content: const Text('Você pode trazer de volta depois: toque na Amora → Encontrar uma função → Primeiros passos.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Continuar')),
+          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Pular')),
+        ],
+      ),
+    );
+    if (sure == true && mounted) await _hide(tellHowToBringBack: false);
+  }
+
   Future<void> _skip(StartStep step) async {
     setState(() => _skipped = {..._skipped, step});
     await widget.store.skip(widget.workspaceId, step);
@@ -132,7 +148,7 @@ class _GettingStartedCardState extends State<GettingStartedCard> {
                 IconButton(
                   tooltip: all ? 'Fechar' : 'Pular o guia',
                   icon: const Icon(Icons.close),
-                  onPressed: () => _hide(tellHowToBringBack: !all),
+                  onPressed: all ? () => _hide(tellHowToBringBack: false) : _confirmHide,
                 ),
               ],
             ),

@@ -2,6 +2,7 @@ import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/money/money.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/widgets/form_parts.dart';
+import 'package:finly/core/widgets/form_validation.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/accounts/domain/entities/account_type.dart';
 import 'package:finly/features/accounts/presentation/account_messages.dart';
@@ -58,7 +59,7 @@ class _AccountEditViewState extends State<_AccountEditView> {
   }
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!validateOnSave(_formKey)) return;
     int? opening;
     if (!_isCard) {
       final cents = centsFromInput(_opening.text);
@@ -100,7 +101,8 @@ class _AccountEditViewState extends State<_AccountEditView> {
           onSave: _submit,
           form: Form(
             key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
+            autovalidateMode: AutovalidateMode.disabled,
+            onChanged: () => revalidateIfTried(_formKey),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

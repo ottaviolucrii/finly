@@ -1,6 +1,7 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/widgets/form_parts.dart';
+import 'package:finly/core/widgets/form_validation.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
@@ -116,7 +117,7 @@ class _TransferFormViewState extends State<_TransferFormView> {
         );
       return;
     }
-    if (!_formKey.currentState!.validate()) return;
+    if (!validateOnSave(_formKey)) return;
 
     final from = _from;
     final amount = centsFromInput(_amount.text);
@@ -242,7 +243,8 @@ class _TransferFormViewState extends State<_TransferFormView> {
 
     return Form(
       key: _formKey,
-      autovalidateMode: AutovalidateMode.onUserInteraction,
+      autovalidateMode: AutovalidateMode.disabled,
+      onChanged: () => revalidateIfTried(_formKey),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

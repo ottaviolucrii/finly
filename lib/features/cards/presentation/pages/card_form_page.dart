@@ -1,6 +1,7 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/widgets/form_parts.dart';
+import 'package:finly/core/widgets/form_validation.dart';
 import 'package:finly/features/cards/presentation/card_messages.dart';
 import 'package:finly/features/cards/presentation/cubit/card_form_cubit.dart';
 import 'package:finly/features/cards/presentation/cubit/card_form_state.dart';
@@ -50,7 +51,7 @@ class _CardFormViewState extends State<_CardFormView> {
   }
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!validateOnSave(_formKey)) return;
     final limit = centsFromInput(_limit.text);
     final closing = dayOfMonth(_closing.text);
     final due = dayOfMonth(_due.text);
@@ -94,7 +95,8 @@ class _CardFormViewState extends State<_CardFormView> {
           onSave: _submit,
           form: Form(
             key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
+            autovalidateMode: AutovalidateMode.disabled,
+            onChanged: () => revalidateIfTried(_formKey),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
