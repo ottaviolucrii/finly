@@ -74,6 +74,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/brand/
+    - assets/mascot/
   fonts:
        - family: Poppins
          fonts:

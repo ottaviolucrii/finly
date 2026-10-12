@@ -4,6 +4,10 @@ import 'package:finly/features/accounts/presentation/cubit/accounts_state.dart';
 import 'package:finly/features/accounts/presentation/pages/account_form_page.dart';
 import 'package:finly/features/accounts/presentation/pages/accounts_page.dart';
 import 'package:finly/features/alerts/presentation/widgets/dashboard_alerts_card.dart';
+import 'package:finly/features/assistant/presentation/amora_shortcuts.dart';
+import 'package:finly/features/assistant/presentation/amora_tips.dart';
+import 'package:finly/features/assistant/presentation/widgets/amora_helper.dart';
+import 'package:finly/features/assistant/presentation/widgets/amora_sheet.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/budgets/presentation/pages/budgets_page.dart';
 import 'package:finly/features/cards/presentation/cubit/cards_cubit.dart';
@@ -23,6 +27,7 @@ import 'package:finly/features/goals/domain/entities/goal_progress.dart';
 import 'package:finly/features/goals/presentation/cubit/goals_cubit.dart';
 import 'package:finly/features/goals/presentation/cubit/goals_state.dart';
 import 'package:finly/features/goals/presentation/pages/goals_page.dart';
+import 'package:finly/features/recurring/presentation/pages/recurring_page.dart';
 import 'package:finly/features/reports/presentation/pages/reports_page.dart';
 import 'package:finly/features/transactions/presentation/pages/transactions_page.dart';
 import 'package:flutter/material.dart';
@@ -102,16 +107,141 @@ class _HomeViewState extends State<HomeView> {
           child: AnnotatedRegion<SystemUiOverlayStyle>(
             // The band is dark: light icons in the status bar.
             value: SystemUiOverlayStyle.light,
-            child: RefreshIndicator(
-              onRefresh: () => context.read<DashboardCubit>().reload(),
-              child: BlocBuilder<DashboardCubit, DashboardState>(
-                builder: (context, state) => _list(context, state),
-              ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: RefreshIndicator(
+                    onRefresh: () => context.read<DashboardCubit>().reload(),
+                    child: BlocBuilder<DashboardCubit, DashboardState>(
+                      builder: (context, state) => _list(context, state),
+                    ),
+                  ),
+                ),
+                // Amora, the helper: a small button in the corner; Início
+                // itself stays as it is.
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: BlocBuilder<DashboardCubit, DashboardState>(
+                    buildWhen: (previous, current) => previous.data != current.data,
+                    builder: (context, state) {
+                      final tip = amoraTipFor(
+                        budgets: state.data?.budgets ?? const [],
+                        upcoming: state.data?.upcoming ?? const [],
+                        today: (widget.clock ?? DateTime.now)(),
+                      );
+                      return AmoraHelper(
+                        tip: tip,
+                        onOpen: () => showAmoraSheet(
+                          context,
+                          tip: tip,
+                          onWrite: () => widget.onAdd?.call(),
+                          shortcuts: _amoraShortcuts(context),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// The places of the app Amora can take the person to.
+  List<AmoraShortcut> _amoraShortcuts(BuildContext context) {
+    final workspace = widget.workspace;
+    void open(Widget page) => openAndRefresh(context, page);
+    return [
+      if (widget.onAdd != null)
+        AmoraShortcut(
+          title: 'Novo lançamento',
+          hint: 'Despesa ou receita, ou escreva como você falaria',
+          icon: Icons.add_circle_outline,
+          keywords: const ['lancar', 'lançamento', 'gasto', 'gastei', 'despesa', 'receita', 'adicionar', 'registrar'],
+          onOpen: widget.onAdd!,
+        ),
+      if (widget.onTransfer != null)
+        AmoraShortcut(
+          title: 'Transferir',
+          hint: 'Entre suas contas',
+          icon: Icons.swap_horiz,
+          keywords: const ['transferencia', 'mover', 'passar dinheiro', 'pix entre contas'],
+          onOpen: widget.onTransfer!,
+        ),
+      AmoraShortcut(
+        title: 'Pagar fatura',
+        hint: 'A fatura do cartão que está para pagar',
+        icon: Icons.receipt_long_outlined,
+        keywords: const ['fatura', 'pagar', 'pago', 'pagamento', 'cartao', 'vencimento'],
+        onOpen: () => open(CardsPage(workspace: workspace, preferDue: true)),
+      ),
+      AmoraShortcut(
+        title: 'Cartões',
+        hint: 'Limite, faturas e compras parceladas',
+        icon: Icons.credit_card,
+        keywords: const ['cartao', 'credito', 'limite', 'parcelado', 'parcela', 'novo cartao'],
+        onOpen: () => open(CardsPage(workspace: workspace)),
+      ),
+      AmoraShortcut(
+        title: 'Extrato',
+        hint: 'Todos os lançamentos, mês a mês',
+        icon: Icons.receipt_outlined,
+        keywords: const ['extrato', 'lancamentos', 'transacoes', 'historico', 'buscar', 'gastos', 'entradas', 'saidas'],
+        onOpen: () => open(TransactionsPage(workspace: workspace)),
+      ),
+      AmoraShortcut(
+        title: 'Contas',
+        hint: 'Saldos das suas contas',
+        icon: Icons.account_balance_outlined,
+        keywords: const ['conta', 'banco', 'saldo', 'arquivar'],
+        onOpen: () => open(AccountsPage(workspace: workspace)),
+      ),
+      AmoraShortcut(
+        title: 'Nova conta',
+        hint: 'Cadastrar um banco ou a carteira',
+        icon: Icons.add_card_outlined,
+        keywords: const ['criar conta', 'cadastrar', 'banco novo', 'carteira'],
+        onOpen: () => open(AccountFormPage(workspaceId: workspace.id)),
+      ),
+      AmoraShortcut(
+        title: 'Orçamentos',
+        hint: 'Limites por categoria',
+        icon: Icons.donut_large_outlined,
+        keywords: const ['orcamento', 'limite', 'gastar menos', 'economizar', 'categoria'],
+        onOpen: () => open(BudgetsPage(workspace: workspace)),
+      ),
+      AmoraShortcut(
+        title: 'Metas',
+        hint: 'Guardar dinheiro para um objetivo',
+        icon: Icons.flag_outlined,
+        keywords: const ['meta', 'objetivo', 'guardar', 'poupar', 'reserva', 'economia'],
+        onOpen: () => open(GoalsPage(workspace: workspace)),
+      ),
+      AmoraShortcut(
+        title: 'Previsão de saldo',
+        hint: 'Como fica o saldo nos próximos dias',
+        icon: Icons.show_chart,
+        keywords: const ['previsao', 'futuro', 'saldo previsto', 'proximos', 'negativo'],
+        onOpen: () => open(ForecastPage(workspace: workspace)),
+      ),
+      AmoraShortcut(
+        title: 'Recorrências',
+        hint: 'Aluguel, salário, assinaturas',
+        icon: Icons.repeat,
+        keywords: const ['recorrente', 'mensal', 'aluguel', 'salario', 'assinatura', 'repetir', 'todo mes'],
+        onOpen: () => open(RecurringPage(workspace: workspace)),
+      ),
+      AmoraShortcut(
+        title: 'Relatório',
+        hint: 'Gráficos e exportar em PDF ou CSV',
+        icon: Icons.bar_chart,
+        keywords: const ['relatorio', 'exportar', 'pdf', 'csv', 'grafico', 'resumo'],
+        onOpen: () => open(ReportsPage(workspace: workspace)),
+      ),
+    ];
   }
 
   Widget _list(BuildContext context, DashboardState state) {
@@ -123,7 +253,7 @@ class _HomeViewState extends State<HomeView> {
     const overlap = 56.0;
 
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.only(bottom: 80),
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         // The band, with the shortcuts floating over its bottom edge.

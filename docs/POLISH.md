@@ -210,3 +210,5 @@ found; cosmetic items are done in batches.
 - [x] The fingerprint is asked only after the splash has fully faded out
 - [x] AI quick add: "Escreva como voce falaria" in the "+" sheet fills in the fields (nothing saved by the AI); switch with consent in Configuracoes; Edge Function ai-parse-transaction with Claude Haiku 5.5; 60 uses a day
 - [ ] AI: category suggestions for the OFX import; a monthly summary in words
+- [x] Amora: the helper floating on Inicio (round head, 4 moods), the tip of the day worked out in the app (budget over limit, something to pay in 3 days, budget close to limit, else a tip about the app), a bubble once per session, the help sheet (Lancar escrevendo, Encontrar uma funcao with 12 places, Perguntar sobre meu dinheiro: soon)
+- [ ] Amora: the thinking face while the AI reads; celebrating a goal reached; asking about your money
