@@ -41,7 +41,7 @@ void main() {
 
   TransactionAction? chosen;
 
-  Future<void> open(WidgetTester tester, TransactionEntity item) async {
+  Future<void> open(WidgetTester tester, TransactionEntity item, {AccountEntity from = account}) async {
     chosen = null;
     tester.view.physicalSize = const Size(400, 900);
     tester.view.devicePixelRatio = 1;
@@ -52,7 +52,7 @@ void main() {
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () async =>
-                chosen = await showTransactionDetails(context, transaction: item, account: account),
+                chosen = await showTransactionDetails(context, transaction: item, account: from),
             child: const Text('abrir'),
           ),
         ),
@@ -110,5 +110,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(chosen, TransactionAction.receipt);
+  });
+
+  group('refunding a card purchase', () {
+    const card = AccountEntity(
+      id: 'c1',
+      workspaceId: 'w1',
+      name: 'Nubank',
+      type: AccountType.creditCard,
+      currency: 'BRL',
+      openingBalanceCents: 0,
+      postedBalanceCents: 0,
+      projectedBalanceCents: 0,
+    );
+
+    testWidgets('a purchase on a card can be refunded', (tester) async {
+      await open(tester, transaction(), from: card);
+
+      await tester.tap(find.text('Estornar compra'));
+      await tester.pumpAndSettle();
+
+      expect(chosen, TransactionAction.refund);
+    });
+
+    testWidgets('a purchase on a bank account has no refund', (tester) async {
+      await open(tester, transaction());
+
+      expect(find.text('Estornar compra'), findsNothing);
+    });
   });
 }

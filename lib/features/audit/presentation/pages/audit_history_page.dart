@@ -1,6 +1,7 @@
 import 'package:finly/core/di/injection.dart';
 import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/core/utils/date_format.dart';
+import 'package:finly/core/widgets/grouped_list.dart';
 import 'package:finly/core/widgets/workspace_title.dart';
 import 'package:finly/features/audit/domain/audit_filter.dart';
 import 'package:finly/features/audit/domain/audit_rules.dart';
@@ -91,27 +92,41 @@ class AuditHistoryView extends StatelessWidget {
 
     final now = (clock ?? DateTime.now)();
     final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
     final children = <Widget>[];
-    String? currentDay;
 
+    // the items of each day together, in one white card
+    final days = <String, List<AuditItem>>{};
     for (final item in state.items) {
-      final day = dayLabel(item.occurredAt, now);
-      if (day != currentDay) {
-        currentDay = day;
-        children.add(
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-            child: Text(day, style: text.titleSmall),
+      days.putIfAbsent(dayLabel(item.occurredAt, now), () => []).add(item);
+    }
+    for (final entry in days.entries) {
+      children
+        ..add(Padding(
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 8),
+          child: Text(
+            entry.key,
+            style: text.labelLarge?.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600, letterSpacing: 0.4),
           ),
-        );
-      }
-      children.add(_ItemTile(item: item));
+        ))
+        ..add(Card(
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              for (var i = 0; i < entry.value.length; i++) ...[
+                if (i > 0) const Divider(height: 1, indent: 72),
+                _ItemTile(item: entry.value[i]),
+              ],
+            ],
+          ),
+        ));
     }
 
     if (state.hasMore) {
       children.add(
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: state.loadingMore
               ? const Center(child: CircularProgressIndicator())
               : OutlinedButton(onPressed: cubit.loadMore, child: const Text('Carregar mais')),
@@ -182,17 +197,19 @@ class _ItemTile extends StatelessWidget {
         .join(' · ');
 
     final title = Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis);
-    final leading = Icon(_iconOf(item.kind));
+    final leading = IconBadge(icon: _iconOf(item.kind));
 
     if (item.changes.isEmpty) {
       return ListTile(leading: leading, title: title, subtitle: Text(subtitle));
     }
 
     return ExpansionTile(
+      shape: const Border(),
+      collapsedShape: const Border(),
       leading: leading,
       title: title,
       subtitle: Text(subtitle),
-      childrenPadding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
+      childrenPadding: const EdgeInsets.fromLTRB(72, 0, 16, 14),
       expandedCrossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (final change in item.changes)
