@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart' show Either;
 import 'package:finly/core/error/failure.dart';
+import 'package:finly/core/widgets/mic_button.dart';
 import 'package:finly/features/ai/domain/entities/ask_turn.dart';
 import 'package:finly/features/ai/presentation/ai_messages.dart';
 import 'package:finly/features/assistant/presentation/amora.dart';
@@ -360,7 +361,13 @@ class _AmoraSheetState extends State<AmoraSheet> {
                   padding: EdgeInsets.all(14),
                   child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
                 )
-              : IconButton(tooltip: 'Perguntar', icon: const Icon(Icons.arrow_upward), onPressed: () => _send()),
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    MicButton(onText: (words) => _question.text = words),
+                    IconButton(tooltip: 'Perguntar', icon: const Icon(Icons.arrow_upward), onPressed: () => _send()),
+                  ],
+                ),
         ),
       ),
       if (_turns.isEmpty && !_thinking) ...[

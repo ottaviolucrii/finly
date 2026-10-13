@@ -45,5 +45,13 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Para fotografar comprovantes dos seus lançamentos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Para escolher a foto de um comprovante.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Para você falar em vez de digitar.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Para transformar o que você fala em texto.</string>
 </dict>
 </plist>

@@ -20,6 +20,9 @@ class TransactionEntity extends Equatable {
   /// Set when this entry is one end of a transfer. Both ends share the id.
   final String? transferId;
 
+  /// Where the photo of the receipt is kept (private storage), when there is one.
+  final String? receiptPath;
+
   const TransactionEntity({
     required this.id,
     required this.workspaceId,
@@ -32,6 +35,7 @@ class TransactionEntity extends Equatable {
     required this.description,
     required this.occurredAt,
     this.transferId,
+    this.receiptPath,
   });
 
   Money get amount => Money(amountCents, currency);
@@ -42,6 +46,8 @@ class TransactionEntity extends Equatable {
   bool get isPending => status == TransactionStatus.pending;
 
   bool get isTransferLeg => transferId != null;
+
+  bool get hasReceipt => receiptPath != null && receiptPath!.isNotEmpty;
 
   @override
   List<Object?> get props => [
@@ -56,5 +62,6 @@ class TransactionEntity extends Equatable {
         description,
         occurredAt,
         transferId,
+        receiptPath,
       ];
 }

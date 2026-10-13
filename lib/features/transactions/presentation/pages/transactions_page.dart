@@ -5,26 +5,29 @@ import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/dashboard/presentation/cubit/month_totals_cubit.dart';
+import 'package:finly/features/receipts/data/receipt_storage.dart';
+import 'package:finly/features/receipts/presentation/receipt_page.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
-import 'package:finly/features/trash/presentation/pages/trash_page.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_state.dart';
 import 'package:finly/features/transactions/presentation/pages/transaction_edit_page.dart';
 import 'package:finly/features/transactions/presentation/statement_filters.dart';
 import 'package:finly/features/transactions/presentation/transaction_messages.dart';
+import 'package:finly/features/transactions/presentation/widgets/new_transaction_sheet.dart';
 import 'package:finly/features/transactions/presentation/widgets/statement_band.dart';
 import 'package:finly/features/transactions/presentation/widgets/statement_list.dart';
-import 'package:finly/features/transactions/presentation/widgets/new_transaction_sheet.dart';
+import 'package:finly/features/transactions/presentation/widgets/transaction_details_sheet.dart';
 import 'package:finly/features/transactions/presentation/widgets/transaction_filter_sheet.dart';
 import 'package:finly/features/transfers/presentation/pages/transfer_form_page.dart';
-import 'package:finly/features/transactions/presentation/widgets/transaction_details_sheet.dart';
-import 'package:finly/features/categories/domain/entities/category_entity.dart';
+import 'package:finly/features/trash/presentation/pages/trash_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 
 /// Extrato: the transactions of one workspace, a month at a time. The cubits
 /// are created for [workspace], so it never shows data of another workspace.
@@ -288,6 +291,13 @@ class _TransactionsViewState extends State<_TransactionsView> {
         await _openEdit(state, transaction);
       case TransactionAction.confirm:
         _confirm(transaction.id);
+      case TransactionAction.receipt:
+        final changed = await Navigator.of(context).push<bool>(
+          MaterialPageRoute<bool>(
+            builder: (_) => ReceiptPage(transaction: transaction, storage: SupabaseReceiptStorage(sl<SupabaseClient>())),
+          ),
+        );
+        if (changed == true) await cubit.reload();
       case TransactionAction.delete:
         if (transaction.isTransferLeg) {
           if (await _confirmTransferDelete()) await cubit.deleteTransfer(transaction);

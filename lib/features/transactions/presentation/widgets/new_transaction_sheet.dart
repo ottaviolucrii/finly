@@ -5,6 +5,7 @@ import 'package:finly/core/money/money.dart';
 import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/core/utils/cents_input_formatter.dart';
 import 'package:finly/core/utils/date_format.dart';
+import 'package:finly/core/widgets/mic_button.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/accounts/presentation/account_style.dart';
 import 'package:finly/features/ai/domain/entities/ai_draft.dart';
@@ -766,10 +767,19 @@ class _SentenceField extends StatelessWidget {
                 padding: EdgeInsets.all(14),
                 child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
               )
-            : IconButton(
-                tooltip: 'Preencher com a IA',
-                icon: const Icon(Icons.arrow_upward),
-                onPressed: enabled ? onRead : null,
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  MicButton(
+                    enabled: enabled,
+                    onText: (words) => controller.text = words,
+                  ),
+                  IconButton(
+                    tooltip: 'Preencher com a IA',
+                    icon: const Icon(Icons.arrow_upward),
+                    onPressed: enabled ? onRead : null,
+                  ),
+                ],
               ),
         filled: true,
         fillColor: scheme.primary.withValues(alpha: 0.06),
