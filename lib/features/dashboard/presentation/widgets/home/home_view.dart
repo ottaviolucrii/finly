@@ -260,6 +260,13 @@ class _HomeViewState extends State<HomeView> {
         onOpen: () => open(RecurringPage(workspace: workspace)),
       ),
       AmoraShortcut(
+        title: 'Importar extrato',
+        hint: 'OFX ou CSV do banco: em Contas, no ⋮ da conta',
+        icon: Icons.upload_file,
+        keywords: const ['importar', 'extrato', 'ofx', 'csv', 'arquivo', 'banco', 'planilha'],
+        onOpen: () => open(AccountsPage(workspace: workspace)),
+      ),
+      AmoraShortcut(
         title: 'Primeiros passos',
         hint: 'O guia da Amora para começar',
         icon: Icons.checklist,

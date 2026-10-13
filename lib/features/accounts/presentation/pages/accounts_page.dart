@@ -17,8 +17,11 @@ import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
 import 'package:finly/features/dashboard/domain/dashboard_rules.dart';
 import 'package:finly/features/dashboard/domain/entities/dashboard_data.dart';
+import 'package:finly/features/import/data/import_source.dart';
+import 'package:finly/features/import/presentation/import_statement_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show SupabaseClient;
 
 /// Accounts of one workspace. The cubits are created for [workspace], so they
 /// never show accounts of another workspace.
@@ -64,6 +67,27 @@ class _AccountsView extends StatelessWidget {
       ),
     );
     if (saved == true) await cubit.reload();
+  }
+
+  /// Imports a bank statement into [account], then says what came in.
+  Future<void> _openImport(BuildContext context, AccountEntity account) async {
+    final cubit = context.read<AccountsCubit>();
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await Navigator.of(context).push<ImportCheck>(
+      MaterialPageRoute<ImportCheck>(
+        builder: (_) => ImportStatementPage(account: account, source: SupabaseImportSource(sl<SupabaseClient>())),
+      ),
+    );
+    if (result == null) return;
+    await cubit.reload();
+    final parts = [
+      result.newCount == 1 ? '1 lançamento importado' : '${result.newCount} lançamentos importados',
+      if (result.duplicates > 0) '${result.duplicates} já existiam',
+      if (result.paidInvoice > 0) '${result.paidInvoice} em fatura já paga',
+    ];
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(parts.join(' · '))));
   }
 
   Future<void> _confirmArchive(
@@ -145,6 +169,7 @@ class _AccountsView extends StatelessWidget {
           return _AccountList(
             accounts: state.accounts,
             onEdit: (account) => _openEdit(context, account),
+            onImport: (account) => _openImport(context, account),
             onArchive: (account) => _confirmArchive(context, account),
             footer: _ArchivedSection(
               onRestore: (account) => _restore(context, account),
@@ -159,12 +184,14 @@ class _AccountsView extends StatelessWidget {
 class _AccountList extends StatelessWidget {
   final List<AccountEntity> accounts;
   final void Function(AccountEntity account) onEdit;
+  final void Function(AccountEntity account) onImport;
   final void Function(AccountEntity account) onArchive;
   final Widget footer;
 
   const _AccountList({
     required this.accounts,
     required this.onEdit,
+    required this.onImport,
     required this.onArchive,
     required this.footer,
   });
@@ -188,6 +215,7 @@ class _AccountList extends StatelessWidget {
                   account: list[i],
                   onTap: () => onEdit(list[i]),
                   onEdit: () => onEdit(list[i]),
+                  onImport: () => onImport(list[i]),
                   onArchive: () => onArchive(list[i]),
                 ),
               ],
@@ -305,12 +333,14 @@ class _AccountRow extends StatelessWidget {
   final AccountEntity account;
   final VoidCallback onTap;
   final VoidCallback onEdit;
+  final VoidCallback onImport;
   final VoidCallback onArchive;
 
   const _AccountRow({
     required this.account,
     required this.onTap,
     required this.onEdit,
+    required this.onImport,
     required this.onArchive,
   });
 
@@ -397,14 +427,18 @@ class _AccountRow extends StatelessWidget {
             PopupMenuButton<String>(
               tooltip: 'Mais opções',
               onSelected: (value) {
-                if (value == 'edit') {
-                  onEdit();
-                } else {
-                  onArchive();
+                switch (value) {
+                  case 'edit':
+                    onEdit();
+                  case 'import':
+                    onImport();
+                  default:
+                    onArchive();
                 }
               },
               itemBuilder: (_) => const [
                 PopupMenuItem(value: 'edit', child: Text('Editar')),
+                PopupMenuItem(value: 'import', child: Text('Importar extrato (OFX ou CSV)')),
                 PopupMenuItem(value: 'archive', child: Text('Arquivar')),
               ],
             ),
