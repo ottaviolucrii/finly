@@ -8,7 +8,7 @@ import 'package:finly/features/transactions/presentation/transaction_style.dart'
 import 'package:flutter/material.dart';
 
 /// What the person chose in the details of a transaction.
-enum TransactionAction { edit, delete, confirm }
+enum TransactionAction { edit, delete, confirm, receipt }
 
 /// Opens the details of [transaction] in a sheet: everything in full (no
 /// text cut), and what can be done with it. Returns the chosen action, or
@@ -126,6 +126,11 @@ class TransactionDetails extends StatelessWidget {
                   line(Icons.account_balance_wallet_outlined, 'Conta', account?.name ?? 'Conta'),
                   line(Icons.event, 'Data', '${formatDateBr(at)} às $time'),
                   line(
+                    Icons.receipt_long_outlined,
+                    'Comprovante',
+                    transaction.hasReceipt ? 'Anexado' : 'Nenhum',
+                  ),
+                  line(
                     transaction.isPending ? Icons.schedule : Icons.check_circle_outline,
                     'Situação',
                     transaction.isPending ? 'Pendente: entra no previsto, não no saldo' : 'Confirmada',
@@ -142,7 +147,13 @@ class TransactionDetails extends StatelessWidget {
               style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            icon: Icon(transaction.hasReceipt ? Icons.image_outlined : Icons.add_a_photo_outlined),
+            label: Text(transaction.hasReceipt ? 'Ver comprovante' : 'Anexar comprovante'),
+            onPressed: () => choose(TransactionAction.receipt),
+          ),
+          const SizedBox(height: 12),
           if (transaction.isPending) ...[
             FilledButton.icon(
               icon: const Icon(Icons.check),

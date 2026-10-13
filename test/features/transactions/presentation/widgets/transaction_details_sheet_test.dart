@@ -101,4 +101,14 @@ void main() {
     expect(find.text('Excluir'), findsOneWidget);
     expect(find.text('Transferência'), findsOneWidget);
   });
+
+  testWidgets('a receipt can be attached from the details', (tester) async {
+    await open(tester, transaction());
+
+    expect(find.text('Nenhum'), findsOneWidget);
+    await tester.tap(find.text('Anexar comprovante'));
+    await tester.pumpAndSettle();
+
+    expect(chosen, TransactionAction.receipt);
+  });
 }
