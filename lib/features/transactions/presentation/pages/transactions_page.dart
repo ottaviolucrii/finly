@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:finly/core/di/injection.dart';
+import 'package:finly/core/money/money.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
@@ -12,6 +13,8 @@ import 'package:finly/features/receipts/presentation/receipt_page.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
+import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
+import 'package:finly/features/transactions/domain/repositories/transaction_repository.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_cubit.dart';
 import 'package:finly/features/transactions/presentation/cubit/transactions_state.dart';
 import 'package:finly/features/transactions/presentation/pages/transaction_edit_page.dart';
@@ -210,6 +213,47 @@ class _TransactionsViewState extends State<_TransactionsView> {
     }
   }
 
+  /// Refunds a card purchase: a credit of the same amount on the same card,
+  /// today. The purchase stays in the history; the credit offsets it in the
+  /// invoice.
+  Future<void> _refund(TransactionEntity purchase, AccountEntity? card) async {
+    final amount = Money(purchase.amountCents, purchase.currency).format();
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Estornar esta compra?'),
+        content: Text(
+          'Lança um crédito de $amount${card == null ? '' : ' no ${card.name}'}, com a data de hoje. '
+          'A compra continua no histórico e o crédito abate na fatura.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Estornar')),
+        ],
+      ),
+    );
+    if (sure != true || !mounted) return;
+    final description = 'Estorno: ${purchase.description}';
+    final result = await sl<TransactionRepository>().createTransaction(
+      workspaceId: purchase.workspaceId,
+      accountId: purchase.accountId,
+      type: TransactionType.income,
+      status: TransactionStatus.posted,
+      amountCents: purchase.amountCents,
+      currency: purchase.currency,
+      description: description.length > 200 ? description.substring(0, 200) : description,
+      occurredAt: DateTime.now(),
+    );
+    if (!mounted) return;
+    result.fold(
+      (failure) => _showMessage(transactionFailureMessage(failure)),
+      (_) {
+        _showMessage('Estorno de $amount lançado no cartão.');
+        context.read<TransactionsCubit>().reload();
+      },
+    );
+  }
+
   Future<void> _openEdit(
     TransactionsState state,
     TransactionEntity transaction,
@@ -291,6 +335,8 @@ class _TransactionsViewState extends State<_TransactionsView> {
         await _openEdit(state, transaction);
       case TransactionAction.confirm:
         _confirm(transaction.id);
+      case TransactionAction.refund:
+        await _refund(transaction, account);
       case TransactionAction.receipt:
         final changed = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(

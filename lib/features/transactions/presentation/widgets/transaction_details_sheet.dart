@@ -1,14 +1,16 @@
 import 'package:finly/core/theme/app_colors.dart';
 import 'package:finly/core/utils/date_format.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
+import 'package:finly/features/accounts/domain/entities/account_type.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
+import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
 import 'package:finly/features/transactions/presentation/transaction_style.dart';
 import 'package:flutter/material.dart';
 
 /// What the person chose in the details of a transaction.
-enum TransactionAction { edit, delete, confirm, receipt }
+enum TransactionAction { edit, delete, confirm, receipt, refund }
 
 /// Opens the details of [transaction] in a sheet: everything in full (no
 /// text cut), and what can be done with it. Returns the chosen action, or
@@ -153,6 +155,17 @@ class TransactionDetails extends StatelessWidget {
             label: Text(transaction.hasReceipt ? 'Ver comprovante' : 'Anexar comprovante'),
             onPressed: () => choose(TransactionAction.receipt),
           ),
+          // a purchase on a card can be refunded: a credit on the same card
+          if (account?.type == AccountType.creditCard &&
+              transaction.type == TransactionType.expense &&
+              !transaction.isTransferLeg) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.undo),
+              label: const Text('Estornar compra'),
+              onPressed: () => choose(TransactionAction.refund),
+            ),
+          ],
           const SizedBox(height: 12),
           if (transaction.isPending) ...[
             FilledButton.icon(

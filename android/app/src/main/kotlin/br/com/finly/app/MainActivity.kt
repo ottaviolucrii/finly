@@ -1,4 +1,4 @@
-package com.example.finly
+package br.com.finly.app
 
 import android.content.Context
 import android.os.Build

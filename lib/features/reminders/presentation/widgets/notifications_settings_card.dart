@@ -54,6 +54,8 @@ class _NotificationsSettingsCardState extends State<NotificationsSettingsCard> {
             final ready = state.prefsReady;
 
             return Card(
+              margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
                   if (state.permissionGranted == false) ...[

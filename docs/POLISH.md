@@ -220,3 +220,7 @@ found; cosmetic items are done in batches.
 - [x] Statement import: OFX (SGML and XML, Windows-1252) and CSV (separators, columns, dates and amounts guessed) from the menu of each account in Contas; preview with the category from the history, lines already in Finly unchecked, card CSV signs; saved all at once (sql/22 import_transactions, bank id kept)
 - [x] Receipts: a photo (camera or gallery, reduced to 1600 px) on any transaction, kept in the private receipts bucket; seen, replaced or removed from the details of the transaction
 - [x] Microphone: the phone's own speech recognizer (pt_BR) in the "+" sheet sentence and in Amora's questions
+- [x] App id br.com.finly.app (Android, iOS, macOS, Linux; MainActivity moved)
+- [x] Receipt chosen in the "+" sheet, attached right after saving
+- [x] Refund of a card purchase: a credit on the same card, today (Estornar compra)
+- [x] Historico (a card per day, icon badges) and the Configuracoes cards in the new style

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dartz/dartz.dart';
 import 'package:finly/core/error/failure.dart';
 import 'package:finly/core/theme/app_theme.dart';
@@ -5,6 +7,7 @@ import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/accounts/domain/entities/account_type.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_kind.dart';
+import 'package:finly/features/receipts/data/receipt_storage.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
@@ -103,7 +106,7 @@ void main() {
 
   /// Opens the form in its own route, like the sheet does, so it can close
   /// with a result.
-  Future<void> open(WidgetTester tester, {Future<String?> Function(String, TransactionType)? suggest}) async {
+  Future<void> open(WidgetTester tester, {Future<String?> Function(String, TransactionType)? suggest, ReceiptStorage? receipts}) async {
     tester.view.physicalSize = const Size(800, 2000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -121,6 +124,8 @@ void main() {
                     child: Scaffold(
                       body: NewTransactionForm(
                         suggestCategory: suggest,
+                        receipts: receipts,
+                        pickPhoto: ({required bool camera}) async => _tinyPng,
                         workspaceId: 'w1',
                         accounts: const [itau, nubank],
                         categories: const [market, salary],
@@ -382,4 +387,40 @@ void main() {
       expect(find.textContaining('Sugerida pelo seu histórico'), findsNothing);
     });
   });
+
+  group('the receipt photo', () {
+    testWidgets('without where to keep it, there is no 📎', (tester) async {
+      await open(tester);
+
+      expect(find.text('Anexar comprovante'), findsNothing);
+    });
+
+    testWidgets('a photo chosen before saving waits, and can be taken off', (tester) async {
+      await open(tester, receipts: _NoReceipts());
+
+      await tester.tap(find.text('Anexar comprovante'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tirar foto'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Comprovante pronto'), findsOneWidget);
+      await tester.tap(find.byTooltip('Tirar o comprovante'));
+      await tester.pump();
+      expect(find.text('Anexar comprovante'), findsOneWidget);
+    });
+  });
 }
+
+class _NoReceipts implements ReceiptStorage {
+  @override
+  Future<String> attach(TransactionEntity transaction, Uint8List jpeg) async => 'x';
+
+  @override
+  Future<String> link(String path) async => 'x';
+
+  @override
+  Future<void> remove(TransactionEntity transaction) async {}
+}
+
+/// A real 1x1 PNG: the sheet draws the photo it is given.
+final _tinyPng = Uint8List.fromList(const [137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 13, 73, 68, 65, 84, 120, 156, 99, 248, 207, 192, 240, 31, 0, 5, 0, 1, 255, 137, 153, 61, 29, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130]);

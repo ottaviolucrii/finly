@@ -15,7 +15,10 @@ import 'package:finly/features/assistant/presentation/amora.dart';
 import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_kind.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
+import 'package:finly/features/receipts/data/receipt_storage.dart';
+import 'package:finly/features/receipts/presentation/receipt_page.dart';
 import 'package:finly/features/transactions/data/category_suggestion.dart';
+import 'package:finly/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_status.dart';
 import 'package:finly/features/transactions/domain/entities/transaction_type.dart';
 import 'package:finly/features/transactions/presentation/account_choice.dart';
@@ -57,6 +60,7 @@ Future<NewTransactionResult?> showNewTransactionSheet(
         accounts: accounts,
         categories: categories,
         ai: sl.isRegistered<AiRepository>() ? sl<AiRepository>() : null,
+        receipts: sl.isRegistered<SupabaseClient>() ? SupabaseReceiptStorage(sl<SupabaseClient>()) : null,
         suggestCategory: sl.isRegistered<SupabaseClient>()
             ? (description, type) => CategorySuggestionSource(sl<SupabaseClient>())
                 .suggest(workspaceId: workspaceId, description: description, type: type)
@@ -85,6 +89,12 @@ class NewTransactionForm extends StatefulWidget {
   /// history); null turns the suggestion off.
   final Future<String?> Function(String description, TransactionType type)? suggestCategory;
 
+  /// Where the receipt photo goes after saving; null hides the 📎.
+  final ReceiptStorage? receipts;
+
+  /// Takes or picks the photo (tests pass a fake).
+  final Future<Uint8List?> Function({required bool camera}) pickPhoto;
+
   const NewTransactionForm({
     super.key,
     required this.workspaceId,
@@ -93,6 +103,8 @@ class NewTransactionForm extends StatefulWidget {
     this.clock,
     this.ai,
     this.suggestCategory,
+    this.receipts,
+    this.pickPhoto = pickReceiptPhoto,
   });
 
   @override
@@ -114,6 +126,60 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
   /// Why the last save failed, shown above the button (a message at the
   /// bottom of the screen would be hidden behind the sheet).
   String? _error;
+
+  /// The receipt photo chosen before saving; attached right after.
+  Uint8List? _receipt;
+  bool _attaching = false;
+
+  Future<void> _chooseReceipt() async {
+    final camera = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Tirar foto'),
+              onTap: () => Navigator.of(sheetContext).pop(true),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Escolher da galeria'),
+              onTap: () => Navigator.of(sheetContext).pop(false),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (camera == null || !mounted) return;
+    final photo = await widget.pickPhoto(camera: camera);
+    if (photo != null && mounted) setState(() => _receipt = photo);
+  }
+
+  /// After saving: attaches the photo, then closes. If the photo fails, the
+  /// transaction is still saved and the person is told where to attach it.
+  Future<void> _finish(TransactionEntity? saved) async {
+    final photo = _receipt;
+    final receipts = widget.receipts;
+    var note = false;
+    if (photo != null && saved != null && receipts != null) {
+      setState(() => _attaching = true);
+      try {
+        await receipts.attach(saved, photo);
+      } catch (e) {
+        note = true;
+      }
+    }
+    if (!mounted) return;
+    if (note) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Lançamento salvo, mas a foto não foi enviada. Anexe pelo Extrato, nos detalhes do lançamento.'),
+      ));
+    }
+    Navigator.of(context).pop(NewTransactionResult.created);
+  }
 
   /// The category was suggested from the person's history (not picked).
   bool _suggested = false;
@@ -296,11 +362,11 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
           setState(() => _error = transactionFailureMessage(state.failure!));
         }
         if (state.status == TransactionFormStatus.success) {
-          Navigator.of(context).pop(NewTransactionResult.created);
+          _finish(state.transaction);
         }
       },
       builder: (context, state) {
-        final submitting = state.status == TransactionFormStatus.submitting;
+        final submitting = state.status == TransactionFormStatus.submitting || _attaching;
         final income = _type == TransactionType.income;
         final options = _categoryOptions;
         final day = dayFor(_quickDay, _now, _picked);
@@ -493,6 +559,30 @@ class _NewTransactionFormState extends State<NewTransactionForm> {
                     value: _pending,
                     onChanged: submitting ? null : (value) => setState(() => _pending = value),
                   ),
+                  if (widget.receipts != null)
+                    _receipt == null
+                        ? Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
+                              icon: const Icon(Icons.attach_file),
+                              label: const Text('Anexar comprovante'),
+                              onPressed: submitting ? null : _chooseReceipt,
+                            ),
+                          )
+                        : ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(_receipt!, width: 44, height: 44, fit: BoxFit.cover),
+                            ),
+                            title: const Text('Comprovante pronto'),
+                            subtitle: const Text('Vai junto quando você salvar.'),
+                            trailing: IconButton(
+                              tooltip: 'Tirar o comprovante',
+                              icon: const Icon(Icons.close),
+                              onPressed: submitting ? null : () => setState(() => _receipt = null),
+                            ),
+                          ),
                   const SizedBox(height: 12),
                   if (_error != null) ...[
                     _ErrorBox(message: _error!),

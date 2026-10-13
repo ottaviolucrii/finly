@@ -33,6 +33,8 @@ class AppearanceSettingsCard extends StatelessWidget {
           },
           builder: (context, state) {
             return Card(
+              margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
