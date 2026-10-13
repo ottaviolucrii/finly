@@ -15,7 +15,7 @@ import pgserver, psycopg
 SQL = pathlib.Path(__file__).resolve().parent.parent
 FILES = ["tests/00_mock_supabase.sql", "00_types.sql", "01_helpers.sql",
          "02_tables.sql", "03_logic.sql", "04_security.sql", "07_hardening.sql", "08_credit_card.sql", "09_budget_end_marker.sql",
-         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql", "18_invoice_partial_payment.sql", "19_ai_quick_add.sql", "20_ai_ask.sql", "21_ai_more.sql"]
+         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql", "18_invoice_partial_payment.sql", "19_ai_quick_add.sql", "20_ai_ask.sql", "21_ai_more.sql", "22_import.sql"]
 
 passed = failed = 0
 def check(name, cond, extra=""):
@@ -547,6 +547,44 @@ def main():
     check("B asking about A's workspace gets nothing",
           conn.execute(f"select count(*) from public.ai_spending_matching(%s, {period}, 'uber')", (ws_p,)).fetchone()[0] == 0
           and conn.execute("select count(*) from public.ai_account_balances(%s)", (ws_p,)).fetchone()[0] == 0)
+    as_user(conn, A)
+
+    # ---- importing a bank statement -------------------------------------------
+    print("import")
+    as_user(conn, A)
+    import json
+    rows = [
+        {"external_id": "FIT-1", "date": str(one(conn, "select current_date - 2")), "amount_cents": -2590, "description": "Padaria Pão Quente", "category_id": str(cat_food)},
+        {"external_id": "FIT-2", "date": str(one(conn, "select current_date - 1")), "amount_cents": 150000, "description": "Pix recebido", "category_id": str(cat_food)},
+        {"date": str(one(conn, "select current_date - 1")), "amount_cents": -999, "description": "Café"},
+    ]
+    dry = one(conn, "select public.import_transactions(%s, %s::jsonb, true)", (chk, json.dumps(rows)))
+    before = one(conn, "select count(*) from public.transactions where account_id=%s", (chk,))
+    check("a dry run says what is new and saves nothing", dry["new"] == 3 and dry["rows"] == ["new", "new", "new"]
+          and one(conn, "select count(*) from public.transactions where account_id=%s", (chk,)) == before, dry)
+    done = one(conn, "select public.import_transactions(%s, %s::jsonb, false)", (chk, json.dumps(rows)))
+    check("importing saves the lines", done["new"] == 3
+          and one(conn, "select count(*) from public.transactions where account_id=%s", (chk,)) == before + 3, done)
+    check("a negative amount is an expense, positive an income, amounts saved positive",
+          conn.execute("select type::text, amount_cents from public.transactions where account_id=%s and external_id in ('FIT-1','FIT-2') order by external_id", (chk,)).fetchall()
+          == [('expense', 2590), ('income', 150000)])
+    check("a category of the wrong kind is dropped (income with a food category)",
+          one(conn, "select category_id from public.transactions where account_id=%s and external_id='FIT-2'", (chk,)) is None)
+    again = one(conn, "select public.import_transactions(%s, %s::jsonb, false)", (chk, json.dumps(rows)))
+    check("the same file twice adds nothing (bank id, or day + amount + description)",
+          again["new"] == 0 and again["duplicates"] == 3
+          and one(conn, "select count(*) from public.transactions where account_id=%s", (chk,)) == before + 3, again)
+    bad = rows[:1] + [{"date": "ontem", "amount_cents": -100, "description": "x"}]
+    bad[0] = dict(bad[0], external_id="FIT-9")
+    check("one broken line saves nothing at all", raises(conn, "select public.import_transactions(%s, %s::jsonb, false)", (chk, json.dumps(bad)), contains="invalid_row")
+          and one(conn, "select count(*) from public.transactions where account_id=%s and external_id='FIT-9'", (chk,)) == 0)
+    check("too many lines are refused", raises(conn, "select public.import_transactions(%s, %s::jsonb, true)", (chk, json.dumps(rows * 400)), contains="invalid_rows"))
+    sugs = dict(conn.execute("select description, category_id from public.suggest_categories(%s, array['uber centro','farmacia nova'], 'expense')", (ws_p,)).fetchall())
+    check("an imported line teaches the history too (padaria -> Alimentação)",
+          one(conn, "select public.suggest_category(%s, 'padaria nova', 'expense')", (ws_p,)) == cat_food)
+    check("suggestions for many descriptions at once", sugs.get('uber centro') == cat_food and sugs.get('farmacia nova') is None, sugs)
+    as_user(conn, B)
+    check("B cannot import into A's account", raises(conn, "select public.import_transactions(%s, %s::jsonb, true)", (chk, json.dumps(rows)), contains="account_not_found"))
     as_user(conn, A)
 
     # ---- account deletion -------------------------------------------------

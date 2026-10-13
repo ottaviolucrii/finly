@@ -218,3 +218,4 @@ found; cosmetic items are done in batches.
 - [x] Amora understands more: where the money goes, budgets of a month, invoices to pay, goals, comparing periods, follow-up questions (a conversation while the sheet is open)
 - [x] Category suggested in the "+" sheet from the person's own history (sql/21 suggest_category, no AI)
 - [ ] A microphone button (speech to text) in the "+" sheet and in Amora's questions
+- [x] Statement import: OFX (SGML and XML, Windows-1252) and CSV (separators, columns, dates and amounts guessed) from the menu of each account in Contas; preview with the category from the history, lines already in Finly unchecked, card CSV signs; saved all at once (sql/22 import_transactions, bank id kept)
