@@ -15,7 +15,7 @@ import pgserver, psycopg
 SQL = pathlib.Path(__file__).resolve().parent.parent
 FILES = ["tests/00_mock_supabase.sql", "00_types.sql", "01_helpers.sql",
          "02_tables.sql", "03_logic.sql", "04_security.sql", "07_hardening.sql", "08_credit_card.sql", "09_budget_end_marker.sql",
-         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql", "18_invoice_partial_payment.sql", "19_ai_quick_add.sql", "20_ai_ask.sql", "21_ai_more.sql", "22_import.sql"]
+         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql", "18_invoice_partial_payment.sql", "19_ai_quick_add.sql", "20_ai_ask.sql", "21_ai_more.sql", "22_import.sql", "23_recurring_suggestions.sql"]
 
 passed = failed = 0
 def check(name, cond, extra=""):
@@ -585,6 +585,37 @@ def main():
     check("suggestions for many descriptions at once", sugs.get('uber centro') == cat_food and sugs.get('farmacia nova') is None, sugs)
     as_user(conn, B)
     check("B cannot import into A's account", raises(conn, "select public.import_transactions(%s, %s::jsonb, true)", (chk, json.dumps(rows)), contains="account_not_found"))
+    as_user(conn, A)
+
+    # ---- spotting recurring items ---------------------------------------------
+    print("recurring suggestions")
+    as_user(conn, A)
+    ws_r = one(conn, "select id from public.workspaces where owner_id=%s and type='personal'", (A,)) if False else ws_p
+    for months_ago, amount in [(4, 3990), (3, 3990), (2, 4090), (1, 3990)]:
+        one(conn, "insert into public.transactions(workspace_id, account_id, category_id, type, status, amount_cents, currency, description, occurred_at) "
+                  "values (%s, %s, %s, 'expense', 'posted', %s, 'BRL', 'Netflix', now() - make_interval(months => %s) - interval '1 day') returning id",
+            (ws_p, chk, cat_food, amount, months_ago))
+    for months_ago, amount in [(3, 1000), (2, 4000), (1, 9000)]:
+        one(conn, "insert into public.transactions(workspace_id, account_id, category_id, type, status, amount_cents, currency, description, occurred_at) "
+                  "values (%s, %s, %s, 'expense', 'posted', %s, 'BRL', 'Mercado do bairro', now() - make_interval(months => %s) - interval '2 days') returning id",
+            (ws_p, chk, cat_food, amount, months_ago))
+    for months_ago in (2, 1):
+        one(conn, "insert into public.transactions(workspace_id, account_id, category_id, type, status, amount_cents, currency, description, occurred_at) "
+                  "values (%s, %s, %s, 'expense', 'posted', 2500, 'BRL', 'So duas vezes', now() - make_interval(months => %s) - interval '1 day') returning id",
+            (ws_p, chk, cat_food, months_ago))
+    sug = conn.execute("select description, amount_cents, months_seen, day_of_month from public.suggest_recurring(%s)", (ws_p,)).fetchall()
+    names = [r[0] for r in sug]
+    check("the same description and amount every month is suggested", 'Netflix' in names, sug)
+    netflix = [r for r in sug if r[0] == 'Netflix'][0]
+    check("the usual amount is the middle one, seen in 4 months", netflix[1] == 3990 and netflix[2] == 4, netflix)
+    check("amounts that vary a lot are not suggested", 'Mercado do bairro' not in names, names)
+    check("only 2 months is not enough", 'So duas vezes' not in names, names)
+    one(conn, "insert into public.recurring_transactions(workspace_id, account_id, currency, category_id, type, amount_cents, description, frequency, start_date) "
+              "values (%s, %s, 'BRL', %s, 'expense', 3990, 'netflix', 'monthly', current_date) returning id", (ws_p, chk, cat_food))
+    check("one already created as a recurring item is not suggested again",
+          'Netflix' not in [r[0] for r in conn.execute("select description from public.suggest_recurring(%s)", (ws_p,)).fetchall()])
+    as_user(conn, B)
+    check("B gets nothing from A's history", conn.execute("select count(*) from public.suggest_recurring(%s)", (ws_p,)).fetchone()[0] == 0)
     as_user(conn, A)
 
     # ---- account deletion -------------------------------------------------

@@ -224,3 +224,5 @@ found; cosmetic items are done in batches.
 - [x] Receipt chosen in the "+" sheet, attached right after saving
 - [x] Refund of a card purchase: a credit on the same card, today (Estornar compra)
 - [x] Historico (a card per day, icon badges) and the Configuracoes cards in the new style
+- [x] Monthly summary: a card on Inicio on days 1 to 7 about the month that ended (worked out in the app, no AI), a page with month arrows (also from Amora: "Resumo do mes"), and an optional notification on the 1st at 9am (a switch in Notificacoes; the reminders leave it alone)
+- [x] Spotting recurring items: "A Amora notou" in Recorrencias (sql/23 suggest_recurring: same description and about the same amount in 3+ of the last 6 months), Criar recorrencia opens the form filled in, Agora nao is remembered

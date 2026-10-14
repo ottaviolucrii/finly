@@ -31,7 +31,12 @@ import 'package:finly/features/goals/presentation/cubit/goals_cubit.dart';
 import 'package:finly/features/goals/presentation/cubit/goals_state.dart';
 import 'package:finly/features/goals/presentation/pages/goals_page.dart';
 import 'package:finly/features/recurring/presentation/pages/recurring_page.dart';
+import 'package:finly/features/reports/domain/usecases/get_monthly_report_use_case.dart';
 import 'package:finly/features/reports/presentation/pages/reports_page.dart';
+import 'package:finly/features/summary/data/summary_notifier.dart';
+import 'package:finly/features/summary/data/summary_store.dart';
+import 'package:finly/features/summary/presentation/month_summary_card.dart';
+import 'package:finly/features/summary/presentation/month_summary_page.dart';
 import 'package:finly/features/transactions/presentation/pages/transactions_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -67,6 +72,9 @@ class HomeView extends StatefulWidget {
   /// Where the choices about "Primeiros passos" are kept.
   final GettingStartedStore gettingStarted;
 
+  /// Which monthly summaries the person already closed.
+  final SummaryStore summaryStore;
+
   const HomeView({
     super.key,
     required this.workspace,
@@ -78,6 +86,7 @@ class HomeView extends StatefulWidget {
     required this.onTransfer,
     this.clock,
     this.gettingStarted = const PrefsGettingStartedStore(),
+    this.summaryStore = const PrefsSummaryStore(),
   });
 
   @override
@@ -155,6 +164,24 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Reads the report of a month of this workspace (what Relatório uses).
+  SummaryLoader _summaryLoader() {
+    final workspace = widget.workspace;
+    return (month) =>
+        sl<GetMonthlyReportUseCase>()(GetMonthlyReportParams(workspaceId: workspace.id, month: month));
+  }
+
+  /// The summary of a month, with a way to the full report.
+  Widget _summaryPage(BuildContext context, DateTime month) {
+    final workspace = widget.workspace;
+    return MonthSummaryPage(
+      initialMonth: month,
+      today: (widget.clock ?? DateTime.now)(),
+      load: _summaryLoader(),
+      onOpenReport: () => openAndRefresh(context, ReportsPage(workspace: workspace)),
     );
   }
 
@@ -259,6 +286,17 @@ class _HomeViewState extends State<HomeView> {
         keywords: const ['recorrente', 'mensal', 'aluguel', 'salario', 'assinatura', 'repetir', 'todo mes'],
         onOpen: () => open(RecurringPage(workspace: workspace)),
       ),
+      if (sl.isRegistered<GetMonthlyReportUseCase>())
+        AmoraShortcut(
+          title: 'Resumo do mês',
+          hint: 'Como foi o mês: quanto entrou, saiu e onde mais gastou',
+          icon: Icons.summarize_outlined,
+          keywords: const ['resumo', 'mes', 'balanco', 'como estou', 'como foi', 'gastei', 'sobrou', 'faltou'],
+          onOpen: () {
+            final today = (widget.clock ?? DateTime.now)();
+            open(_summaryPage(context, DateTime(today.year, today.month)));
+          },
+        ),
       AmoraShortcut(
         title: 'Importar extrato',
         hint: 'OFX ou CSV do banco: em Contas, no ⋮ da conta',
@@ -333,6 +371,16 @@ class _HomeViewState extends State<HomeView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // The summary of the month that ended, in the first days of a month.
+              if (sl.isRegistered<GetMonthlyReportUseCase>())
+                MonthSummaryCard(
+                  workspaceId: workspace.id,
+                  today: now,
+                  load: _summaryLoader(),
+                  store: widget.summaryStore,
+                  notifier: sl.isRegistered<SummaryNotifier>() ? sl<SummaryNotifier>() : null,
+                  onOpen: (month) => open(_summaryPage(context, month)),
+                ),
               // "Primeiros passos": Amora's guide for a new workspace.
               Builder(builder: (context) {
                 final accounts = context.watch<AccountsCubit>().state;
