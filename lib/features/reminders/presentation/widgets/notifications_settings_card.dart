@@ -1,5 +1,6 @@
 import 'package:finly/features/reminders/presentation/cubit/reminders_cubit.dart';
 import 'package:finly/features/reminders/presentation/cubit/reminders_state.dart';
+import 'package:finly/features/summary/presentation/monthly_summary_switch.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -92,6 +93,7 @@ class _NotificationsSettingsCardState extends State<NotificationsSettingsCard> {
                     value: state.prefs.cardDue,
                     onChanged: ready ? cubit.setCardDue : null,
                   ),
+                  const MonthlySummarySwitch(),
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.sync),

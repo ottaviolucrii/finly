@@ -7,8 +7,10 @@ import 'package:finly/core/widgets/workspace_title.dart';
 import 'package:finly/features/accounts/domain/entities/account_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_entity.dart';
 import 'package:finly/features/auth/domain/entities/workspace_type.dart';
+import 'package:finly/features/recurring/data/recurring_suggestion_source.dart';
 import 'package:finly/features/recurring/domain/entities/recurrence_frequency.dart';
 import 'package:finly/features/recurring/domain/entities/recurring_entity.dart';
+import 'package:finly/features/recurring/domain/entities/recurring_suggestion.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_cubit.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_delete_cubit.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_delete_state.dart';
@@ -17,6 +19,7 @@ import 'package:finly/features/recurring/presentation/pages/recurring_edit_page.
 import 'package:finly/features/recurring/presentation/pages/recurring_form_page.dart';
 import 'package:finly/features/recurring/presentation/recurring_messages.dart';
 import 'package:finly/features/recurring/presentation/recurring_style.dart';
+import 'package:finly/features/recurring/presentation/widgets/recurring_suggestions_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -50,10 +53,12 @@ class _RecurringView extends StatelessWidget {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _openForm(BuildContext context, RecurringState state) async {
+  /// Opens the form (filled in when it comes from a suggestion); true when
+  /// the recurring item was created.
+  Future<bool> _openForm(BuildContext context, RecurringState state, {RecurringSuggestion? suggestion}) async {
     if (state.accounts.isEmpty) {
       _showMessage(context, 'Crie uma conta antes de criar uma recorrência.');
-      return;
+      return false;
     }
     final cubit = context.read<RecurringCubit>();
     final created = await Navigator.of(context).push<bool>(
@@ -62,11 +67,26 @@ class _RecurringView extends StatelessWidget {
           workspaceId: workspace.id,
           accounts: state.accounts,
           categories: state.categories,
+          suggestion: suggestion,
         ),
       ),
     );
     // Reloading also creates the pending transactions of the new item.
     if (created == true) await cubit.reload();
+    return created == true;
+  }
+
+  /// "A Amora notou": what repeats every month and is not recurring yet; null
+  /// when the app has no source for it.
+  Widget? _suggestions(BuildContext context, RecurringState state) {
+    if (!sl.isRegistered<RecurringSuggestionSource>()) return null;
+    final accountById = {for (final a in state.accounts) a.id: a};
+    return RecurringSuggestionsSection(
+      workspaceId: workspace.id,
+      source: sl<RecurringSuggestionSource>(),
+      currencyOf: (suggestion) => accountById[suggestion.accountId]?.currency ?? 'BRL',
+      onCreate: (suggestion) => _openForm(context, state, suggestion: suggestion),
+    );
   }
 
   Future<void> _openEdit(
@@ -184,7 +204,15 @@ class _RecurringView extends StatelessWidget {
     if (state.status != RecurringStatus.loaded && state.items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (state.items.isEmpty) return const _EmptyView();
+    final suggestions = _suggestions(context, state);
+    if (state.items.isEmpty) {
+      return suggestions == null
+          ? const _EmptyView()
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
+              children: [suggestions, const _EmptyView()],
+            );
+    }
 
     final accountById = {for (final a in state.accounts) a.id: a};
     final cubit = context.read<RecurringCubit>();
@@ -214,6 +242,7 @@ class _RecurringView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
       children: [
+        ?suggestions,
         _MonthlySummary(items: state.items, today: DateTime.now()),
         if (incomes.isNotEmpty) ...[
           const SizedBox(height: 20),

@@ -1,4 +1,5 @@
 import 'package:finly/features/recurring/data/datasources/recurring_remote_data_source.dart';
+import 'package:finly/features/recurring/data/recurring_suggestion_source.dart';
 import 'package:finly/features/recurring/data/repositories/recurring_repository_impl.dart';
 import 'package:finly/features/recurring/domain/repositories/recurring_repository.dart';
 import 'package:finly/features/recurring/domain/usecases/create_recurring_use_case.dart';
@@ -22,6 +23,9 @@ void registerRecurringModule(GetIt sl) {
     )
     ..registerLazySingleton<RecurringRepository>(
       () => RecurringRepositoryImpl(sl()),
+    )
+    ..registerLazySingleton<RecurringSuggestionSource>(
+      () => SupabaseRecurringSuggestionSource(sl()),
     )
     ..registerLazySingleton(() => GetRecurringUseCase(sl()))
     ..registerLazySingleton(() => CreateRecurringUseCase(sl()))

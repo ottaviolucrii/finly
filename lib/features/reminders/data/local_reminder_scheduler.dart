@@ -1,6 +1,7 @@
 import 'package:finly/features/reminders/domain/entities/reminder_items.dart';
 import 'package:finly/features/reminders/domain/reminder_scheduler.dart';
 import 'package:finly/features/reminders/reminder_texts.dart';
+import 'package:finly/features/summary/data/summary_notifier.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
@@ -72,7 +73,11 @@ class LocalReminderScheduler implements ReminderScheduler {
   @override
   Future<int> replaceAll(List<ScheduledReminder> reminders) async {
     await _ensureInitialized();
-    await _plugin.cancelAll();
+    // Everything scheduled before goes, except the monthly summary: it is not
+    // a reminder and has its own switch.
+    for (final pending in await _plugin.pendingNotificationRequests()) {
+      if (pending.id != monthlySummaryNotificationId) await _plugin.cancel(pending.id);
+    }
 
     var scheduled = 0;
     for (final reminder in reminders) {

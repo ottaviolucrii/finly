@@ -15,7 +15,7 @@ import pgserver, psycopg
 SQL = pathlib.Path(__file__).resolve().parent.parent
 FILES = ["tests/00_mock_supabase.sql", "00_types.sql", "01_helpers.sql",
          "02_tables.sql", "03_logic.sql", "04_security.sql", "07_hardening.sql", "08_credit_card.sql", "09_budget_end_marker.sql",
-         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql", "18_invoice_partial_payment.sql", "19_ai_quick_add.sql", "20_ai_ask.sql", "21_ai_more.sql", "22_import.sql"]
+         "11_monthly_flow.sql", "12_recurring_edit_delete.sql", "14_restore_transfer.sql", "15_move_transaction.sql", "16_goals.sql", "17_recurring_end_date.sql", "18_invoice_partial_payment.sql", "19_ai_quick_add.sql", "20_ai_ask.sql", "21_ai_more.sql", "22_import.sql", "23_recurring_suggestions.sql", "24_recurring_no_duplicates.sql"]
 
 passed = failed = 0
 def check(name, cond, extra=""):
@@ -585,6 +585,109 @@ def main():
     check("suggestions for many descriptions at once", sugs.get('uber centro') == cat_food and sugs.get('farmacia nova') is None, sugs)
     as_user(conn, B)
     check("B cannot import into A's account", raises(conn, "select public.import_transactions(%s, %s::jsonb, true)", (chk, json.dumps(rows)), contains="account_not_found"))
+    as_user(conn, A)
+
+    # ---- spotting recurring items ---------------------------------------------
+    print("recurring suggestions")
+    as_user(conn, A)
+    ws_r = one(conn, "select id from public.workspaces where owner_id=%s and type='personal'", (A,)) if False else ws_p
+    for months_ago, amount in [(4, 3990), (3, 3990), (2, 4090), (1, 3990)]:
+        one(conn, "insert into public.transactions(workspace_id, account_id, category_id, type, status, amount_cents, currency, description, occurred_at) "
+                  "values (%s, %s, %s, 'expense', 'posted', %s, 'BRL', 'Netflix', now() - make_interval(months => %s) - interval '1 day') returning id",
+            (ws_p, chk, cat_food, amount, months_ago))
+    for months_ago, amount in [(3, 1000), (2, 4000), (1, 9000)]:
+        one(conn, "insert into public.transactions(workspace_id, account_id, category_id, type, status, amount_cents, currency, description, occurred_at) "
+                  "values (%s, %s, %s, 'expense', 'posted', %s, 'BRL', 'Mercado do bairro', now() - make_interval(months => %s) - interval '2 days') returning id",
+            (ws_p, chk, cat_food, amount, months_ago))
+    for months_ago in (2, 1):
+        one(conn, "insert into public.transactions(workspace_id, account_id, category_id, type, status, amount_cents, currency, description, occurred_at) "
+                  "values (%s, %s, %s, 'expense', 'posted', 2500, 'BRL', 'So duas vezes', now() - make_interval(months => %s) - interval '1 day') returning id",
+            (ws_p, chk, cat_food, months_ago))
+    sug = conn.execute("select description, amount_cents, months_seen, day_of_month from public.suggest_recurring(%s)", (ws_p,)).fetchall()
+    names = [r[0] for r in sug]
+    check("the same description and amount every month is suggested", 'Netflix' in names, sug)
+    netflix = [r for r in sug if r[0] == 'Netflix'][0]
+    check("the usual amount is the middle one, seen in 4 months", netflix[1] == 3990 and netflix[2] == 4, netflix)
+    check("amounts that vary a lot are not suggested", 'Mercado do bairro' not in names, names)
+    check("only 2 months is not enough", 'So duas vezes' not in names, names)
+    one(conn, "insert into public.recurring_transactions(workspace_id, account_id, currency, category_id, type, amount_cents, description, frequency, start_date) "
+              "values (%s, %s, 'BRL', %s, 'expense', 3990, 'netflix', 'monthly', current_date) returning id", (ws_p, chk, cat_food))
+    check("one already created as a recurring item is not suggested again",
+          'Netflix' not in [r[0] for r in conn.execute("select description from public.suggest_recurring(%s)", (ws_p,)).fetchall()])
+    as_user(conn, B)
+    check("B gets nothing from A's history", conn.execute("select count(*) from public.suggest_recurring(%s)", (ws_p,)).fetchone()[0] == 0)
+    as_user(conn, A)
+
+    # ---- a recurring item does not double what is already entered ----------------
+    print("recurring without duplicates")
+    as_user(conn, A)
+    ins_tx = ("insert into public.transactions(workspace_id, account_id, category_id, type, status, amount_cents, currency, description, occurred_at) "
+              "values (%s, %s, %s, 'expense', %s, %s, 'BRL', %s, (current_date + %s + time '12:00') at time zone 'America/Sao_Paulo') returning id")
+    # the same month as the 1st occurrence (today + 3 days): entered by hand, already there
+    one(conn, ins_tx, (ws_p, chk, cat_food, 'pending', 4590, 'Spotify familia', 3))
+    # an upcoming one a month later, also entered by hand
+    one(conn, ins_tx, (ws_p, chk, cat_food, 'pending', 4590, 'SPOTIFY  FAMILIA ', 33))
+    rid = one(conn, "insert into public.recurring_transactions(workspace_id,account_id,currency,category_id,type,amount_cents,description,frequency,start_date) "
+                    "values (%s,%s,'BRL',%s,'expense',4590,'Spotify familia','monthly',current_date + 3) returning id", (ws_p, chk, cat_food))
+    conn.execute("select public.generate_my_recurring(current_date + 40)")
+    made = one(conn, "select count(*) from public.transactions where recurring_id=%s", (rid,))
+    check("occurrences that already exist by hand are not generated again", made == 0, made)
+
+    # a price change within 15% still counts as the same; a very different amount does not
+    one(conn, ins_tx, (ws_p, chk, cat_food, 'posted', 5000, 'Plano de saude', 4))
+    rid2 = one(conn, "insert into public.recurring_transactions(workspace_id,account_id,currency,category_id,type,amount_cents,description,frequency,start_date) "
+                     "values (%s,%s,'BRL',%s,'expense',4590,'Plano de saude','monthly',current_date + 4) returning id", (ws_p, chk, cat_food))
+    conn.execute("select public.generate_my_recurring(current_date + 6)")
+    check("about the same amount (within 15%) is the same entry",
+          one(conn, "select count(*) from public.transactions where recurring_id=%s", (rid2,)) == 0)
+    one(conn, ins_tx, (ws_p, chk, cat_food, 'posted', 30000, 'Mensalidade curso', 4))
+    rid3 = one(conn, "insert into public.recurring_transactions(workspace_id,account_id,currency,category_id,type,amount_cents,description,frequency,start_date) "
+                     "values (%s,%s,'BRL',%s,'expense',9000,'Mensalidade curso','monthly',current_date + 4) returning id", (ws_p, chk, cat_food))
+    conn.execute("select public.generate_my_recurring(current_date + 6)")
+    check("a very different amount is another entry, so it is generated",
+          one(conn, "select count(*) from public.transactions where recurring_id=%s", (rid3,)) == 1)
+
+    # the entry of the month before does not block this month's occurrence
+    one(conn, ins_tx, (ws_p, chk, cat_food, 'posted', 8000, 'Academia', -40))
+    rid4 = one(conn, "insert into public.recurring_transactions(workspace_id,account_id,currency,category_id,type,amount_cents,description,frequency,start_date) "
+                     "values (%s,%s,'BRL',%s,'expense',8000,'Academia','monthly',current_date + 5) returning id", (ws_p, chk, cat_food))
+    conn.execute("select public.generate_my_recurring(current_date + 7)")
+    check("an entry of an earlier month does not block this month's occurrence",
+          one(conn, "select count(*) from public.transactions where recurring_id=%s", (rid4,)) == 1)
+
+    # another account, another type, a deleted or a failed entry do not count
+    other = conn.execute("select id, currency from public.accounts where workspace_id=%s and id <> %s and archived_at is null and type <> 'credit_card' limit 1", (ws_p, chk)).fetchone()
+    if other:
+        acc2, cur2 = other
+        one(conn, "insert into public.transactions(workspace_id, account_id, type, status, amount_cents, currency, description, occurred_at) "
+                  "values (%s, %s, 'expense', 'posted', 2000, %s, 'Outra conta', (current_date + 6 + time '12:00') at time zone 'America/Sao_Paulo') returning id", (ws_p, acc2, cur2))
+        rid5 = one(conn, "insert into public.recurring_transactions(workspace_id,account_id,currency,type,amount_cents,description,frequency,start_date) "
+                         "values (%s,%s,%s,'expense',2000,'Outra conta','monthly',current_date + 6) returning id", (ws_p, acc2, cur2))
+        # the same description and amount on the first account: the entry above is on the second one
+        rid5b = one(conn, "insert into public.recurring_transactions(workspace_id,account_id,currency,category_id,type,amount_cents,description,frequency,start_date) "
+                          "values (%s,%s,'BRL',%s,'expense',2000,'Outra conta','monthly',current_date + 6) returning id", (ws_p, chk, cat_food))
+        conn.execute("select public.generate_my_recurring(current_date + 8)")
+        check("an entry in another account does not block", one(conn, "select count(*) from public.transactions where recurring_id=%s", (rid5b,)) == 1)
+        check("but it blocks its own account", one(conn, "select count(*) from public.transactions where recurring_id=%s", (rid5,)) == 0)
+    one(conn, ins_tx, (ws_p, chk, cat_food, 'failed', 3000, 'Recusado', 7))
+    rid6 = one(conn, "insert into public.recurring_transactions(workspace_id,account_id,currency,category_id,type,amount_cents,description,frequency,start_date) "
+                     "values (%s,%s,'BRL',%s,'expense',3000,'Recusado','monthly',current_date + 7) returning id", (ws_p, chk, cat_food))
+    conn.execute("select public.generate_my_recurring(current_date + 9)")
+    check("a failed entry does not block", one(conn, "select count(*) from public.transactions where recurring_id=%s", (rid6,)) == 1)
+
+    # weekly: 2 days away is the same week's entry, 5 days away is not
+    one(conn, ins_tx, (ws_p, chk, cat_food, 'posted', 1500, 'Feira semanal', 12))
+    rid7 = one(conn, "insert into public.recurring_transactions(workspace_id,account_id,currency,category_id,type,amount_cents,description,frequency,start_date) "
+                     "values (%s,%s,'BRL',%s,'expense',1500,'Feira semanal','weekly',current_date + 10) returning id", (ws_p, chk, cat_food))
+    conn.execute("select public.generate_my_recurring(current_date + 11)")
+    check("weekly: an entry 2 days from the occurrence is the same one",
+          one(conn, "select count(*) from public.transactions where recurring_id=%s", (rid7,)) == 0)
+    one(conn, ins_tx, (ws_p, chk, cat_food, 'posted', 1700, 'Feira da quinzena', 25))
+    rid8 = one(conn, "insert into public.recurring_transactions(workspace_id,account_id,currency,category_id,type,amount_cents,description,frequency,start_date) "
+                     "values (%s,%s,'BRL',%s,'expense',1700,'Feira da quinzena','weekly',current_date + 20) returning id", (ws_p, chk, cat_food))
+    conn.execute("select public.generate_my_recurring(current_date + 21)")
+    check("weekly: an entry 5 days away is another one",
+          one(conn, "select count(*) from public.transactions where recurring_id=%s", (rid8,)) == 1)
     as_user(conn, A)
 
     # ---- account deletion -------------------------------------------------

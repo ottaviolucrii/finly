@@ -8,6 +8,7 @@ import 'package:finly/features/categories/domain/entities/category_entity.dart';
 import 'package:finly/features/categories/domain/entities/category_kind.dart';
 import 'package:finly/features/categories/presentation/category_style.dart';
 import 'package:finly/features/recurring/domain/entities/recurrence_frequency.dart';
+import 'package:finly/features/recurring/domain/entities/recurring_suggestion.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_form_cubit.dart';
 import 'package:finly/features/recurring/presentation/cubit/recurring_form_state.dart';
 import 'package:finly/features/recurring/presentation/recurring_messages.dart';
@@ -25,11 +26,15 @@ class RecurringFormPage extends StatelessWidget {
   final List<AccountEntity> accounts;
   final List<CategoryEntity> categories;
 
+  /// When the form comes from "A Amora notou", it starts filled in.
+  final RecurringSuggestion? suggestion;
+
   const RecurringFormPage({
     super.key,
     required this.workspaceId,
     required this.accounts,
     required this.categories,
+    this.suggestion,
   });
 
   @override
@@ -40,6 +45,7 @@ class RecurringFormPage extends StatelessWidget {
         workspaceId: workspaceId,
         accounts: accounts,
         categories: categories,
+        suggestion: suggestion,
       ),
     );
   }
@@ -49,11 +55,13 @@ class _RecurringFormView extends StatefulWidget {
   final String workspaceId;
   final List<AccountEntity> accounts;
   final List<CategoryEntity> categories;
+  final RecurringSuggestion? suggestion;
 
   const _RecurringFormView({
     required this.workspaceId,
     required this.accounts,
     required this.categories,
+    this.suggestion,
   });
 
   @override
@@ -89,6 +97,22 @@ class _RecurringFormViewState extends State<_RecurringFormView> {
         ? CategoryKind.income
         : CategoryKind.expense;
     return widget.categories.where((c) => c.kind == kind).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final s = widget.suggestion;
+    if (s == null) return;
+    _type = s.type;
+    if (widget.accounts.any((a) => a.id == s.accountId)) _accountId = s.accountId;
+    // money coming in cannot be on a card: the first account that can
+    final options = accountsForType(_type, widget.accounts);
+    if (options.isNotEmpty && !options.any((a) => a.id == _accountId)) _accountId = options.first.id;
+    if (s.categoryId != null && widget.categories.any((c) => c.id == s.categoryId)) _categoryId = s.categoryId;
+    _amount.text = formatCentsInput(s.amountCents);
+    _description.text = s.description;
+    _start = suggestedStart(s, DateTime.now());
   }
 
   @override
