@@ -23,21 +23,23 @@ class FakeSource implements RecurringSuggestionSource {
 }
 
 void main() {
-  const netflix = RecurringSuggestion(
+  final netflix = RecurringSuggestion(
     description: 'Netflix',
     type: TransactionType.expense,
     amountCents: 3990,
     accountId: 'a1',
     dayOfMonth: 12,
     monthsSeen: 4,
+    lastSeen: DateTime(2026, 10, 12),
   );
-  const rent = RecurringSuggestion(
+  final rent = RecurringSuggestion(
     description: 'Aluguel',
     type: TransactionType.expense,
     amountCents: 180000,
     accountId: 'a1',
     dayOfMonth: 5,
     monthsSeen: 5,
+    lastSeen: DateTime(2026, 10, 5),
   );
 
   group('the next date', () {
@@ -61,6 +63,46 @@ void main() {
       expect(nextDayOfMonth(31, DateTime(2026, 11, 14)), DateTime(2026, 11, 30));
       expect(nextDayOfMonth(31, DateTime(2027, 1, 31)), DateTime(2027, 1, 31));
       expect(nextDayOfMonth(31, DateTime(2027, 2, 1)), DateTime(2027, 2, 28));
+    });
+  });
+
+  group('where the recurring item starts', () {
+    RecurringSuggestion seenOn(DateTime? day, {int dayOfMonth = 12}) => RecurringSuggestion(
+          description: 'Netflix',
+          type: TransactionType.expense,
+          amountCents: 3990,
+          accountId: 'a1',
+          dayOfMonth: dayOfMonth,
+          monthsSeen: 4,
+          lastSeen: day,
+        );
+
+    test('seen this month already (paid early): it starts next month, not on a twin', () {
+      expect(suggestedStart(seenOn(DateTime(2026, 10, 3)), DateTime(2026, 10, 5)), DateTime(2026, 11, 12));
+    });
+
+    test('seen this month on the usual day: next month', () {
+      expect(suggestedStart(seenOn(DateTime(2026, 10, 12)), DateTime(2026, 10, 14)), DateTime(2026, 11, 12));
+    });
+
+    test('last seen last month and the day has not come yet: this month', () {
+      expect(suggestedStart(seenOn(DateTime(2026, 9, 12)), DateTime(2026, 10, 5)), DateTime(2026, 10, 12));
+    });
+
+    test('never in the past: last seen long ago, the day already passed', () {
+      expect(suggestedStart(seenOn(DateTime(2026, 8, 12)), DateTime(2026, 10, 14)), DateTime(2026, 11, 12));
+    });
+
+    test('an upcoming entry already exists: it starts after it', () {
+      expect(suggestedStart(seenOn(DateTime(2026, 12, 12)), DateTime(2026, 10, 14)), DateTime(2027, 1, 12));
+    });
+
+    test('without a last date it is the next time that day comes', () {
+      expect(suggestedStart(seenOn(null), DateTime(2026, 10, 14)), DateTime(2026, 11, 12));
+    });
+
+    test('the 31st on a short month', () {
+      expect(suggestedStart(seenOn(DateTime(2027, 1, 31), dayOfMonth: 31), DateTime(2027, 2, 2)), DateTime(2027, 2, 28));
     });
   });
 

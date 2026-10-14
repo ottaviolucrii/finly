@@ -112,7 +112,7 @@ class _RecurringFormViewState extends State<_RecurringFormView> {
     if (s.categoryId != null && widget.categories.any((c) => c.id == s.categoryId)) _categoryId = s.categoryId;
     _amount.text = formatCentsInput(s.amountCents);
     _description.text = s.description;
-    _start = nextDayOfMonth(s.dayOfMonth, DateTime.now());
+    _start = suggestedStart(s, DateTime.now());
   }
 
   @override
